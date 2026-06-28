@@ -1,65 +1,88 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useStore } from "./store";
+
+export default function LoginPage() {
+  const router = useRouter();
+  const { isLoggedIn, login, signup } = useStore();
+  const [showSignup, setShowSignup] = useState(false);
+  const [email, setEmail] = useState("");
+  const [nickname, setNickname] = useState("");
+
+  useEffect(() => {
+    if (isLoggedIn) router.replace("/home");
+  }, [isLoggedIn, router]);
+
+  if (showSignup) {
+    return (
+      <div className="flex flex-col min-h-screen px-6">
+        <div className="flex items-center gap-3 pt-14 pb-4 border-b border-gray-100">
+          <button onClick={() => setShowSignup(false)} className="text-blue-500">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <h1 className="text-lg font-bold">회원가입</h1>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+
+        <div className="flex flex-col gap-5 pt-8">
+          <div>
+            <label className="text-sm font-semibold mb-1.5 block">이메일</label>
+            <input
+              className="w-full p-3.5 bg-gray-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-300"
+              placeholder="이메일을 입력해주세요"
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          </div>
+          <div>
+            <label className="text-sm font-semibold mb-1.5 block">닉네임</label>
+            <input
+              className="w-full p-3.5 bg-gray-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-300"
+              placeholder="닉네임을 입력해주세요"
+              value={nickname}
+              onChange={e => setNickname(e.target.value)}
+            />
+          </div>
+          <button
+            onClick={() => signup(nickname)}
+            disabled={!nickname.trim()}
+            className="w-full py-4 rounded-2xl bg-blue-500 text-white font-semibold text-base mt-2 disabled:opacity-40"
           >
-            Documentation
-          </a>
+            가입 완료
+          </button>
         </div>
-      </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col min-h-screen px-6 pb-8">
+      <div className="flex-1 flex flex-col items-center justify-center gap-4">
+        <span className="text-6xl">🗺️</span>
+        <h1 className="text-4xl font-bold tracking-tight">TripLog</h1>
+        <p className="text-gray-500 text-center leading-relaxed">
+          친구들과 여행을 계획하고,<br />여행 중 순간을 기록해보세요.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <button
+          onClick={login}
+          className="w-full py-4 rounded-2xl bg-blue-500 text-white font-semibold text-base active:opacity-80"
+        >
+          로그인하기
+        </button>
+        <button
+          onClick={() => setShowSignup(true)}
+          className="w-full py-4 rounded-2xl bg-gray-100 text-gray-800 font-semibold text-base active:opacity-80"
+        >
+          회원가입
+        </button>
+      </div>
     </div>
   );
 }
