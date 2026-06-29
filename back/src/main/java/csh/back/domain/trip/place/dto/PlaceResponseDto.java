@@ -8,7 +8,7 @@ public class PlaceResponseDto {
                                String category,
                                String address
     ) {
-        public SaveResponse from(TripPlace tripPlace) {
+        public static SaveResponse from(TripPlace tripPlace) {
             return new SaveResponse(
                     tripPlace.getId(),
                     tripPlace.getName(),
