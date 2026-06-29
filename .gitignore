@@ -33,3 +33,8 @@ replay_pid*
 ### macOS ###
 .DS_Store
 gradlew.bat
+
+### h2 ###
+db_dev.mv.db
+db_dev.trace.db
+db_dev.lock.db
