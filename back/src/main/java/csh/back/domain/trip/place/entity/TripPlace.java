@@ -1,0 +1,49 @@
+package csh.back.domain.trip.place.entity;
+
+import csh.back.domain.trip.group.entity.TripGroup;
+import csh.back.global.entity.BaseEntity;
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Getter
+@Entity
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(name = "trip_wish_places")
+public class TripPlace extends BaseEntity {
+
+    //FK
+    //Join tripGroup Table
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "trip_id", nullable = false)
+    private TripGroup tripGroup;
+
+    //장소 이름
+    private String name;
+
+    //테마
+    private String theme;
+
+    //주소
+    private String address;
+
+    //카카오 플레이스 id
+    private String kakaoPlaceId;
+
+    //카카오멥 URL
+    private String kakaoMapUrl;
+
+    //생성자
+    //빌드 사용
+    @Builder
+    private TripPlace(TripGroup tripGroup, String name, String theme, String address, String kakaoPlaceId, String kakaoMapUrl) {
+        this.tripGroup = tripGroup;
+        this.name = name;
+        this.theme = theme;
+        this.address = address;
+        this.kakaoPlaceId = kakaoPlaceId;
+        this.kakaoMapUrl = kakaoMapUrl;
+    }
+}

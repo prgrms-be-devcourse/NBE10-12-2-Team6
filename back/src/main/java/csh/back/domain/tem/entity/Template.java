@@ -7,12 +7,15 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 @Entity
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Template extends BaseEntity {
     private String tem;
 
+
+    //생성자
+    //빌드 사용
     @Builder
     private Template (String tem) {
         this.tem = tem;
