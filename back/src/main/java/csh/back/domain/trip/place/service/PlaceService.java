@@ -16,7 +16,7 @@ public class PlaceService {
     private final PlaceRepository placeRepository;
 
     public List<PlaceResponseDto.PlaceFindItem> findWishPlaces(Long tripId) {
-        List<TripPlace> tripPlaces = placeRepository.findAllByTripId(tripId);
+        List<TripPlace> tripPlaces = placeRepository.findAllByTripGroup_Id(tripId);
         return tripPlaces
                 .stream()
                 .map(PlaceResponseDto.PlaceFindItem::from)
