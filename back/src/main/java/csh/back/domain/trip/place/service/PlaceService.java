@@ -1,7 +1,6 @@
 package csh.back.domain.trip.place.service;
 
 import csh.back.domain.trip.group.entity.TripGroup;
-import csh.back.domain.trip.group.repository.TripGroupRepository;
 import csh.back.domain.trip.place.dto.PlaceResponseDto;
 import csh.back.domain.trip.place.entity.TripPlace;
 import csh.back.domain.trip.place.repository.PlaceRepository;
@@ -16,6 +15,7 @@ public class PlaceService {
     private final PlaceRepository placeRepository;
     private final TripGroupRepository tripGroupRepository;
 
+    @Transactional
     public PlaceResponseDto.SaveResponse savePlace(Long tripId,
                                                    String name,
                                                    String theme,
