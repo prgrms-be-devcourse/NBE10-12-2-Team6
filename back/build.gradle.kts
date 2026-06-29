@@ -43,3 +43,12 @@ dependencies {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+tasks.register<Copy>("installGitHooks") {
+    from("${rootDir}/hooks")
+    into("${rootDir}/../.git/hooks")
+    filePermissions {unix("755")}
+}
+
+tasks.named("build") {
+    dependsOn("installGitHooks") }
