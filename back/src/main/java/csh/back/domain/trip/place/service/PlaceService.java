@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PlaceService {
     private final PlaceRepository placeRepository;
-    private final TripGroupRepository tripGroupRepository;
+//    private final TripGroupRepository tripGroupRepository;
 
     @Transactional
     public PlaceResponseDto.SaveResponse savePlace(Long tripId,
@@ -22,10 +22,10 @@ public class PlaceService {
                                                    String address,
                                                    String kakaoPlaceId,
                                                    String kakaoUrl) {
-        TripGroup tripGroup = tripGroupRepository.findById(tripId).orElseThrow(RuntimeException::new);
+//        TripGroup tripGroup = tripGroupRepository.findById(tripId).orElseThrow(RuntimeException::new);
         TripPlace place = TripPlace
                 .builder()
-                .tripGroup(tripGroup)
+//                .tripGroup(tripGroup)
                 .name(name)
                 .theme(theme)
                 .address(address)
