@@ -1,8 +1,9 @@
 package csh.back.domain.trip.group.service;
 
 import csh.back.domain.member.entity.Member;
-import csh.back.domain.trip.group.dto.request.TripGroupRequestDto;
-import csh.back.domain.trip.group.dto.response.TripGroupResponseDto;
+import csh.back.domain.trip.group.dto.request.TripGroupModifyRequest;
+import csh.back.domain.trip.group.dto.request.TripGroupRequest;
+import csh.back.domain.trip.group.dto.response.TripGroupResponse;
 import csh.back.domain.trip.group.entity.TripGroup;
 import csh.back.domain.trip.group.exception.NotFoundException;
 import csh.back.domain.trip.group.repository.TripGroupRepository;
@@ -25,17 +26,17 @@ public class TripGroupService {
 
 	// 모임방 조회
 	@Transactional(readOnly = true)
-	public List<TripGroupResponseDto> getGroups(Long ownerId) {
+	public List<TripGroupResponse> getGroups(Long ownerId) {
 		List<TripGroup> tripGroups = tripGroupRepository.findAllByOwnerIdOrderByStartDateDesc(ownerId);
 		return tripGroups
 				.stream()
-				.map(TripGroupResponseDto::from)
+				.map(TripGroupResponse::from)
 				.toList();
 	}
 
 	// 모임방 생성
 	@Transactional
-	public TripGroupResponseDto writeGroup(TripGroupRequestDto request, Member owner) {
+	public TripGroupResponse writeGroup(TripGroupRequest request, Member owner) {
 		LocalDate startDate = LocalDate.parse(request.startDate());
 		LocalDate endDate = LocalDate.parse(request.endDate());
 		int nights = (int) ChronoUnit.DAYS.between(startDate, endDate);
@@ -59,17 +60,32 @@ public class TripGroupService {
 						.build()
 		);
 
-		return TripGroupResponseDto.from(savedGroup);
+		return TripGroupResponse.from(savedGroup);
 	}
 
 	//모임 상세 조회
 	@Transactional(readOnly = true)
-	public TripGroupResponseDto getGroupDetail(Long groupId, Long ownerId) {
+	public TripGroupResponse getGroupDetail(Long groupId, Long ownerId) {
 		//TODO 멤버가 아닐경우에 대해서 조회 안된다는 로직 필요
 
 		TripGroup group = tripGroupRepository.findById(groupId)
 				.orElseThrow(() -> new NotFoundException("존재하지 않는 모임입니다."));
 
-		return TripGroupResponseDto.from(group);
+		return TripGroupResponse.from(group);
+	}
+
+	//모임 상세 수정
+	//TODO 1차 mvp에서는 name만 수정, 혹시몰라 patch로 진행
+	@Transactional
+	public TripGroupResponse modifyGroupDetail(Long groupId, Long ownerId, TripGroupModifyRequest request) {
+		TripGroup group = tripGroupRepository.findById(groupId)
+				.orElseThrow(() -> new NotFoundException("존재하지 않는 모임입니다."));
+
+		if (!group.getOwner().getId().equals(ownerId)) {
+			throw new IllegalArgumentException("해당 모임의 소유자가 아닙니다.");
+		}
+
+		group.modify(request);
+		return TripGroupResponse.from(group);
 	}
 }

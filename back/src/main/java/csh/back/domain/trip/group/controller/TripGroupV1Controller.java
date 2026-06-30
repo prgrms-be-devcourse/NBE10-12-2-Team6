@@ -2,8 +2,9 @@ package csh.back.domain.trip.group.controller;
 
 import csh.back.domain.member.entity.Member;
 import csh.back.domain.member.repository.MemberRepository;
-import csh.back.domain.trip.group.dto.request.TripGroupRequestDto;
-import csh.back.domain.trip.group.dto.response.TripGroupResponseDto;
+import csh.back.domain.trip.group.dto.request.TripGroupModifyRequest;
+import csh.back.domain.trip.group.dto.request.TripGroupRequest;
+import csh.back.domain.trip.group.dto.response.TripGroupResponse;
 import csh.back.domain.trip.group.exception.NotFoundException;
 import csh.back.domain.trip.group.service.TripGroupService;
 import csh.back.global.dto.ResponseData;
@@ -22,7 +23,7 @@ public class TripGroupV1Controller {
 
 	//모임방 조회
 	@GetMapping()
-	public ResponseData<List<TripGroupResponseDto>> getAllGroups(
+	public ResponseData<List<TripGroupResponse>> getAllGroups(
 			@RequestParam Long ownerId //FIXME 나중에 @AuthenticationPrincipal 수정예정
 	) {
 
@@ -32,9 +33,9 @@ public class TripGroupV1Controller {
 
 	//모임방 생성
 	@PostMapping()
-	public ResponseData<TripGroupResponseDto> saveGroup(
+	public ResponseData<TripGroupResponse> saveGroup(
 			@RequestParam Long ownerId, //FIXME 나중에 @AuthenticationPrincipal 수정예정
-			@RequestBody TripGroupRequestDto request
+			@RequestBody TripGroupRequest request
 	) {
 		Member owner = memberRepository.findById(ownerId)
 				.orElseThrow(() -> new NotFoundException("존재하지 않는 유저"));
@@ -43,7 +44,7 @@ public class TripGroupV1Controller {
 
 	//모임방 상세페이지 조회
 	@GetMapping("/{groupId}")
-	public ResponseData<TripGroupResponseDto> getGroupDetail(
+	public ResponseData<TripGroupResponse> getGroupDetail(
 			@PathVariable Long groupId,
 			@RequestParam Long ownerId //FIXME 나중에 @AuthenticationPrincipal 수정예정
 	) {
@@ -51,7 +52,14 @@ public class TripGroupV1Controller {
 		return new ResponseData<>(200, tripGroupService.getGroupDetail(groupId, ownerId));
 	}
 //
-//	//모임방 상세 수정 - name
-//	@PatchMapping("/{groupId}")
-//	public ResponseData<>
+	//모임방 상세 수정 - name
+	@PatchMapping("/{groupId}")
+	public ResponseData<TripGroupResponse> modifyGroupName(
+			@PathVariable Long groupId,
+			@RequestParam Long ownerId, //FIXME 나중에 @AuthenticationPrincipal 수정예정
+			@RequestBody TripGroupModifyRequest request
+			) {
+		//		Long ownerId = userDetails.getMember().getId(); // id만 추출
+		return new ResponseData<>(200, tripGroupService.modifyGroupDetail(groupId, ownerId, request));
+	}
 }

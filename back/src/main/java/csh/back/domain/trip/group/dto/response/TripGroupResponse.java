@@ -4,7 +4,7 @@ import csh.back.domain.trip.group.entity.TripGroup;
 
 import java.time.LocalDate;
 
-public record TripGroupResponseDto(
+public record TripGroupResponse(
 		Long id,
 		String name,
 		Long ownerId,
@@ -14,8 +14,8 @@ public record TripGroupResponseDto(
 		LocalDate startDate,
 		LocalDate endDate
 ){
-	public static TripGroupResponseDto from(TripGroup tripGroup) {
-		return new TripGroupResponseDto(
+	public static TripGroupResponse from(TripGroup tripGroup) {
+		return new TripGroupResponse(
 				tripGroup.getId(),
 				tripGroup.getName(),
 				tripGroup.getOwner().getId(),
