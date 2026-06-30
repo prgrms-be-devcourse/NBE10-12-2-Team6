@@ -40,8 +40,13 @@ public class GroupV1Controller {
 		return new ResponseData<>(201, groupService.writeGroup(request, owner));
 	}
 
-//	@GetMapping("/{groupId}")
-//	public void getGroupDetail() {
-//
-//	}
+	//모임방 상세페이지 조회
+	@GetMapping("/{groupId}")
+	public ResponseData<GroupResponseDto> getGroupDetail(
+			@PathVariable Long groupId,
+			@RequestParam Long ownerId //FIXME 나중에 @AuthenticationPrincipal 수정예정
+	) {
+//		Long ownerId = userDetails.getMember().getId(); // id만 추출
+		return new ResponseData<>(200, groupService.getGroupDetail(groupId, ownerId));
+	}
 }
