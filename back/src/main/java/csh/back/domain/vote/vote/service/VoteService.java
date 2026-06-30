@@ -34,6 +34,7 @@ public class VoteService {
         //장소의 아이디를 키로 하여 위의 맵에서 횟수를 매핑하여 반환
         return voteItemList.stream()
                 .map(vi -> VoteFindResponse.from(
+                        vi.getTripPlace().getId(),
                         vi.getTripPlace().getName(),
                         countMap.getOrDefault(vi.getId(), 0L)
                 ))
