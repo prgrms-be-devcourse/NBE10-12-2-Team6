@@ -5,6 +5,8 @@ import csh.back.domain.trip.group.dto.request.GroupRequestDto;
 import csh.back.domain.trip.group.dto.response.GroupResponseDto;
 import csh.back.domain.trip.group.entity.TripGroup;
 import csh.back.domain.trip.group.repository.GroupRepository;
+import csh.back.domain.trip.member.entity.TripMember;
+import csh.back.domain.trip.member.repository.TripMemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +20,7 @@ import java.util.List;
 public class GroupService {
 
 	private final GroupRepository groupRepository;
+	private final TripMemberRepository tripMemberRepository;
 
 	// 모임방 조회
 	@Transactional(readOnly = true)
@@ -45,7 +48,16 @@ public class GroupService {
 				.startDate(startDate)
 				.endDate(endDate)
 				.build();
+		TripGroup savedGroup = groupRepository.save(group);
 
-		return GroupResponseDto.from(groupRepository.save(group));
+		tripMemberRepository.save(
+				TripMember.builder()
+						.tripGroup(savedGroup)
+						.owner(owner)
+						.isAdmin(true)
+						.build()
+		);
+
+		return GroupResponseDto.from(savedGroup);
 	}
 }
