@@ -48,8 +48,8 @@ public class PostService {
                 .orElseThrow(() -> new IllegalArgumentException("게시글이 존재하지 않습니다."));
 
         post.update(
-                request.getContent(),
-                request.getLocation()
+                request.content(),
+                request.location()
         );
     }
     //게시글 삭제(임시)
