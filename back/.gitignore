@@ -42,4 +42,4 @@ db_dev.trace.db
 db_dev.lock.db
 
 ### initData ###
-back/src/main/java/csh/back/global/init
+/src/main/java/csh/back/global/init/InitData.java
