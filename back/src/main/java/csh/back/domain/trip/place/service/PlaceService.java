@@ -19,7 +19,7 @@ public class PlaceService {
 //    private final TripGroupRepository tripGroupRepository;
 
     public List<PlaceFindItem> findWishPlaces(Long tripId) {
-        List<TripPlace> tripPlaces = placeRepository.findAllByTripGroup_Id(tripId);
+        List<TripPlace> tripPlaces = placeRepository.findAllByTripGroupId(tripId);
         return tripPlaces
                 .stream()
                 .map(PlaceFindItem::from)

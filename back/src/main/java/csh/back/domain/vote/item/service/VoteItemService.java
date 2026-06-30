@@ -9,9 +9,11 @@ import csh.back.domain.vote.user.service.VoteUserService;
 import csh.back.domain.vote.vote.entity.Vote;
 import csh.back.domain.vote.vote.repository.VoteRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 @Service
@@ -23,12 +25,13 @@ public class VoteItemService {
 
     @Transactional
     public VoteUserSaveResponseDto saveVoteItem(Long voteId, Long placeId) {
+        log.info("장소 아이디 값 : {}", placeId.toString());
+        log.info("투표 아이디 값 : {}", voteId.toString());
         Vote vote = voteRepository.getReferenceById(voteId);
         TripPlace tripPlace = placeRepository.findById(placeId).orElseThrow(RuntimeException::new);
-        VoteItem voteItem = voteItemRepository
-                .findByTripPlace_Id(placeId).orElse(null);
+        VoteItem voteItem = voteItemRepository.findByTripPlaceId(placeId);
         if (voteItem == null) {
-            VoteItem
+            voteItem = VoteItem
                     .builder()
                     .tripPlace(tripPlace)
                     .vote(vote)

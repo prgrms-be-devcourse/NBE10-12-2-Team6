@@ -26,19 +26,19 @@ public class VoteItem extends BaseEntity {
     //Join Vote Table
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vote_id",  nullable = false)
-    private Vote Vote;
+    private Vote vote;
 
     //FK
     //Join TripPlace Table
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "place_id",  nullable = false)
-    private TripPlace TripPlace;
+    private TripPlace tripPlace;
 
     //생성자
     //빌드 사용
     @Builder
     private VoteItem(Vote vote, TripPlace tripPlace) {
-        this.Vote = vote;
-        this.TripPlace = tripPlace;
+        this.vote = vote;
+        this.tripPlace = tripPlace;
     }
 }
