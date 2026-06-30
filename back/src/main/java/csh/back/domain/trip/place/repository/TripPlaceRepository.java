@@ -5,6 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
-public interface PlaceRepository extends JpaRepository<TripPlace, Long> {
-    List<TripPlace> findAllByTripGroup_Id(Long tripId);
+public interface TripPlaceRepository extends JpaRepository<TripPlace, Long> {
+    List<TripPlace> findAllByTripGroupId(Long tripId);
 }
