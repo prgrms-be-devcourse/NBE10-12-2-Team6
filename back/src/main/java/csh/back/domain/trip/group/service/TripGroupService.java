@@ -67,7 +67,10 @@ public class TripGroupService {
 	@Transactional(readOnly = true)
 	public TripGroupResponse getGroupDetail(Long groupId, Long ownerId) {
 		//TODO 멤버가 아닐경우에 대해서 조회 안된다는 로직 필요
-
+		boolean isMember = tripMemberRepository.existsByTripGroupIdAndOwnerId(groupId, ownerId);
+		if (!isMember) {
+			throw new IllegalArgumentException("해당 모임의 멤버가 아닙니다.");
+		}
 		TripGroup group = tripGroupRepository.findById(groupId)
 				.orElseThrow(() -> new NotFoundException("존재하지 않는 모임입니다."));
 
@@ -84,7 +87,6 @@ public class TripGroupService {
 		if (!group.getOwner().getId().equals(ownerId)) {
 			throw new IllegalArgumentException("해당 모임의 소유자가 아닙니다.");
 		}
-
 		group.modify(request);
 		return TripGroupResponse.from(group);
 	}
