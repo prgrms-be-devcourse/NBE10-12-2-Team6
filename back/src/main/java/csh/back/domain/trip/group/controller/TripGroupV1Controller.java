@@ -10,6 +10,7 @@ import csh.back.domain.trip.group.service.TripGroupService;
 import csh.back.global.dto.ResponseData;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,7 +43,7 @@ public class TripGroupV1Controller {
 	@PostMapping()
 	public ResponseData<TripGroupResponse> saveGroup(
 			@RequestParam Long ownerId, //FIXME 나중에 @AuthenticationPrincipal 수정예정
-			@RequestBody TripGroupRequest request
+			@Valid @RequestBody TripGroupRequest request
 	) {
 		Member owner = memberRepository.findById(ownerId)
 				.orElseThrow(() -> new NotFoundException("존재하지 않는 유저"));
