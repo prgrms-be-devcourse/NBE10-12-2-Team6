@@ -1,7 +1,7 @@
 package csh.back.domain.vote.item.service;
 
 import csh.back.domain.trip.place.entity.TripPlace;
-import csh.back.domain.trip.place.repository.PlaceRepository;
+import csh.back.domain.trip.place.repository.TripPlaceRepository;
 import csh.back.domain.vote.item.entity.VoteItem;
 import csh.back.domain.vote.item.repository.VoteItemRepository;
 import csh.back.domain.vote.user.dto.response.VoteUserSaveResponseDto;
@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class VoteItemService {
     private final VoteItemRepository voteItemRepository;
     private final VoteRepository voteRepository;
-    private final PlaceRepository placeRepository;
+    private final TripPlaceRepository tripPlaceRepository;
     private final VoteUserService voteUserService;
 
     @Transactional
@@ -28,7 +28,7 @@ public class VoteItemService {
         log.info("장소 아이디 값 : {}", placeId.toString());
         log.info("투표 아이디 값 : {}", voteId.toString());
         Vote vote = voteRepository.getReferenceById(voteId);
-        TripPlace tripPlace = placeRepository.findById(placeId).orElseThrow(RuntimeException::new);
+        TripPlace tripPlace = tripPlaceRepository.findById(placeId).orElseThrow(RuntimeException::new);
         VoteItem voteItem = voteItemRepository.findByTripPlaceId(placeId);
         if (voteItem == null) {
             voteItem = VoteItem

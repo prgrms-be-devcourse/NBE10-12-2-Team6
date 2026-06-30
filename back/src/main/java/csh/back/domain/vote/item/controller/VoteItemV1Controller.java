@@ -20,7 +20,7 @@ public class VoteItemV1Controller {
     public ResponseData<VoteUserSaveResponseDto> saveVote(@RequestBody VoteItemSaveRequestDto request) {
         return new ResponseData<>(
                 201,
-                voteItemService.saveVoteItem(request.voteId(), request.placeId(), request.testId())
+                voteItemService.saveVoteItem(request.voteId(), request.placeId())
         );
     }
 }
