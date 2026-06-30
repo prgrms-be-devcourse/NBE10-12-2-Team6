@@ -1,6 +1,6 @@
 package csh.back.domain.trip.group.dto.request;
 
-public record GroupRequestDto (
+public record TripGroupRequest(
 		String name,
 		String region,
 		String startDate,
