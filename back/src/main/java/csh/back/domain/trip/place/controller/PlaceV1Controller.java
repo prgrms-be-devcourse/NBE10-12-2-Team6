@@ -1,7 +1,8 @@
 package csh.back.domain.trip.place.controller;
 
-import csh.back.domain.trip.place.dto.PlaceRequestDto;
-import csh.back.domain.trip.place.dto.PlaceResponseDto;
+import csh.back.domain.trip.place.dto.request.SaveRequest;
+import csh.back.domain.trip.place.dto.response.PlaceFindItem;
+import csh.back.domain.trip.place.dto.response.SaveResponse;
 import csh.back.domain.trip.place.service.PlaceService;
 
 import csh.back.global.dto.ResponseData;
@@ -22,15 +23,15 @@ public class PlaceV1Controller {
     private final PlaceService placeService;
 
     @GetMapping("/{tripId}/wish-places")
-    public ResponseData<List<PlaceResponseDto.PlaceFindItem>> findWishPlaces(@PathVariable Long tripId) {
-        List<PlaceResponseDto.PlaceFindItem> wishPlaces = placeService.findWishPlaces(tripId);
+    public ResponseData<List<PlaceFindItem>> findWishPlaces(@PathVariable Long tripId) {
+        List<PlaceFindItem> wishPlaces = placeService.findWishPlaces(tripId);
         return new ResponseData<>(200, wishPlaces);
     }
 
 
     @PostMapping("/{tripId}/wish-places")
-    public ResponseData saveWishPlace(@RequestBody PlaceRequestDto.SaveRequest request, @PathVariable Long tripId) {
-        PlaceResponseDto.SaveResponse response = placeService.savePlace(
+    public ResponseData saveWishPlace(@RequestBody SaveRequest request, @PathVariable Long tripId) {
+        SaveResponse response = placeService.savePlace(
                 tripId,
                 request.name(),
                 request.category(),

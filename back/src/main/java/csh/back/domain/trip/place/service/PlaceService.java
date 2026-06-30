@@ -1,8 +1,8 @@
 package csh.back.domain.trip.place.service;
 
 
-import csh.back.domain.trip.group.entity.TripGroup;
-import csh.back.domain.trip.place.dto.PlaceResponseDto;
+import csh.back.domain.trip.place.dto.response.PlaceFindItem;
+import csh.back.domain.trip.place.dto.response.SaveResponse;
 import csh.back.domain.trip.place.entity.TripPlace;
 import csh.back.domain.trip.place.repository.PlaceRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,39 +16,35 @@ import java.util.List;
 @Service
 public class PlaceService {
     private final PlaceRepository placeRepository;
+//    private final TripGroupRepository tripGroupRepository;
 
-    public List<PlaceResponseDto.PlaceFindItem> findWishPlaces(Long tripId) {
+    public List<PlaceFindItem> findWishPlaces(Long tripId) {
         List<TripPlace> tripPlaces = placeRepository.findAllByTripGroup_Id(tripId);
         return tripPlaces
                 .stream()
-                .map(PlaceResponseDto.PlaceFindItem::from)
+                .map(PlaceFindItem::from)
                 .toList();
     }
 
-
-
-//    private final TripGroupRepository tripGroupRepository;
-
-@Transactional
-public PlaceResponseDto.SaveResponse savePlace(Long tripId,
-                                               String name,
-                                               String theme,
-                                               String address,
-                                               String kakaoPlaceId,
-                                               String kakaoUrl) {
-//        TripGroup tripGroup = tripGroupRepository.findById(tripId).orElseThrow(RuntimeException::new);
-    TripPlace place = TripPlace
-            .builder()
-//                .tripGroup(tripGroup)
-            .name(name)
-            .theme(theme)
-            .address(address)
-            .kakaoPlaceId(kakaoPlaceId)
-            .kakaoMapUrl(kakaoUrl)
-            .build();
-    TripPlace saveResult = placeRepository.save(place);
-    PlaceResponseDto.SaveResponse response = PlaceResponseDto.SaveResponse.from(saveResult);
-    return response;
-
+    @Transactional
+    public SaveResponse savePlace(Long tripId,
+                                  String name,
+                                  String theme,
+                                  String address,
+                                  String kakaoPlaceId,
+                                  String kakaoUrl) {
+    //        TripGroup tripGroup = tripGroupRepository.findById(tripId).orElseThrow(RuntimeException::new);
+        TripPlace place = TripPlace
+                .builder()
+    //                .tripGroup(tripGroup)
+                .name(name)
+                .theme(theme)
+                .address(address)
+                .kakaoPlaceId(kakaoPlaceId)
+                .kakaoMapUrl(kakaoUrl)
+                .build();
+        TripPlace saveResult = placeRepository.save(place);
+        SaveResponse response = SaveResponse.from(saveResult);
+        return response;
     }
 }
