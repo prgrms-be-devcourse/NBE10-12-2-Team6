@@ -44,9 +44,9 @@ public class VoteUser extends BaseEntity {
     //생성자
     //빌드 사용
     @Builder
-    private VoteUser(Vote vote, VoteItem VoteItem, TripMember TripMember) {
+    private VoteUser(Vote vote, VoteItem voteItem, TripMember tripMember) {
         this.vote = vote;
-        this.voteItem = VoteItem;
-        this.tripMember = TripMember;
+        this.voteItem = voteItem;
+        this.tripMember = tripMember;
     }
 }
