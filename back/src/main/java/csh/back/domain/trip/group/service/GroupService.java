@@ -22,7 +22,7 @@ public class GroupService {
 	// 모임방 조회
 	@Transactional(readOnly = true)
 	public List<GroupResponseDto> getGroups(Long ownerId) {
-		List<TripGroup> tripGroups = groupRepository.findAllByOwnerId(ownerId);
+		List<TripGroup> tripGroups = groupRepository.findAllByOwnerIdOrderByStartDateDesc(ownerId);
 		return tripGroups
 				.stream()
 				.map(GroupResponseDto::from)

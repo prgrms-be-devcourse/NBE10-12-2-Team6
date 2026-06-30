@@ -19,6 +19,7 @@ public class GroupV1Controller {
 	private final GroupService groupService;
 	private final MemberRepository memberRepository;
 
+	//모임방 조회
 	@GetMapping()
 	public ResponseData<List<GroupResponseDto>> getAllGroups(
 			@RequestParam Long ownerId //FIXME 나중에 @AuthenticationPrincipal 수정예정
@@ -28,6 +29,7 @@ public class GroupV1Controller {
 		return new ResponseData<>(200, groupService.getGroups(ownerId));
 	}
 
+	//모임방 생성
 	@PostMapping()
 	public ResponseData<GroupResponseDto> saveGroup(
 			@RequestParam Long ownerId, //FIXME 나중에 @AuthenticationPrincipal 수정예정
