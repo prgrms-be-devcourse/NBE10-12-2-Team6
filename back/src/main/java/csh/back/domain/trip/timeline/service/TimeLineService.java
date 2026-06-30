@@ -1,7 +1,7 @@
 package csh.back.domain.trip.timeline.service;
 
 import csh.back.domain.trip.group.entity.TripGroup;
-import csh.back.domain.trip.group.repository.GroupRepository;
+import csh.back.domain.trip.group.repository.TripGroupRepository;
 import csh.back.domain.trip.member.repository.TripMemberRepository;
 import csh.back.domain.trip.timeline.dto.request.TimeLineCreateRequest;
 import csh.back.domain.trip.timeline.dto.request.TimeLineUpdateRequest;
@@ -21,7 +21,7 @@ public class TimeLineService {
 
     //DB 접근을 위한 Repository를 가져옴
     private final TimeLineRepository timeLineRepository;
-    private final GroupRepository groupRepository;
+    private final TripGroupRepository tripGroupRepository;
     private final TripMemberRepository tripMemberRepository;
 
     public TimeLineResponse createTimeLine(Long tripId, Long memberId, TimeLineCreateRequest request) {
@@ -29,7 +29,7 @@ public class TimeLineService {
         validateTripAdmin(tripId, memberId);
 
         //tripId로 여행 모임 조회
-        TripGroup tripGroup = groupRepository.findById(tripId)
+        TripGroup tripGroup = tripGroupRepository.findById(tripId)
                 .orElseThrow(() -> new IllegalArgumentException("여행 모임을 찾을 수 없습니다."));
 
         //타임라인 구간 생성
