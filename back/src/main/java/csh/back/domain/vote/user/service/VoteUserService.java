@@ -30,7 +30,7 @@ public class VoteUserService {
 
         VoteUser voteUser = VoteUser.builder()
                 .vote(voteItem.getVote())
-                .VoteItem(voteItem)
+                .voteItem(voteItem)
 //                .TripMember(tripMember)
                 .build();
         VoteUser saved = voteUserRepository.save(voteUser);
