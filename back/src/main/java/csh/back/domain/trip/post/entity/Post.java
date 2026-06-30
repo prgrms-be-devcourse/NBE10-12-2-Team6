@@ -36,15 +36,34 @@ public class Post extends BaseEntity {
     //contentUrl
     //이미지 불러오기
     private String contentUrl;
+    //포스트 글 내용(임시)
+    @Column(length = 1000)
+    private String content;
+    //포스트에 포함 될 위치값
+    private String location;
 
 
     //생성자
     //빌드 사용
     @Builder
-    private Post(TripMember author, TimeLine timeLine, Boolean isImg, String contentUrl) {
+    private Post(
+            TripMember author,
+            TimeLine timeLine,
+            Boolean isImg,
+            String content,
+            String location,
+            String contentUrl
+    ) {
         this.author = author;
         this.timeLine = timeLine;
         this.isImg = isImg;
+        this.content = content;
+        this.location = location;
         this.contentUrl = contentUrl;
+    }
+    //업데이트 함수
+    public void update(String content, String location) {
+        this.content = content;
+        this.location = location;
     }
 }
