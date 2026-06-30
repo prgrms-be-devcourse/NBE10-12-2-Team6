@@ -25,29 +25,30 @@ public class PlaceService {
                 .toList();
     }
 
-}
+
 
 //    private final TripGroupRepository tripGroupRepository;
 
-    @Transactional
-    public PlaceResponseDto.SaveResponse savePlace(Long tripId,
-                                                   String name,
-                                                   String theme,
-                                                   String address,
-                                                   String kakaoPlaceId,
-                                                   String kakaoUrl) {
+@Transactional
+public PlaceResponseDto.SaveResponse savePlace(Long tripId,
+                                               String name,
+                                               String theme,
+                                               String address,
+                                               String kakaoPlaceId,
+                                               String kakaoUrl) {
 //        TripGroup tripGroup = tripGroupRepository.findById(tripId).orElseThrow(RuntimeException::new);
-        TripPlace place = TripPlace
-                .builder()
+    TripPlace place = TripPlace
+            .builder()
 //                .tripGroup(tripGroup)
-                .name(name)
-                .theme(theme)
-                .address(address)
-                .kakaoPlaceId(kakaoPlaceId)
-                .kakaoMapUrl(kakaoUrl)
-                .build();
-        TripPlace saveResult = placeRepository.save(place);
-        PlaceResponseDto.SaveResponse response = PlaceResponseDto.SaveResponse.from(saveResult);
-        return response;
+            .name(name)
+            .theme(theme)
+            .address(address)
+            .kakaoPlaceId(kakaoPlaceId)
+            .kakaoMapUrl(kakaoUrl)
+            .build();
+    TripPlace saveResult = placeRepository.save(place);
+    PlaceResponseDto.SaveResponse response = PlaceResponseDto.SaveResponse.from(saveResult);
+    return response;
+
     }
 }
