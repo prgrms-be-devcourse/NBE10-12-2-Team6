@@ -21,7 +21,7 @@ public class MemberController {
     // 회원가입 요청 처리
     @PostMapping("/signup")
     public ResponseData<MemberResponseDto> signUp(
-            @RequestBody @Valid MemberRequestDto request) {
-        return new ResponseData<>(201, "회원가입 성공", memberService.signUp(request.email(), request.password(), request.name()));
+            @RequestBody @Valid MemberRequestDto request) { //이거 Base entity에서 메세지 빼놓은 규격인데 넣어놔서 오류뜨는거같아요~
+        return new ResponseData<>(201, memberService.signUp(request.email(), request.password(), request.name()));
     }
 }
