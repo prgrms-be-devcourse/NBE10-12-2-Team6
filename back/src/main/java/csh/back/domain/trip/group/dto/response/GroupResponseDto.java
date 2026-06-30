@@ -11,6 +11,7 @@ public record GroupResponseDto (
 		Long ownerId,
 		String region,
 		String joinUrl,
+		int nights,
 		LocalDate startDate,
 		LocalDate endDate
 ){
@@ -21,6 +22,7 @@ public record GroupResponseDto (
 				tripGroup.getOwner().getId(),
 				tripGroup.getRegion(),
 				tripGroup.getJoinUrl(),
+				tripGroup.getNights(),
 				tripGroup.getStartDate(),
 				tripGroup.getEndDate()
 		);
