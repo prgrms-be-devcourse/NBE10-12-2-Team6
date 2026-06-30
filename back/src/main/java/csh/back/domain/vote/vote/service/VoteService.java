@@ -44,7 +44,7 @@ public class VoteService {
     }
 
     public List<VoteFindUserResponse> findUserVoteThisPlace(Long voteId, Long placeId) {
-        VoteItem voteItem = voteItemRepository.findByVoteIdAndPlaceId(voteId, placeId).orElseThrow(RuntimeException::new);
+        VoteItem voteItem = voteItemRepository.findByVoteIdAndTripPlaceId(voteId, placeId).orElseThrow(RuntimeException::new);
         List<VoteUser> voteUsers = voteUserRepository.findByVoteItemId(voteItem.getId());
         List<VoteFindUserResponse> responses = voteUsers.stream().map(VoteFindUserResponse::from).toList();
         return responses;
