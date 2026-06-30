@@ -15,4 +15,19 @@ public class PlaceResponseDto {
             );
         }
     }
+
+    public record SaveResponse(Long id,
+                               String name,
+                               String category,
+                               String address
+    ) {
+        public static SaveResponse from(TripPlace tripPlace) {
+            return new SaveResponse(
+                    tripPlace.getId(),
+                    tripPlace.getName(),
+                    tripPlace.getTheme(),
+                    tripPlace.getAddress()
+            );
+        }
+    }
 }
