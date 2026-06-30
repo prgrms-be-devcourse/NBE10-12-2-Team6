@@ -1,13 +1,9 @@
 package csh.back.domain.vote.user.service;
 
-import csh.back.domain.trip.member.entity.TripMember;
-import csh.back.domain.trip.member.repository.TripMemberRepository;
 import csh.back.domain.vote.item.entity.VoteItem;
-import csh.back.domain.vote.item.repository.VoteItemRepository;
 import csh.back.domain.vote.user.dto.response.VoteUserSaveResponseDto;
 import csh.back.domain.vote.user.entity.VoteUser;
 import csh.back.domain.vote.user.repository.VoteUserRepository;
-import csh.back.domain.vote.vote.repository.VoteRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
