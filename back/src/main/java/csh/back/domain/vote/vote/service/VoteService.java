@@ -8,8 +8,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -19,15 +20,24 @@ public class VoteService {
     private final VoteItemRepository voteItemRepository;
 
     public List<VoteFindResponse> findVoteItemAndCount(Long voteId) {
-        List<VoteFindResponse> responseList = new ArrayList<>();
-        List<VoteItem> voteItemList = voteItemRepository.findByVoteId(voteId);
+        //투표된 장소 목록을 조회해 옴
+        List<VoteItem> voteItemList = voteItemRepository.findByVoteIdWithTripPlace(voteId);
 
-        for(VoteItem voteItem : voteItemList) {
-            Long voteCount = voteUserRepository.countByVoteItemId(voteItem.getId());
-            String place = voteItem.getTripPlace().getName();
-            responseList.add(VoteFindResponse.from(place, voteCount));
-        }
+        //각 장소에 몇포가 투표 되었는지 카운팅
+        Map<Long, Long> countMap = voteUserRepository.countGroupByVoteId(voteId)
+                .stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> (Long) row[1]
+                ));
 
-        return responseList;
+        //장소의 아이디를 키로 하여 위의 맵에서 횟수를 매핑하여 반환
+        return voteItemList.stream()
+                .map(vi -> VoteFindResponse.from(
+                        vi.getTripPlace().getName(),
+                        countMap.getOrDefault(vi.getId(), 0L)
+                ))
+                .toList();
     }
+
 }

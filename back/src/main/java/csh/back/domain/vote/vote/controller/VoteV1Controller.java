@@ -12,7 +12,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @RequestMapping("/votes")
 public class VoteV1Controller {
-    public final VoteService voteService;
+    private final VoteService voteService;
 
     @GetMapping("/{voteId}")
     public ResponseData<List<VoteFindResponse>> findVoteItemAndCount(@PathVariable Long voteId) {
