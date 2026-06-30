@@ -1,7 +1,9 @@
 package csh.back.domain.member.controller;
 
-import csh.back.domain.member.dto.MemberRequestDto;
-import csh.back.domain.member.dto.MemberResponseDto;
+import csh.back.domain.member.dto.request.LoginRequestDto;
+import csh.back.domain.member.dto.request.MemberRequestDto;
+import csh.back.domain.member.dto.response.LoginResponseDto;
+import csh.back.domain.member.dto.response.MemberResponseDto;
 import csh.back.domain.member.service.MemberService;
 import csh.back.global.dto.ResponseData;
 import jakarta.validation.Valid;
@@ -21,7 +23,14 @@ public class MemberController {
     // 회원가입 요청 처리
     @PostMapping("/signup")
     public ResponseData<MemberResponseDto> signUp(
-            @RequestBody @Valid MemberRequestDto request) { //이거 Base entity에서 메세지 빼놓은 규격인데 넣어놔서 오류뜨는거같아요~
+            @RequestBody @Valid MemberRequestDto request) {
         return new ResponseData<>(201, memberService.signUp(request.email(), request.password(), request.name()));
+    }
+
+    // 로그인 요청 처리
+    @PostMapping("/login")
+    public ResponseData<LoginResponseDto> login(
+            @RequestBody @Valid LoginRequestDto request) {
+        return new ResponseData<>(200, memberService.login(request.email(), request.password()));
     }
 }
