@@ -13,7 +13,12 @@ import lombok.NoArgsConstructor;
 //멤버 엔티티
 @Getter
 @Entity
-@Table(name = "trip_place_vote_items")
+@Table(name = "trip_place_vote_items",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_vote_item",
+                columnNames = {"vote_id", "place_id"}  // vote_id 기준
+        )
+)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class VoteItem extends BaseEntity {
 

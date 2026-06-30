@@ -1,14 +1,10 @@
 package csh.back.domain.vote.item.service;
 
-import csh.back.domain.trip.member.entity.TripMember;
-import csh.back.domain.trip.member.repository.TripMemberRepository;
 import csh.back.domain.trip.place.entity.TripPlace;
 import csh.back.domain.trip.place.repository.PlaceRepository;
-import csh.back.domain.vote.item.dto.response.VoteItemSaveResponseDto;
 import csh.back.domain.vote.item.entity.VoteItem;
 import csh.back.domain.vote.item.repository.VoteItemRepository;
 import csh.back.domain.vote.user.dto.response.VoteUserSaveResponseDto;
-import csh.back.domain.vote.user.entity.VoteUser;
 import csh.back.domain.vote.user.service.VoteUserService;
 import csh.back.domain.vote.vote.entity.Vote;
 import csh.back.domain.vote.vote.repository.VoteRepository;
@@ -27,14 +23,19 @@ public class VoteItemService {
 
     @Transactional
     public VoteUserSaveResponseDto saveVoteItem(Long voteId, Long placeId) {
-        Vote vote = voteRepository.findById(voteId).orElseThrow(RuntimeException::new);
+        Vote vote = voteRepository.getReferenceById(voteId);
         TripPlace tripPlace = placeRepository.findById(placeId).orElseThrow(RuntimeException::new);
-        VoteItem voteItem = VoteItem
-                .builder()
-                .tripPlace(tripPlace)
-                .vote(vote)
-                .build();
-        VoteItem saved = voteItemRepository.save(voteItem);
-        return voteUserService.saveVoteUser(vote, saved);
+        VoteItem voteItem = voteItemRepository
+                .findByTripPlace_Id(placeId).orElse(null);
+        if (voteItem == null) {
+            VoteItem
+                    .builder()
+                    .tripPlace(tripPlace)
+                    .vote(vote)
+                    .build();
+            VoteItem saved = voteItemRepository.save(voteItem);
+            return voteUserService.saveVoteUser(saved);
+        }
+        return voteUserService.saveVoteUser(voteItem);
     }
 }

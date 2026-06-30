@@ -7,7 +7,6 @@ import csh.back.domain.vote.item.repository.VoteItemRepository;
 import csh.back.domain.vote.user.dto.response.VoteUserSaveResponseDto;
 import csh.back.domain.vote.user.entity.VoteUser;
 import csh.back.domain.vote.user.repository.VoteUserRepository;
-import csh.back.domain.vote.vote.entity.Vote;
 import csh.back.domain.vote.vote.repository.VoteRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,17 +17,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class VoteUserService {
 
-    private final VoteRepository voteRepository;
     private final VoteUserRepository voteUserRepository;
-    private final VoteItemRepository voteItemRepository;
     private final TripMemberRepository tripMemberRepository;
 
     @Transactional
-    public VoteUserSaveResponseDto saveVoteUser(Vote vote, VoteItem voteItem) {
+    public VoteUserSaveResponseDto saveVoteUser(VoteItem voteItem) {
         TripMember tripMember = tripMemberRepository.findById(1L).orElseThrow(RuntimeException::new);
 
         VoteUser voteUser = VoteUser.builder()
-                .vote(vote)
+                .vote(voteItem.getVote())
                 .VoteItem(voteItem)
                 .TripMember(tripMember)
                 .build();
