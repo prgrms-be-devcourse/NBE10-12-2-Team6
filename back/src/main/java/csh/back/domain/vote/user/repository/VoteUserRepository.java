@@ -10,5 +10,7 @@ public interface VoteUserRepository extends JpaRepository<VoteUser, Long> {
     @Query("SELECT vi.id, COUNT(vu) FROM VoteUser vu JOIN vu.voteItem vi WHERE vi.vote.id = :voteId GROUP BY vi.id")
     List<Object[]> countGroupByVoteId(Long voteId);
 
+    List<VoteUser> findByVoteItemId(Long voteItemId);
+
 
 }

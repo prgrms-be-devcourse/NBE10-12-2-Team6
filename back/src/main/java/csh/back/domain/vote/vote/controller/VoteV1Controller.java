@@ -1,6 +1,7 @@
 package csh.back.domain.vote.vote.controller;
 
 import csh.back.domain.vote.vote.dto.response.VoteFindResponse;
+import csh.back.domain.vote.vote.dto.response.VoteFindUserResponse;
 import csh.back.domain.vote.vote.service.VoteService;
 import csh.back.global.dto.ResponseData;
 import lombok.RequiredArgsConstructor;
@@ -20,5 +21,10 @@ public class VoteV1Controller {
                 200,
                 voteService.findVoteItemAndCount(voteId)
         );
+    }
+
+    @GetMapping("/{voteId}/places/{placeId}")
+    public ResponseData<List<VoteFindUserResponse>> findVoteUserThisPlace(@PathVariable Long voteId, @PathVariable Long placeId) {
+        return new ResponseData<>(200, voteService.findUserVoteThisPlace(voteId, placeId));
     }
 }
