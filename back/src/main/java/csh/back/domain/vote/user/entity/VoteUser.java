@@ -27,26 +27,26 @@ public class VoteUser extends BaseEntity {
     //Join Vote Table
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vote_id",  nullable = false)
-    private Vote Vote;
+    private Vote vote;
 
     //FK
     //Join VoteItem Table
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vote_item_id",  nullable = false)
-    private VoteItem VoteItem;
+    private VoteItem voteItem;
 
     //FK
     //Join TripMember Table
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id",  nullable = false)
-    private TripMember TripMember;
+    private TripMember tripMember;
 
     //생성자
     //빌드 사용
     @Builder
     private VoteUser(Vote vote, VoteItem VoteItem, TripMember TripMember) {
-        this.Vote = vote;
-        this.VoteItem = VoteItem;
-        this.TripMember = TripMember;
+        this.vote = vote;
+        this.voteItem = VoteItem;
+        this.tripMember = TripMember;
     }
 }
