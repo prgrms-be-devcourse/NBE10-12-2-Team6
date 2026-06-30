@@ -1,11 +1,11 @@
 package csh.back.domain.trip.group.service;
 
 import csh.back.domain.member.entity.Member;
-import csh.back.domain.trip.group.dto.request.GroupRequestDto;
-import csh.back.domain.trip.group.dto.response.GroupResponseDto;
+import csh.back.domain.trip.group.dto.request.TripGroupRequestDto;
+import csh.back.domain.trip.group.dto.response.TripGroupResponseDto;
 import csh.back.domain.trip.group.entity.TripGroup;
-import csh.back.domain.trip.group.exception.GroupNotFoundException;
-import csh.back.domain.trip.group.repository.GroupRepository;
+import csh.back.domain.trip.group.exception.NotFoundException;
+import csh.back.domain.trip.group.repository.TripGroupRepository;
 import csh.back.domain.trip.member.entity.TripMember;
 import csh.back.domain.trip.member.repository.TripMemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,24 +18,24 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class GroupService {
+public class TripGroupService {
 
-	private final GroupRepository groupRepository;
+	private final TripGroupRepository tripGroupRepository;
 	private final TripMemberRepository tripMemberRepository;
 
 	// 모임방 조회
 	@Transactional(readOnly = true)
-	public List<GroupResponseDto> getGroups(Long ownerId) {
-		List<TripGroup> tripGroups = groupRepository.findAllByOwnerIdOrderByStartDateDesc(ownerId);
+	public List<TripGroupResponseDto> getGroups(Long ownerId) {
+		List<TripGroup> tripGroups = tripGroupRepository.findAllByOwnerIdOrderByStartDateDesc(ownerId);
 		return tripGroups
 				.stream()
-				.map(GroupResponseDto::from)
+				.map(TripGroupResponseDto::from)
 				.toList();
 	}
 
 	// 모임방 생성
 	@Transactional
-	public GroupResponseDto writeGroup(GroupRequestDto request, Member owner) {
+	public TripGroupResponseDto writeGroup(TripGroupRequestDto request, Member owner) {
 		LocalDate startDate = LocalDate.parse(request.startDate());
 		LocalDate endDate = LocalDate.parse(request.endDate());
 		int nights = (int) ChronoUnit.DAYS.between(startDate, endDate);
@@ -49,7 +49,7 @@ public class GroupService {
 				.startDate(startDate)
 				.endDate(endDate)
 				.build();
-		TripGroup savedGroup = groupRepository.save(group);
+		TripGroup savedGroup = tripGroupRepository.save(group);
 
 		tripMemberRepository.save(
 				TripMember.builder()
@@ -59,17 +59,17 @@ public class GroupService {
 						.build()
 		);
 
-		return GroupResponseDto.from(savedGroup);
+		return TripGroupResponseDto.from(savedGroup);
 	}
 
 	//모임 상세 조회
 	@Transactional(readOnly = true)
-	public GroupResponseDto getGroupDetail(Long groupId, Long ownerId) {
+	public TripGroupResponseDto getGroupDetail(Long groupId, Long ownerId) {
 		//TODO 멤버가 아닐경우에 대해서 조회 안된다는 로직 필요
 
-		TripGroup group = groupRepository.findById(groupId)
-				.orElseThrow(() -> new GroupNotFoundException("존재하지 않는 모임입니다."));
+		TripGroup group = tripGroupRepository.findById(groupId)
+				.orElseThrow(() -> new NotFoundException("존재하지 않는 모임입니다."));
 
-		return GroupResponseDto.from(group);
+		return TripGroupResponseDto.from(group);
 	}
 }

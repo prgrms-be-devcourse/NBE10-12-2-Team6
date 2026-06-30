@@ -1,8 +1,7 @@
 package csh.back.global.exception;
 
-import csh.back.domain.trip.group.exception.GroupNotFoundException;
+import csh.back.domain.trip.group.exception.NotFoundException;
 import csh.back.global.dto.ErrorResponse;
-import csh.back.global.dto.ResponseData;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,9 +17,9 @@ public class GlobalExeptionHandler {
 //        return ResponseEntity.status(HttpStatus.NOT_FOUND)
 //                .body(new ResponseData<>("404-1", e.getMessage(), null));
 //    }
-	@ExceptionHandler(GroupNotFoundException.class)
+	@ExceptionHandler(NotFoundException.class)
 	public ResponseEntity<ErrorResponse> handleGroupNotFound(
-			GroupNotFoundException e
+			NotFoundException e
 	) {
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
 				.body(new ErrorResponse(404, e.getMessage()));  // 따옴표 제거 + new 추가
