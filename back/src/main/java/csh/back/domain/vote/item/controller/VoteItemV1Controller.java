@@ -1,10 +1,11 @@
 package csh.back.domain.vote.item.controller;
 
+import csh.back.domain.vote.item.dto.request.VoteItemSaveRequestDto;
+import csh.back.domain.vote.item.dto.response.VoteItemSaveResponseDto;
 import csh.back.domain.vote.item.service.VoteItemService;
+import csh.back.global.dto.ResponseData;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/")
@@ -12,8 +13,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class VoteItemV1Controller {
     private final VoteItemService voteItemService;
 
-    @PostMapping("/tripId/votes")
-    public void saveVote() {
-        return;
+    @PostMapping("/votes")
+    public ResponseData<VoteItemSaveResponseDto> saveVote(@RequestBody VoteItemSaveRequestDto request) {
+        return new ResponseData<>(
+                201,
+                voteItemService.saveVoteItem(request.voteId(), request.placeId())
+        );
     }
 }
