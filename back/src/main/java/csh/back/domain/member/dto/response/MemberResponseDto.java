@@ -1,4 +1,4 @@
-package csh.back.domain.member.dto;
+package csh.back.domain.member.dto.response;
 
 import csh.back.domain.member.entity.Member;
 
