@@ -35,7 +35,7 @@ public class GroupV1Controller {
 	) {
 		Member owner = memberRepository.findById(ownerId)
 				.orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저"));
-		return new ResponseData<>(201, groupService.writeGroup(request, owner););
+		return new ResponseData<>(201, groupService.writeGroup(request, owner));
 	}
 
 //	@GetMapping("/{groupId}")
