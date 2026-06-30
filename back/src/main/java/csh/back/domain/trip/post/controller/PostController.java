@@ -1,5 +1,6 @@
 package csh.back.domain.trip.post.controller;
 
+import csh.back.domain.trip.post.dto.request.CreatePostRequest;
 import csh.back.domain.trip.post.dto.request.UpdatePostRequest;
 import csh.back.domain.trip.post.dto.response.PostResponse;
 import csh.back.domain.trip.post.service.PostService;
@@ -34,4 +35,19 @@ public class PostController {
     public void delete(@PathVariable Long postId) {
         postService.delete(postId);
     }
+    // 게시글 생성
+    @PostMapping
+    public PostResponse create(
+            @RequestParam Long tripMemberId,
+            @RequestParam Long timelineId,
+            @RequestBody CreatePostRequest request
+    ) {
+        //일단 작성 권한 및 작성자 ID를 통한 체크를 진행
+        return postService.create(
+                tripMemberId,
+                timelineId,
+                request
+        );
+    }
+
 }
