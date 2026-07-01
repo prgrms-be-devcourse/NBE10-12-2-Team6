@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useStore, TripDay, PlanCandidate } from "../../../../../../store";
 import { timeText } from "../../../../../../lib";
 
@@ -50,11 +50,23 @@ function TieRandomSheet({
 export default function BlockDetailPage() {
   const router = useRouter();
   const { id, dayNumber, blockId } = useParams<{ id: string; dayNumber: string; blockId: string }>();
+  const searchParams = useSearchParams();
+  const goBack = () => {
+    if (searchParams.get("from") === "vote") router.push(`/trip/${id}?tab=vote`);
+    else router.back();
+  };
   const { trips, updateTrip, currentUser } = useStore();
+
+  useEffect(() => {
+    if (!id) return;
+    console.log(`[후보 목록] GET /api/v1/trips/${id}/wish-places`);
+  }, [id]);
 
   const [showTie, setShowTie] = useState(false);
   const [tieCandidates, setTieCandidates] = useState<PlanCandidate[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [pendingVote, setPendingVote] = useState<string | null>(null);
+  const [showHostMenu, setShowHostMenu] = useState(false);
 
   const trip = trips.find(t => t.id === id);
   const dayNum = parseInt(dayNumber);
@@ -87,11 +99,20 @@ export default function BlockDetailPage() {
     setDay({ ...day, votedUserIDsByBlockAndCandidate: { ...day.votedUserIDsByBlockAndCandidate, [blockId]: blockVotes } });
   };
 
-  const randomPick = () => {
+  const randomVote = () => {
+    if (trip.candidates.length === 0) return;
+    const picked = trip.candidates[Math.floor(Math.random() * trip.candidates.length)];
+    vote(picked.id);
+  };
+
+  const randomConfirm = () => {
     if (trip.candidates.length === 0) return;
     const picked = trip.candidates[Math.floor(Math.random() * trip.candidates.length)];
     setDay({ ...day, selectedCandidateByBlock: { ...day.selectedCandidateByBlock, [blockId]: picked.id } });
+    setShowHostMenu(false);
   };
+
+  const isHost = currentUser.id === trip.members[0]?.id;
 
   const decideByVote = () => {
     if (trip.candidates.length === 0) return;
@@ -103,6 +124,7 @@ export default function BlockDetailPage() {
       setTieCandidates(winners);
       setShowTie(true);
     }
+    setShowHostMenu(false);
   };
 
   const pickFromTie = (candidate: PlanCandidate) => {
@@ -112,13 +134,48 @@ export default function BlockDetailPage() {
   return (
     <div className="flex flex-col h-screen">
       <div className="flex items-center gap-3 px-4 pt-12 pb-2">
-        <button onClick={() => router.back()} className="text-blue-500 p-1 -ml-1">
+        <button onClick={goBack} className="text-blue-500 p-1 -ml-1">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
         <h1 className="font-semibold text-base flex-1 text-center">{block.order}번째 구간</h1>
-        <div className="w-8" />
+        {isHost ? (
+          <div className="relative">
+            <button
+              onClick={() => setShowHostMenu(v => !v)}
+              className="text-xs font-bold px-2.5 py-1.5 rounded-full"
+              style={{ background: showHostMenu ? "#fef08a" : "#fef9c3", color: "#92400e" }}
+            >
+              방장
+            </button>
+            {showHostMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowHostMenu(false)} />
+                <div className="absolute right-0 top-9 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 flex flex-col gap-1 w-36">
+                  <button
+                    onClick={randomConfirm}
+                    disabled={trip.candidates.length === 0}
+                    className="w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-left disabled:opacity-40"
+                    style={{ background: "#f3e8ff", color: "#9333ea" }}
+                  >
+                    🔀 랜덤 확정
+                  </button>
+                  <button
+                    onClick={decideByVote}
+                    disabled={trip.candidates.length === 0}
+                    className="w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-left disabled:opacity-40"
+                    style={{ background: "#dcfce7", color: "#16a34a" }}
+                  >
+                    📊 투표 확정
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="w-8" />
+        )}
       </div>
 
       <div className="flex-1 overflow-y-scroll px-4 pt-2 pb-4 flex flex-col gap-5">
@@ -203,11 +260,11 @@ export default function BlockDetailPage() {
                 return (
                   <div
                     key={c.id}
-                    onClick={() => vote(c.id)}
+                    onClick={() => setPendingVote(c.id)}
                     className="p-4 rounded-2xl border cursor-pointer active:scale-[0.98] transition-transform"
                     style={{
-                      background: isSelected ? "#dcfce7" : voted ? "#eff6ff" : "white",
-                      borderColor: isSelected ? "#4ade80" : voted ? "#93c5fd" : "#e5e7eb",
+                      background: isSelected ? "#dcfce7" : pendingVote === c.id ? "#fefce8" : voted ? "#eff6ff" : "white",
+                      borderColor: isSelected ? "#4ade80" : pendingVote === c.id ? "#facc15" : voted ? "#93c5fd" : "#e5e7eb",
                     }}
                   >
                     <div className="flex items-start gap-2 mb-2">
@@ -240,22 +297,22 @@ export default function BlockDetailPage() {
       </div>
 
       {/* 하단 고정 버튼 */}
-      <div className="px-4 py-4 border-t border-gray-100 flex flex-col gap-2 bg-white">
+      <div className="px-4 py-4 border-t border-gray-100 flex gap-2 bg-white">
         <button
-          onClick={randomPick}
+          onClick={randomVote}
           disabled={trip.candidates.length === 0}
-          className="w-full py-4 rounded-2xl font-semibold disabled:opacity-40"
+          className="flex-1 py-4 rounded-2xl font-semibold disabled:opacity-40"
           style={{ background: "#f3e8ff", color: "#9333ea" }}
         >
-          🔀 전체 후보 중 랜덤 뽑기
+          🔀 랜덤 투표
         </button>
         <button
-          onClick={decideByVote}
-          disabled={trip.candidates.length === 0}
-          className="w-full py-4 rounded-2xl font-semibold disabled:opacity-40"
+          onClick={() => { if (pendingVote) { vote(pendingVote); setPendingVote(null); } }}
+          disabled={!pendingVote}
+          className="flex-1 py-4 rounded-2xl font-semibold disabled:opacity-40"
           style={{ background: "#dbeafe", color: "#2563eb" }}
         >
-          📊 이 구간 투표로 확정
+          투표하기
         </button>
       </div>
 

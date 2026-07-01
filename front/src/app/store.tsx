@@ -50,7 +50,7 @@ export interface TripDay {
 
 export interface Trip {
   id: string;
-  title: string;
+  name: string;
   region: string;
   startDate: string;
   nights: number;
@@ -62,7 +62,7 @@ export interface Trip {
 }
 
 interface CreateTripData {
-  title: string;
+  name: string;
   region: string;
   startDate: string;
   nights: number;
@@ -72,7 +72,7 @@ interface StoreCtx {
   isLoggedIn: boolean;
   currentUser: User;
   trips: Trip[];
-  login: () => void;
+  login: (name?: string, id?: number) => void;
   signup: (nickname: string) => void;
   createTrip: (data: CreateTripData) => string;
   updateTrip: (trip: Trip) => void;
@@ -127,10 +127,13 @@ const Ctx = createContext<StoreCtx | null>(null);
 
 export function TripLogProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User>({ id: 0, name: "루트", color: "blue" });
+  const [currentUser, setCurrentUser] = useState<User>({ id: 0, name: "조모군", color: "blue" });
   const [trips, setTrips] = useState<Trip[]>([]);
 
-  const login = () => setIsLoggedIn(true);
+  const login = (name?: string, id?: number) => {
+    setCurrentUser(u => ({ ...u, id: id ?? 101, name: name ?? u.name }));
+    setIsLoggedIn(true);
+  };
 
   const signup = (nickname: string) => {
     if (nickname.trim()) setCurrentUser(u => ({ ...u, name: nickname.trim() }));
@@ -146,7 +149,7 @@ export function TripLogProvider({ children }: { children: ReactNode }) {
       ...t,
       {
         id,
-        title: data.title,
+        name: data.name,
         region: data.region,
         startDate: data.startDate,
         nights: data.nights,

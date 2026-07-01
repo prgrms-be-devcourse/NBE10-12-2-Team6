@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useStore, Trip, TripDay, ActivityBlock, PlanTheme, uid } from "../../../../store";
@@ -27,7 +27,6 @@ function BlockCard({
   onStartChange: (v: number) => void;
   onEndChange: (v: number) => void;
 }) {
-  const isInvalid = block.endMinute <= block.startMinute;
   const duration = Math.max(0, block.endMinute - block.startMinute);
   const selected = trip.candidates.find(c => c.id === day.selectedCandidateByBlock[block.id]);
 
@@ -36,7 +35,7 @@ function BlockCard({
       <div className="flex items-start justify-between">
         <div>
           <p className="font-semibold">{block.order}번째 시간 구간</p>
-          <p className={`text-xs mt-0.5 ${isInvalid ? "text-red-500" : "text-gray-400"}`}>
+          <p className="text-xs mt-0.5 text-gray-400">
             {durationText(duration)}
           </p>
         </div>
@@ -50,7 +49,7 @@ function BlockCard({
             type="time"
             value={toTimeStr(block.startMinute)}
             onChange={e => e.target.value && onStartChange(fromTimeStr(e.target.value))}
-            className="w-full p-2.5 bg-white rounded-xl text-sm font-semibold border border-gray-200 outline-none"
+            className="w-full p-2.5 bg-white rounded-xl text-sm font-semibold border border-gray-200 outline-none time-input"
           />
         </div>
         <span className="text-gray-300 mt-4 font-bold">~</span>
@@ -60,12 +59,11 @@ function BlockCard({
             type="time"
             value={toTimeStr(block.endMinute)}
             onChange={e => e.target.value && onEndChange(fromTimeStr(e.target.value))}
-            className="w-full p-2.5 bg-white rounded-xl text-sm font-semibold border border-gray-200 outline-none"
+            className="w-full p-2.5 bg-white rounded-xl text-sm font-semibold border border-gray-200 outline-none time-input"
           />
         </div>
       </div>
 
-      {isInvalid && <p className="text-xs text-red-500 font-semibold">종료 시간은 시작 시간보다 늦어야 합니다.</p>}
 
       {selected && (
         <div className="p-3 rounded-xl" style={{ background: "#dcfce7" }}>
@@ -90,6 +88,12 @@ export default function DayPlanPage() {
   const dayIdx = trip?.days.findIndex(d => d.dayNumber === dayNum) ?? -1;
 
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
+  const [validationError, setValidationError] = useState("");
+
+  useEffect(() => {
+    if (!id) return;
+    console.log(`[일차 계획] GET /api/v1/trips/${id}/timelines`);
+  }, [id]);
 
   if (!trip || dayIdx < 0) return null;
 
@@ -102,11 +106,7 @@ export default function DayPlanPage() {
   const normalizeOrders = (blocks: ActivityBlock[]): ActivityBlock[] =>
     [...blocks].sort((a, b) => a.startMinute - b.startMinute).map((b, i) => ({ ...b, order: i + 1 }));
 
-  const hasInvalidTimeRange = day.blocks.some(b => b.endMinute <= b.startMinute);
-
-  const canComplete =
-    day.blocks.length > 0 &&
-    !hasInvalidTimeRange;
+  const canComplete = day.blocks.length > 0;
 
   const suggestedNextStart = () => {
     const lastEnd = day.blocks.reduce((max, b) => Math.max(max, b.endMinute), 9 * 60);
@@ -139,6 +139,34 @@ export default function DayPlanPage() {
   };
 
   const completePlan = () => {
+    const hasInvalid = day.blocks.some(b => b.endMinute <= b.startMinute);
+    if (hasInvalid) {
+      setValidationError("종료 시간이 시작 시간보다 늦어야 합니다.");
+      return;
+    }
+    const sorted = [...day.blocks].sort((a, b) => a.startMinute - b.startMinute);
+    const hasOverlap = sorted.some((b, i) => i > 0 && sorted[i - 1].endMinute > b.startMinute);
+    if (hasOverlap) {
+      setValidationError("시간 구간이 서로 겹칩니다. 겹치지 않게 조정해주세요.");
+      return;
+    }
+    setValidationError("");
+    const dateStr = (() => {
+      const d = new Date(trip.startDate);
+      d.setDate(d.getDate() + dayNum - 1);
+      return d.toISOString().split("T")[0];
+    })();
+    const toDateTime = (mins: number) => {
+      const h = String(Math.floor(mins / 60)).padStart(2, "0");
+      const m = String(mins % 60).padStart(2, "0");
+      return `${dateStr}T${h}:${m}:00`;
+    };
+    const payload = sorted.map(block => ({
+      dayNumber: dayNum,
+      startTime: toDateTime(block.startMinute),
+      endTime: toDateTime(block.endMinute),
+    }));
+    console.log(`[시간 범위 설정] POST /api/v1/trips/${id}/timelines`, payload);
     setDay({ ...day, blocks: normalizeOrders(day.blocks), isPlanCompleted: true, isPlanSkipped: false, records: [] });
     router.push(`/trip/${id}`);
   };
@@ -222,16 +250,6 @@ export default function DayPlanPage() {
               </div>
             </div>
 
-            {hasInvalidTimeRange && (
-              <div className="p-3 rounded-xl flex items-start gap-2" style={{ background: "#fff7ed" }}>
-                <span className="shrink-0">⚠️</span>
-                <div>
-                  <p className="text-sm font-semibold">시간 설정을 확인해주세요.</p>
-                  <p className="text-xs text-gray-500">종료 시간은 시작 시간보다 늦어야 합니다.</p>
-                </div>
-              </div>
-            )}
-
             {sortedBlocks.map(block => (
               <BlockCard
                 key={block.id}
@@ -259,6 +277,9 @@ export default function DayPlanPage() {
       {/* 하단 고정 버튼 */}
       {!day.isPlanCompleted && !day.isPlanSkipped && (
         <div className="px-4 py-4 border-t border-gray-100 flex flex-col gap-2 bg-white">
+          {validationError && (
+            <p className="text-sm text-red-500 font-semibold text-center">{validationError}</p>
+          )}
           <button
             onClick={completePlan}
             disabled={!canComplete}
