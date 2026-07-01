@@ -2,7 +2,6 @@ package csh.back.domain.trip.group.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 //스웨거 테스트를 위한 스키마
 @Schema(description = "여행 모임 생성 요청 DTO")

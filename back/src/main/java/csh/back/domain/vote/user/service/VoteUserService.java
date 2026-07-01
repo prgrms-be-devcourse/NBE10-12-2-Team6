@@ -10,8 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Random;
 
-import static org.apache.commons.lang3.RandomUtils.nextLong;
-
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 @Service
