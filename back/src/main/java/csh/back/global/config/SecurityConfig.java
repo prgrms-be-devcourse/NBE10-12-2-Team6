@@ -26,7 +26,7 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/h2-console/**"
                         ).permitAll()
-                        .requestMatchers("/api/v1/auth/**", "/trips/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**", "/trips/**","/posts","/posts/**").permitAll()
                         .anyRequest().authenticated()
                 );
 
