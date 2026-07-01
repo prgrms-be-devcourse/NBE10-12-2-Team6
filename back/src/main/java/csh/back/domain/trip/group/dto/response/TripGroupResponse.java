@@ -1,11 +1,10 @@
 package csh.back.domain.trip.group.dto.response;
 
-import csh.back.domain.member.entity.Member;
 import csh.back.domain.trip.group.entity.TripGroup;
 
 import java.time.LocalDate;
 
-public record GroupResponseDto (
+public record TripGroupResponse(
 		Long id,
 		String name,
 		Long ownerId,
@@ -15,8 +14,8 @@ public record GroupResponseDto (
 		LocalDate startDate,
 		LocalDate endDate
 ){
-	public static GroupResponseDto from(TripGroup tripGroup) {
-		return new GroupResponseDto(
+	public static TripGroupResponse from(TripGroup tripGroup) {
+		return new TripGroupResponse(
 				tripGroup.getId(),
 				tripGroup.getName(),
 				tripGroup.getOwner().getId(),

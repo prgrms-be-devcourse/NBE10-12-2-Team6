@@ -5,6 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
-public interface GroupRepository extends JpaRepository<TripGroup, Long> {
-	List<TripGroup> findAllByOwnerId(Long ownerId);
+public interface TripGroupRepository extends JpaRepository<TripGroup, Long> {
+	List<TripGroup> findAllByOwnerIdOrderByStartDateDesc(Long ownerId);
 }

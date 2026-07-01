@@ -1,6 +1,7 @@
 package csh.back.domain.trip.group.entity;
 
 import csh.back.domain.member.entity.Member;
+import csh.back.domain.trip.group.dto.request.TripGroupModifyRequest;
 import csh.back.domain.trip.member.entity.TripMember;
 import csh.back.global.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -57,5 +58,13 @@ public class TripGroup extends BaseEntity {
             this.joinUrl = joinUrl;
             this.startDate = startDate;
             this.endDate = endDate;
+    }
+
+    //name 수정 메서드
+    public void modify(TripGroupModifyRequest request) {
+        if (request.name() != null && !request.name().isBlank()) this.name = request.name();
+        if (request.region() != null && !request.region().isBlank()) this.region = request.region();
+        if (request.startDate() != null && !request.startDate().isBlank()) this.startDate = LocalDate.parse(request.startDate());
+        if (request.endDate() != null && !request.endDate().isBlank()) this.endDate = LocalDate.parse(request.endDate());
     }
 }
