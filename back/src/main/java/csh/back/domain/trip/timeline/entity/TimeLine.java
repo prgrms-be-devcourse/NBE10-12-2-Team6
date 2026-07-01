@@ -88,4 +88,14 @@ public class TimeLine extends BaseEntity {
         this.startTime = startTime;
         this.endTime = endTime;
     }
+
+    //확정 장소 반영 메서드
+    public void updateConfirmedPlace(TripPlace confirmedPlace) {
+        //null 검증
+        if (confirmedPlace == null) {
+            throw new IllegalArgumentException("확정할 장소가 없습니다.");
+        }
+        //null이 아닐 경우 값을 넣음
+        this.confirmedPlace = confirmedPlace;
+    }
 }

@@ -1,5 +1,6 @@
 package csh.back.domain.trip.timeline.controller;
 
+import csh.back.domain.trip.timeline.dto.request.TimeLineConfirmPlaceRequest;
 import csh.back.domain.trip.timeline.dto.request.TimeLineCreateRequest;
 import csh.back.domain.trip.timeline.dto.request.TimeLineUpdateRequest;
 import csh.back.domain.trip.timeline.dto.response.TimeLineResponse;
@@ -32,11 +33,10 @@ public class TimeLineV1Controller {
     public ResponseData<TimeLineResponse> createTimeLine(
             @PathVariable Long tripId,
             @RequestParam Long memberId,
-            @Valid @RequestBody TimeLineCreateRequest request
-    ) {
+            @Valid @RequestBody TimeLineCreateRequest request) {
         //로그인 기능 연동 후 memberId는 인증 정보에서 가져오도록 변경
         TimeLineResponse response = timeLineService.createTimeLine(tripId, memberId, request);
-
+        //ResponseData로 감싸서 201 OK 반환
         return new ResponseData<>(201, response);
     }
 
@@ -50,7 +50,7 @@ public class TimeLineV1Controller {
             @RequestParam int dayNumber) {
         //로그인 기능 연동 후 memberId는 인증 정보에서 가져오도록 변경
         List<TimeLineResponse> response = timeLineService.getTimeLines(tripId, memberId, dayNumber);
-
+        //ResponseData로 감싸서 200 OK 반환
         return new ResponseData<>(200, response);
     }
 
@@ -65,6 +65,22 @@ public class TimeLineV1Controller {
             @Valid @RequestBody TimeLineUpdateRequest request) {
         //로그인 기능 연동 후 memberId는 인증 정보에서 가져오도록 변경
         TimeLineResponse response = timeLineService.updateTimeLine(tripId, timelineId, memberId, request);
+
+        return new ResponseData<>(200, response);
+    }
+
+    //Swagger 문서에 확정 장소 반영 API 설명 표시
+    @Operation(summary = "확정 장소 반영")
+    //특정 여행 모임의 특정 타임라인 시간 구간에 확정 장소를 반영
+    @PatchMapping("/{timelineId}/confirm-place")
+    public ResponseData<TimeLineResponse> confirmTimeLinePlace(
+            @PathVariable Long tripId,
+            @PathVariable Long timelineId,
+            @RequestParam Long memberId,
+            @Valid @RequestBody TimeLineConfirmPlaceRequest request) {
+
+        //확정 장소 반영 서비스 호출
+        TimeLineResponse response = timeLineService.confirmTimeLinePlace(tripId, timelineId, memberId, request);
 
         return new ResponseData<>(200, response);
     }
