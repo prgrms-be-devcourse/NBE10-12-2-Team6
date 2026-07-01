@@ -77,15 +77,6 @@ export function formatDate(dateStr: string): string {
     .format(new Date(dateStr + "T00:00:00"));
 }
 
-export function distributeDurations(totalMinutes: number, count: number): number[] {
-  const safe = Math.max(15, totalMinutes);
-  const base = Math.max(15, Math.floor(safe / count / 15) * 15);
-  const durations = Array(count).fill(base);
-  const remainder = safe - base * count;
-  if (remainder > 0) durations[count - 1] += remainder;
-  return durations;
-}
-
 // ── Layout helpers ────────────────────────────────────────────────────────────
 
 export function PageHeader({
@@ -137,29 +128,3 @@ export function BigActionCard({
   );
 }
 
-export function TimeStepper({
-  label, minutes, onChange,
-}: { label: string; minutes: number; onChange: (v: number) => void }) {
-  return (
-    <div className="flex items-center">
-      <div className="flex-1">
-        <p className="text-sm text-gray-600">{label}</p>
-        <p className="text-lg font-bold">{timeText(minutes)}</p>
-      </div>
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => onChange(Math.max(0, minutes - 30))}
-          className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-lg font-bold active:bg-gray-200"
-        >
-          −
-        </button>
-        <button
-          onClick={() => onChange(Math.min(23 * 60 + 30, minutes + 30))}
-          className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-lg font-bold active:bg-gray-200"
-        >
-          +
-        </button>
-      </div>
-    </div>
-  );
-}
