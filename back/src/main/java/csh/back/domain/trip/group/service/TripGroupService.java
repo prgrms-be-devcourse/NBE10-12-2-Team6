@@ -39,6 +39,11 @@ public class TripGroupService {
 	public TripGroupResponse writeGroup(TripGroupRequest request, Member owner) {
 		LocalDate startDate = LocalDate.parse(request.startDate());
 		LocalDate endDate = LocalDate.parse(request.endDate());
+
+		if (endDate.isBefore(startDate)) {
+			throw new IllegalArgumentException("종료일은 시작일보다 빠를 수 없습니다.");
+		}
+
 		int nights = (int) ChronoUnit.DAYS.between(startDate, endDate);
 		// FIXME joinUrl 생성함수를 넣어서 수정예정-윤선
 		TripGroup group = TripGroup.builder()
@@ -66,7 +71,6 @@ public class TripGroupService {
 	//모임 상세 조회
 	@Transactional(readOnly = true)
 	public TripGroupResponse getGroupDetail(Long groupId, Long ownerId) {
-		//TODO 멤버가 아닐경우에 대해서 조회 안된다는 로직 필요
 		boolean isMember = tripMemberRepository.existsByTripGroupIdAndOwnerId(groupId, ownerId);
 		if (!isMember) {
 			throw new IllegalArgumentException("해당 모임의 멤버가 아닙니다.");
