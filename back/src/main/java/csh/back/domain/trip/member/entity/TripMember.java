@@ -20,7 +20,7 @@ public class TripMember extends BaseEntity {
     //FK
     //join member Table
     @JoinColumn(name ="member_id", nullable = false)
-    private Member owner;
+    private Member member;
 
     @ManyToOne(fetch = FetchType.LAZY)
     //join tripGroup Table
@@ -33,8 +33,8 @@ public class TripMember extends BaseEntity {
     //생성자
     //빌드 사용
     @Builder
-    private TripMember(Member owner, TripGroup tripGroup, boolean isAdmin) {
-        this.owner = owner;
+    private TripMember(Member member, TripGroup tripGroup, boolean isAdmin) {
+        this.member = member;
         this.tripGroup = tripGroup;
         this.isAdmin = isAdmin;
     }

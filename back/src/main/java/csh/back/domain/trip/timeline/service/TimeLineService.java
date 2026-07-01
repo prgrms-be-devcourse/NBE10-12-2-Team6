@@ -92,7 +92,7 @@ public class TimeLineService {
 
     //여행 모임 멤버 여부 검증
     private void validateTripMember(Long tripId, Long memberId) {
-        boolean isMember = tripMemberRepository.existsByTripGroupIdAndOwnerId(tripId, memberId);
+        boolean isMember = tripMemberRepository.existsByTripGroupIdAndMemberId(tripId, memberId);
 
         if (!isMember) {
             throw new IllegalArgumentException("여행 모임 멤버만 접근할 수 있습니다.");
@@ -101,7 +101,7 @@ public class TimeLineService {
 
     //방장 여부 검증
     private void validateTripAdmin(Long tripId, Long memberId) {
-        boolean isAdmin = tripMemberRepository.existsByTripGroupIdAndOwnerIdAndIsAdminTrue(tripId, memberId);
+        boolean isAdmin = tripMemberRepository.existsByTripGroupIdAndMemberIdAndIsAdminTrue(tripId, memberId);
 
         if (!isAdmin) {
             throw new IllegalArgumentException("여행 모임 방장만 접근할 수 있습니다.");
