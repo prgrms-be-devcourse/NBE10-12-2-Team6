@@ -3,6 +3,9 @@ package csh.back.domain.trip.timeline.service;
 import csh.back.domain.trip.group.entity.TripGroup;
 import csh.back.domain.trip.group.repository.TripGroupRepository;
 import csh.back.domain.trip.member.repository.TripMemberRepository;
+import csh.back.domain.trip.place.entity.TripPlace;
+import csh.back.domain.trip.place.repository.TripPlaceRepository;
+import csh.back.domain.trip.timeline.dto.request.TimeLineConfirmPlaceRequest;
 import csh.back.domain.trip.timeline.dto.request.TimeLineCreateRequest;
 import csh.back.domain.trip.timeline.dto.request.TimeLineUpdateRequest;
 import csh.back.domain.trip.timeline.dto.response.TimeLineResponse;
@@ -23,6 +26,7 @@ public class TimeLineService {
     private final TimeLineRepository timeLineRepository;
     private final TripGroupRepository tripGroupRepository;
     private final TripMemberRepository tripMemberRepository;
+    private final TripPlaceRepository tripPlaceRepository;
 
     public TimeLineResponse createTimeLine(Long tripId, Long memberId, TimeLineCreateRequest request) {
         //여행 모임 방장 여부 검증
@@ -88,6 +92,27 @@ public class TimeLineService {
 
         //타임라인 제거
         timeLineRepository.delete(timeLine);
+    }
+
+    //확정된 장소 삽입하는 메서드
+    public TimeLineResponse confirmTimeLinePlace(
+            Long tripId,
+            Long timelineId,
+            Long memberId,
+            TimeLineConfirmPlaceRequest request) {
+
+        //여행 모임 멤버 여부 검증 추가
+        validateTripMember(tripId, memberId);
+        //tripId + timelineId로 타임라인 조회
+        TimeLine timeLine = timeLineRepository.findByIdAndTripGroupId(timelineId, tripId)
+                .orElseThrow(()-> new IllegalArgumentException("타임라인을 찾을 수 없습니다."));
+        //tripId + confirmedPlaceId로 후보 장소 조회
+        TripPlace tripPlace = tripPlaceRepository.findByIdAndTripGroupId(request.confirmedPlaceId(), tripId)
+                .orElseThrow(()-> new IllegalArgumentException("확정된 장소가 없습니다."));
+        //타임라인에 확정 장소 반영
+        timeLine.updateConfirmedPlace(tripPlace);
+        //응답 반환
+        return TimeLineResponse.from(timeLine);
     }
 
     //여행 모임 멤버 여부 검증
