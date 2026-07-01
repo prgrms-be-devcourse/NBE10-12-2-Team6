@@ -2,8 +2,10 @@ package csh.back.domain.vote.vote.service;
 
 import csh.back.domain.vote.item.entity.VoteItem;
 import csh.back.domain.vote.item.repository.VoteItemRepository;
+import csh.back.domain.vote.user.entity.VoteUser;
 import csh.back.domain.vote.user.repository.VoteUserRepository;
 import csh.back.domain.vote.vote.dto.response.VoteFindResponse;
+import csh.back.domain.vote.vote.dto.response.VoteFindUserResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,4 +43,10 @@ public class VoteService {
                 .toList();
     }
 
+    public List<VoteFindUserResponse> findUserVoteThisPlace(Long voteId, Long placeId) {
+        VoteItem voteItem = voteItemRepository.findByVoteIdAndTripPlaceId(voteId, placeId).orElseThrow(RuntimeException::new);
+        List<VoteUser> voteUsers = voteUserRepository.findByVoteItemId(voteItem.getId());
+        List<VoteFindUserResponse> responses = voteUsers.stream().map(VoteFindUserResponse::from).toList();
+        return responses;
+    }
 }
