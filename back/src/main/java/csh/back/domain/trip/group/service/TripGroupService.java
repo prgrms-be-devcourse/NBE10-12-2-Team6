@@ -101,7 +101,7 @@ public class TripGroupService {
 		do {
 			//count: 글자수 제한, letters: 영문혼합, numbers: 숫자혼합
 			joinCode = RandomStringUtils.random(7, true, true); //setlog와 같은 문자열 생성
-		} while (tripGroupRepository.existsByJoinUrl(joinCode)); //혹시라도 다른방과 url이 같은걸 막기위해
+		} while (tripGroupRepository.existsByJoinCode(joinCode)); //혹시라도 다른방과 url이 같은걸 막기위해
 		return joinCode;
 	}
 }
