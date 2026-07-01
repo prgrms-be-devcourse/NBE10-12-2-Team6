@@ -35,9 +35,8 @@ public class TimeLineV1Controller {
             @RequestParam Long memberId,
             @Valid @RequestBody TimeLineCreateRequest request) {
         //로그인 기능 연동 후 memberId는 인증 정보에서 가져오도록 변경
-        TimeLineResponse response = timeLineService.createTimeLine(tripId, memberId, request);
         //ResponseData로 감싸서 201 OK 반환
-        return new ResponseData<>(201, response);
+        return new ResponseData<>(201, timeLineService.createTimeLine(tripId, memberId, request));
     }
 
     //Swagger 문서에 일차별 타임라인 목록 조회 API 설명 표시
@@ -49,9 +48,8 @@ public class TimeLineV1Controller {
             @RequestParam Long memberId,
             @RequestParam int dayNumber) {
         //로그인 기능 연동 후 memberId는 인증 정보에서 가져오도록 변경
-        List<TimeLineResponse> response = timeLineService.getTimeLines(tripId, memberId, dayNumber);
         //ResponseData로 감싸서 200 OK 반환
-        return new ResponseData<>(200, response);
+        return new ResponseData<>(200, timeLineService.getTimeLines(tripId, memberId, dayNumber));
     }
 
     //Swagger 문서에 타임라인 수정 API 설명 표시
@@ -64,9 +62,7 @@ public class TimeLineV1Controller {
             @RequestParam Long memberId,
             @Valid @RequestBody TimeLineUpdateRequest request) {
         //로그인 기능 연동 후 memberId는 인증 정보에서 가져오도록 변경
-        TimeLineResponse response = timeLineService.updateTimeLine(tripId, timelineId, memberId, request);
-
-        return new ResponseData<>(200, response);
+        return new ResponseData<>(200, timeLineService.updateTimeLine(tripId, timelineId, memberId, request));
     }
 
     //Swagger 문서에 확정 장소 반영 API 설명 표시
@@ -80,9 +76,7 @@ public class TimeLineV1Controller {
             @Valid @RequestBody TimeLineConfirmPlaceRequest request) {
 
         //확정 장소 반영 서비스 호출
-        TimeLineResponse response = timeLineService.confirmTimeLinePlace(tripId, timelineId, memberId, request);
-
-        return new ResponseData<>(200, response);
+        return new ResponseData<>(200, timeLineService.confirmTimeLinePlace(tripId, timelineId, memberId, request));
     }
 
     //Swagger 문서에 타임라인 삭제 API 설명 표시
