@@ -39,18 +39,14 @@ public class TripGroupService {
 	@Transactional
 	public TripGroupResponse writeGroup(TripGroupRequest request, Member owner) {
 		LocalDate startDate = LocalDate.parse(request.startDate());
-		LocalDate endDate = LocalDate.parse(request.endDate());
 
-		if (endDate.isBefore(startDate)) {
-			throw new IllegalArgumentException("종료일은 시작일보다 빠를 수 없습니다.");
-		}
+		LocalDate endDate = startDate.plusDays(request.nights());
 
-		int nights = (int) ChronoUnit.DAYS.between(startDate, endDate);
 		TripGroup group = TripGroup.builder()
 				.owner(owner)
 				.name(request.name())
 				.region(request.region())
-				.nights(nights)
+				.nights(request.nights())
 				.joinCode(createJoinCode())
 				.startDate(startDate)
 				.endDate(endDate)
@@ -91,6 +87,7 @@ public class TripGroupService {
 		if (!group.getOwner().getId().equals(ownerId)) {
 			throw new IllegalArgumentException("해당 모임의 소유자가 아닙니다.");
 		}
+
 		group.modify(request);
 		return TripGroupResponse.from(group);
 	}
