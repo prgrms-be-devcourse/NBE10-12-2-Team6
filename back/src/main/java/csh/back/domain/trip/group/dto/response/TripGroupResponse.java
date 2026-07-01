@@ -9,7 +9,7 @@ public record TripGroupResponse(
 		String name,
 		Long ownerId,
 		String region,
-		String joinUrl,
+		String joinCode,
 		int nights,
 		LocalDate startDate,
 		LocalDate endDate
@@ -20,7 +20,7 @@ public record TripGroupResponse(
 				tripGroup.getName(),
 				tripGroup.getOwner().getId(),
 				tripGroup.getRegion(),
-				tripGroup.getJoinUrl(),
+				tripGroup.getJoinCode(),
 				tripGroup.getNights(),
 				tripGroup.getStartDate(),
 				tripGroup.getEndDate()

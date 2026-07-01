@@ -9,6 +9,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -39,7 +40,8 @@ public class TripGroup extends BaseEntity {
     private int nights;
 
     //초대 링크
-    private String joinUrl;
+    @Column(unique = true)
+    private String joinCode;
 
     //여행 시작일
     private LocalDate startDate;
@@ -47,15 +49,19 @@ public class TripGroup extends BaseEntity {
     //여행 마무리 날짜
     private LocalDate endDate;
 
+    //투표 시작 상태(초기 생성은 false)
+    @ColumnDefault("false")
+    private boolean isVote;
+
     //생성자
     //buider 사용
     @Builder
-        private TripGroup(Member owner, String name, String region, int nights, String joinUrl, LocalDate startDate, LocalDate endDate) {
+        private TripGroup(Member owner, String name, String region, int nights, String joinCode, LocalDate startDate, LocalDate endDate) {
             this.owner = owner;
             this.name = name;
             this.region = region;
             this.nights = nights;
-            this.joinUrl = joinUrl;
+            this.joinCode = joinCode;
             this.startDate = startDate;
             this.endDate = endDate;
     }

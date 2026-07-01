@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface TripGroupRepository extends JpaRepository<TripGroup, Long> {
 	List<TripGroup> findAllByOwnerIdOrderByStartDateDesc(Long ownerId);
+	boolean existsByJoinUrl(String joinUrl);
 }
