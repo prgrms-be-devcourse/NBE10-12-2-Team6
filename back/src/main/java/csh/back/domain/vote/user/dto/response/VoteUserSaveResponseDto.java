@@ -6,7 +6,7 @@ public record VoteUserSaveResponseDto(String memberName,
                                       String place) {
     public static VoteUserSaveResponseDto from(VoteUser voteUser) {
         return new VoteUserSaveResponseDto(
-                voteUser.getTripMember().getOwner().getName(),
+                voteUser.getTripMember().getMember().getName(),
                 voteUser.getVoteItem().getTripPlace().getName()
         );
     }

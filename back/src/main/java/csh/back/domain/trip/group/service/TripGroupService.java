@@ -60,7 +60,7 @@ public class TripGroupService {
 		tripMemberRepository.save(
 				TripMember.builder()
 						.tripGroup(savedGroup)
-						.owner(owner)
+						.member(owner)
 						.isAdmin(true)
 						.build()
 		);
@@ -71,7 +71,7 @@ public class TripGroupService {
 	//모임 상세 조회
 	@Transactional(readOnly = true)
 	public TripGroupResponse getGroupDetail(Long groupId, Long ownerId) {
-		boolean isMember = tripMemberRepository.existsByTripGroupIdAndOwnerId(groupId, ownerId);
+		boolean isMember = tripMemberRepository.existsByTripGroupIdAndMemberId(groupId, ownerId);
 		if (!isMember) {
 			throw new IllegalArgumentException("해당 모임의 멤버가 아닙니다.");
 		}
