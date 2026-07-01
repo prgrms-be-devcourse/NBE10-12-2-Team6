@@ -18,7 +18,9 @@ export default function PhotoUploadPage() {
   if (!trip || dayIdx < 0) return null;
 
   const day = trip.days[dayIdx];
-  const confirmedBlocks = day.blocks.filter(b => day.selectedCandidateByBlock[b.id] != null);
+  const confirmedBlocks = [...day.blocks]
+    .filter(b => day.selectedCandidateByBlock[b.id] != null)
+    .sort((a, b) => a.startMinute - b.startMinute);
 
   const setDay = (updated: TripDay) => {
     updateTrip({ ...trip, days: trip.days.map((d, i) => i === dayIdx ? updated : d) });
@@ -60,7 +62,7 @@ export default function PhotoUploadPage() {
 
   const block = confirmedBlocks[currentIndex];
   const candidateId = day.selectedCandidateByBlock[block.id];
-  const candidate = day.candidates.find(c => c.id === candidateId);
+  const candidate = trip.candidates.find(c => c.id === candidateId);
   const t = THEME[block.theme];
 
   return (
@@ -91,8 +93,9 @@ export default function PhotoUploadPage() {
         {/* Place card */}
         <div className="w-full p-5 rounded-3xl flex flex-col items-center gap-3" style={{ background: t.bg }}>
           <span className="text-4xl">{t.icon}</span>
+          <p className="text-xs font-bold" style={{ color: t.text }}>{timeText(block.startMinute)} ~ {timeText(block.endMinute)}</p>
           <p className="font-bold text-xl text-center" style={{ color: t.text }}>
-            {candidate?.placeName ?? block.order + "번째 활동"}
+            {candidate?.placeName ?? `${block.order}번째 활동`}
           </p>
           {candidate && <p className="text-sm text-gray-500 text-center">{candidate.address}</p>}
           <p className="text-sm font-semibold" style={{ color: t.text }}>이 장소의 사진을 올리거나 건너뜁니다.</p>
