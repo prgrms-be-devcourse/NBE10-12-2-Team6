@@ -5,6 +5,7 @@ import csh.back.domain.member.dto.request.MemberRequestDto;
 import csh.back.domain.member.dto.response.LoginResponseDto;
 import csh.back.domain.member.dto.response.MemberResponseDto;
 import csh.back.domain.member.service.MemberService;
+import csh.back.domain.trip.member.service.TripMemberService;
 import csh.back.global.dto.ResponseData;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,19 +19,25 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/auth")
 @RestController
 public class MemberController {
-    private final MemberService memberService;
+	private final MemberService memberService;
+	private final TripMemberService tripMemberService;
 
-    // 회원가입 요청 처리
-    @PostMapping("/signup")
-    public ResponseData<MemberResponseDto> signUp(
-            @RequestBody @Valid MemberRequestDto request) {
-        return new ResponseData<>(201, memberService.signUp(request.email(), request.password(), request.name()));
-    }
+	// 회원가입 요청 처리
+	@PostMapping("/signup")
+	public ResponseData<MemberResponseDto> signUp(
+			@RequestBody @Valid MemberRequestDto request) {
+		return new ResponseData<>(201, memberService.signUp(request.email(), request.password(), request.name()));
+	}
 
-    // 로그인 요청 처리
-    @PostMapping("/login")
-    public ResponseData<LoginResponseDto> login(
-            @RequestBody @Valid LoginRequestDto request) {
-        return new ResponseData<>(200, memberService.login(request.email(), request.password()));
-    }
+	// 로그인 요청 처리
+	@PostMapping("/login")
+	public ResponseData<LoginResponseDto> login(
+			@RequestBody @Valid LoginRequestDto request) {
+		LoginResponseDto response = memberService.login(request.email(), request.password());
+
+		if (request.joinCode() != null) {
+			tripMemberService.createJoinMember(request.joinCode(), response.id());
+		}
+		return new ResponseData<>(200, memberService.login(request.email(), request.password()));
+	}
 }
