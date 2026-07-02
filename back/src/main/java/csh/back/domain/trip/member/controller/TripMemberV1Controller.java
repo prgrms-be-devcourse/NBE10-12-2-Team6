@@ -1,6 +1,7 @@
 package csh.back.domain.trip.member.controller;
 
 import csh.back.domain.trip.group.service.TripGroupService;
+import csh.back.domain.trip.member.service.TripMemberService;
 import csh.back.global.annotation.ApiV1;
 import csh.back.global.dto.ResponseData;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/member")
 @RequiredArgsConstructor
 public class TripMemberV1Controller {
-	private final TripGroupService tripGroupService;
+	private final TripMemberService tripMemberService;
 
 	//Swagger 문서 표시
 	@Operation(summary = "초대 코드를 통한 여행 멤버 등록")
@@ -23,7 +24,9 @@ public class TripMemberV1Controller {
 			@RequestParam Long memberId, //FIXME 나중에 @AuthenticationPrincipal 수정예정
 			@PathVariable String joinCode
 	) {
+		//FIXME
 		//Long memberId = userDetails.getMember().getId();
+		tripMemberService.createJoinMember(joinCode, memberId);
 		return new ResponseData<>(200, null);
 	}
 }
