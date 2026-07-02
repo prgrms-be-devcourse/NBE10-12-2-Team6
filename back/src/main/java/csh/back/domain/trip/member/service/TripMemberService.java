@@ -25,12 +25,18 @@ public class TripMemberService {
 		TripGroup tripGroup = tripGroupRepository.findByJoinCode(joinCode)
 				.orElseThrow(() -> new NotFoundException("존재하지 않는 모임방"));
 
-		Member owner = memberRepository.findById(memberId)
+		Member member = memberRepository.findById(memberId)
 				.orElseThrow(() -> new NotFoundException("존재하지 않는 유저"));
+
+		if (tripMemberRepository.existsByTripGroupIdAndMemberId(tripGroup.getId(), member.getId())) {
+			//이미 가입되었으면 성공으로 save 없이 통과
+			// 혹시 모를 서버 중단으로 save가 2번 이상 될 수 있는 점을 예외처리 하기 위해 추가함
+			return;
+		}
 
 		tripMemberRepository.save(
 				TripMember.builder()
-						.member(owner)
+						.member(member)
 						.tripGroup(tripGroup)
 						.isAdmin(false)
 						.build()
