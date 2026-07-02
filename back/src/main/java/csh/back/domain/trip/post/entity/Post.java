@@ -19,7 +19,7 @@ public class Post extends BaseEntity {
     //Join TripMember Table
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "trip_member_id", nullable = false)
-    private TripMember tripMemberId;
+    private TripMember tripMember;
 
     //FK
     //Join TripTimeline Table
@@ -41,14 +41,14 @@ public class Post extends BaseEntity {
 
     @Builder
     private Post(
-            TripMember tripMemberId,
+            TripMember tripMember,
             TimeLine timeLine,
             Boolean isImg,
             String content,
             String location,
             String contentUrl
     ) {
-        this.tripMemberId =tripMemberId;
+        this.tripMember=tripMember;
         this.timeLine = timeLine;
         this.isImg = isImg;
         this.content = content;
