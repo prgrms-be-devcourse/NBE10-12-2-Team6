@@ -53,7 +53,7 @@ public class VoteUser extends BaseEntity {
         this.updateCount = updateCount;
     }
 
-    public VoteUser updatePlaceAndCount(VoteUser voteUser) {
-        voteUser.
+    public void increaseUpdateCount() {
+        this.updateCount++;
     }
 }

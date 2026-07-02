@@ -39,6 +39,7 @@ public class VoteItemService {
             VoteItem saved = voteItemRepository.save(voteItem);
             return voteUserService.saveVoteUser(saved);
         }
+        voteItem.updateTripPlace(tripPlace);
         return voteUserService.saveVoteUser(voteItem);
     }
 }

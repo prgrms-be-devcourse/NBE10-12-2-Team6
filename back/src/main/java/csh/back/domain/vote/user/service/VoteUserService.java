@@ -25,11 +25,11 @@ public class VoteUserService {
     @Transactional
     public VoteUserSaveResponseDto saveVoteUser(VoteItem voteItem) {
         // 테스트 용도 추후 삭제 예정
-        Random rand = new Random();
-        long testId = rand.nextLong(1,1000);
+//        Random rand = new Random();
+//        long testId = rand.nextLong(1,1000);
         // 여행참여자를 찾고
-        TripMember tripMember = tripMemberRepository.findById(testId).orElseThrow(RuntimeException::new);
-        VoteUser voteUser = voteUserRepository.findByVoteIdAndTripMemberId(voteItem.getVote().getId(), testId)
+        TripMember tripMember = tripMemberRepository.findById(101L).orElseThrow(RuntimeException::new);
+        VoteUser voteUser = voteUserRepository.findByVoteIdAndTripMemberId(voteItem.getVote().getId(), 101L)
                 .orElse(null);
         if(voteUser == null) {
             voteUser = VoteUser.builder()
@@ -41,9 +41,7 @@ public class VoteUserService {
             VoteUser saved = voteUserRepository.save(voteUser);
             return VoteUserSaveResponseDto.from(saved);
         }
-        voteUser.updatePlaceAndCount(voteUser, voteItem)
-
-
-
+        voteUser.increaseUpdateCount();
+        return VoteUserSaveResponseDto.from(voteUser);
     }
 }
