@@ -41,6 +41,7 @@ public class VoteUser extends BaseEntity {
     @JoinColumn(name = "member_id",  nullable = false)
     private TripMember tripMember;
 
+    @Column(nullable = false)
     private Integer updateCount;
 
     //생성자
