@@ -5,6 +5,7 @@ import csh.back.domain.member.dto.request.MemberRequestDto;
 import csh.back.domain.member.dto.response.LoginResponseDto;
 import csh.back.domain.member.dto.response.MemberResponseDto;
 import csh.back.domain.member.service.MemberService;
+import csh.back.domain.trip.member.service.TripMemberService;
 import csh.back.global.annotation.ApiV1;
 import csh.back.global.dto.ResponseData;
 import jakarta.servlet.http.HttpServletResponse;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class MemberController {
     private final MemberService memberService;
+    private final TripMemberService tripMemberService;
 
     // 회원가입 요청 처리
     @PostMapping("/signup")
@@ -36,6 +38,11 @@ public class MemberController {
             @RequestBody @Valid LoginRequestDto request,
             HttpServletResponse response) {
         MemberService.LoginResult result = memberService.login(request.email(), request.password());
+
+        if (request.joinCode() != null) {
+            tripMemberService.createJoinMember(request.joinCode(), result.userInfo().id());
+        }
+
         response.setHeader("Authorization", "Bearer " + result.refreshToken() + " " + result.accessToken());
         return new ResponseData<>(200, result.userInfo());
     }
