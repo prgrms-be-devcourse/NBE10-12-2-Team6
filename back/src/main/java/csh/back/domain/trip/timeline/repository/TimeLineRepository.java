@@ -50,4 +50,6 @@ public interface TimeLineRepository extends JpaRepository<TimeLine, Long> {
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime
     );
+
+    List<TimeLine> findAllByTripGroupId(Long tripId);
 }
