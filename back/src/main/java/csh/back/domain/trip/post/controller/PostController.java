@@ -14,13 +14,13 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/trips/{tripId}/posts") //기존 /post가 아닌 여행 API 명세서에 따른 하위 URL로 수정
+@RequestMapping("/api/v1/trips/{tripId}/posts")
 @Tag(name = "Post", description = "게시글 API")
 public class PostController {
 
     private final PostService postService;
 
-    @PostMapping("/{tripMemberId}/{timelineId}") //여행 맴버 및 여행 ID 조회를 통한 검증
+    @PostMapping("/{tripMemberId}/{timelineId}")
     @Operation(summary = "게시글 생성", description = "새로운 게시글을 생성합니다.")
     public PostResponse create(
 
@@ -36,8 +36,8 @@ public class PostController {
             @RequestBody CreatePostRequest request
     ) {
         return postService.create(
-                tripId, // trip의 하위 개념으로 옮겼으므로 tripID 역시 참조해야함
-                tripMemberId, // trip의 하위 개념으로 옮겼으므로 tripMemberId 역시 참조해야함
+                tripId,
+                tripMemberId,
                 timelineId,
                 request
         );
@@ -46,7 +46,7 @@ public class PostController {
     @GetMapping("/{postId}")
     @Operation(summary = "게시글 조회", description = "게시글 단건 조회")
     public PostResponse getPost(
-            @PathVariable Long tripId, // trip의 하위 개념으로 옮겼으므로 tripID를 참조
+            @PathVariable Long tripId,
             @PathVariable Long postId
     ) {
         return postService.getPost(tripId, postId);

@@ -1,7 +1,5 @@
 package csh.back.domain.trip.post.entity;
 
-import csh.back.domain.member.entity.Member;
-import csh.back.domain.trip.group.entity.TripGroup;
 import csh.back.domain.trip.member.entity.TripMember;
 import csh.back.domain.trip.timeline.entity.TimeLine;
 import csh.back.global.entity.BaseEntity;
@@ -20,8 +18,8 @@ public class Post extends BaseEntity {
     //FK
     //Join TripMember Table
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id", nullable = false)
-    private TripMember author;
+    @JoinColumn(name = "trip_member_id", nullable = false)
+    private TripMember trip_member_id;
 
     //FK
     //Join TripTimeline Table
@@ -29,39 +27,34 @@ public class Post extends BaseEntity {
     @JoinColumn(name = "timeline_id", nullable = false)
     private TimeLine timeLine;
 
-    //타입
-    //영상인지 이미지인지
+    //이미지 여부
     private Boolean isImg;
 
-    //contentUrl
-    //이미지 불러오기
+    //이미지 URL
     private String contentUrl;
-    //포스트 글 내용(임시)
-    @Column(length = 1000)
+
+    //포스트 글 내용
+    @Column
     private String content;
     //포스트에 포함 될 위치값
     private String location;
 
-
-    //생성자
-    //빌드 사용
     @Builder
     private Post(
-            TripMember author,
+            TripMember trip_member_id,
             TimeLine timeLine,
             Boolean isImg,
             String content,
             String location,
             String contentUrl
     ) {
-        this.author = author;
+        this.trip_member_id = trip_member_id;
         this.timeLine = timeLine;
         this.isImg = isImg;
         this.content = content;
         this.location = location;
         this.contentUrl = contentUrl;
     }
-    //업데이트 함수
     public void update(String content, String location) {
         this.content = content;
         this.location = location;
