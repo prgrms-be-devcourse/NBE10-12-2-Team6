@@ -1,18 +1,24 @@
 package csh.back.domain.vote.vote.service;
 
+import csh.back.domain.trip.group.entity.TripGroup;
+import csh.back.domain.trip.group.repository.TripGroupRepository;
+import csh.back.domain.trip.timeline.dto.response.TimeLineWithConfirmedPlaceResponse;
+import csh.back.domain.trip.timeline.entity.TimeLine;
+import csh.back.domain.trip.timeline.repository.TimeLineRepository;
 import csh.back.domain.vote.item.entity.VoteItem;
 import csh.back.domain.vote.item.repository.VoteItemRepository;
 import csh.back.domain.vote.user.entity.VoteUser;
 import csh.back.domain.vote.user.repository.VoteUserRepository;
+import csh.back.domain.vote.vote.dto.response.VoteFindListResponse;
 import csh.back.domain.vote.vote.dto.response.VoteFindResponse;
 import csh.back.domain.vote.vote.dto.response.VoteFindUserResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,9 +27,31 @@ import java.util.stream.Collectors;
 public class VoteService {
     private final VoteUserRepository voteUserRepository;
     private final VoteItemRepository voteItemRepository;
+    private final TripGroupRepository tripGroupRepository;
+    private final TimeLineRepository timeLineRepository;
 
-    public List<> findVoteList(Long tripId) {
-        return new ArrayList<>();
+    public List<VoteFindListResponse> findVoteList(Long tripId) {
+        TripGroup tripGroup = tripGroupRepository.findById(tripId).orElseThrow(RuntimeException::new);
+
+        Integer totalDays = tripGroup.getNights() + 1;
+        List<TimeLine> timeLines = timeLineRepository.findAllByTripGroupId(tripId);
+
+        Map<Integer, List<TimeLine>> byDay = timeLines.stream()
+                .collect(Collectors.groupingBy(TimeLine::getDayNumber));
+
+        List<VoteFindListResponse> voteFindListResponses = new ArrayList<>();
+        for (int day = 1; day <= totalDays; day++) {
+            List<TimeLineWithConfirmedPlaceResponse> timeLineResponses =
+                    byDay.getOrDefault(day, List.of()).stream()
+                            .map(TimeLineWithConfirmedPlaceResponse::from)
+                            .toList();
+
+            voteFindListResponses.add(
+                    VoteFindListResponse.of(tripGroup.getStartDate().plusDays(day - 1), timeLineResponses)
+            );
+        }
+
+        return voteFindListResponses;
     }
 
     public List<VoteFindResponse> findVoteItemAndCount(Long voteId) {
