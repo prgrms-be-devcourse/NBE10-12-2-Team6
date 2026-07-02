@@ -31,14 +31,16 @@ public class TripPlaceV1Controller {
 
     @PostMapping("/{tripId}/wish-places")
     public ResponseData saveWishPlace(@RequestBody TripPlaceSaveRequest request, @PathVariable Long tripId) {
-        TripPlaceSaveResponse response = tripPlaceService.savePlace(
-                tripId,
-                request.name(),
-                request.category(),
-                request.address(),
-                request.kakaoPlaceId(),
-                request.kakaoMapUrl()
+        return new ResponseData(
+                200,
+                tripPlaceService.savePlace(
+                        tripId,
+                        request.name(),
+                        request.category(),
+                        request.address(),
+                        request.kakaoPlaceId(),
+                        request.kakaoMapUrl()
+                )
         );
-        return new ResponseData(200, response);
     }
 }
