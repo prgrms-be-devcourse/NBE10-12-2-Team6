@@ -3,12 +3,14 @@ package csh.back.domain.vote.vote.controller;
 import csh.back.domain.vote.vote.dto.response.VoteFindResponse;
 import csh.back.domain.vote.vote.dto.response.VoteFindUserResponse;
 import csh.back.domain.vote.vote.service.VoteService;
+import csh.back.global.annotation.ApiV1;
 import csh.back.global.dto.ResponseData;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@ApiV1
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/votes")
@@ -26,5 +28,11 @@ public class VoteV1Controller {
     @GetMapping("/{voteId}/places/{placeId}")
     public ResponseData<List<VoteFindUserResponse>> findVoteUserThisPlace(@PathVariable Long voteId, @PathVariable Long placeId) {
         return new ResponseData<>(200, voteService.findUserVoteThisPlace(voteId, placeId));
+    }
+
+    @GetMapping("{tripId}")
+    public ResponseData<> findVoteList(@PathVariable Long voteId) {
+        List<> voteList = voteService.findVoteList(voteId);
+        return new ResponseData<>(200, null);
     }
 }

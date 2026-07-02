@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -20,6 +21,10 @@ import java.util.stream.Collectors;
 public class VoteService {
     private final VoteUserRepository voteUserRepository;
     private final VoteItemRepository voteItemRepository;
+
+    public List<> findVoteList(Long tripId) {
+        return new ArrayList<>();
+    }
 
     public List<VoteFindResponse> findVoteItemAndCount(Long voteId) {
         //투표된 장소 목록을 조회해 옴
