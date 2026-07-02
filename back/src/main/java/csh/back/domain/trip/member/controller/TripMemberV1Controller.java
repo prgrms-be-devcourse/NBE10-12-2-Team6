@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 @ApiV1
 @Tag(name = "여행 맴버", description = "여행 멤버 관리 API")
 @RestController
-@RequestMapping("/member")
+@RequestMapping("/trip_member")
 @RequiredArgsConstructor
 public class TripMemberV1Controller {
 	private final TripMemberService tripMemberService;
