@@ -2,18 +2,20 @@ package csh.back.domain.member.dto.response;
 
 import csh.back.domain.member.entity.Member;
 
-// 로그인 응답 DTO
 public record LoginResponseDto(
         Long id,
         String email,
-        String name
+        String name,
+        String accessToken,
+        String refreshToken
 ) {
-    // 엔티티 -> DTO 변환
-    public static LoginResponseDto from(Member member) {
+    public static LoginResponseDto of(Member member, String accessToken, String refreshToken) {
         return new LoginResponseDto(
                 member.getId(),
                 member.getEmail(),
-                member.getName()
+                member.getName(),
+                accessToken,
+                refreshToken
         );
     }
 }
