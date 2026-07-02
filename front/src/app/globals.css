@@ -14,3 +14,18 @@ body {
 * {
   -webkit-tap-highlight-color: transparent;
 }
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.sheet-slide-up {
+  animation: slideUp 0.5s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.time-input::-webkit-calendar-picker-indicator {
+  transform: scale(1.6);
+  cursor: pointer;
+  opacity: 0.6;
+}

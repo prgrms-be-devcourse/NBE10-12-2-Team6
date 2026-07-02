@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useStore, Trip, TripDay, PlanCandidate, uid, MOCK_USERS } from "../../store";
-import { Avatar, BigActionCard, formatDate } from "../../lib";
+import { Avatar, formatDate } from "../../lib";
 
 // ── InviteModal ───────────────────────────────────────────────────────────────
 
@@ -71,43 +71,53 @@ function InviteModal({ trip, onUpdate, onClose }: { trip: Trip; onUpdate: (t: Tr
 // ── AddCandidateSheet ─────────────────────────────────────────────────────────
 
 interface KakaoPlace {
+  id: string;
   place_name: string;
   address_name: string;
   road_address_name: string;
   category_group_name: string;
+  place_url: string;
 }
 
 function AddCandidateSheet({
   trip, onAdd, onClose,
 }: { trip: Trip; onAdd: (c: PlanCandidate) => void; onClose: () => void }) {
   const { currentUser } = useStore();
-  const [authorId, setAuthorId] = useState(currentUser.id);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<KakaoPlace[]>([]);
   const [selected, setSelected] = useState<KakaoPlace | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const author = trip.members.find(m => m.id === authorId) ?? trip.members[0];
+  const [hasSearched, setHasSearched] = useState(false);
 
   const search = async () => {
     if (!query.trim()) return;
     setLoading(true);
     setSelected(null);
+    setHasSearched(false);
     try {
       const res = await fetch(`/api/places?query=${encodeURIComponent(query)}`);
       const data = await res.json();
       setResults(data.documents ?? []);
+      setHasSearched(true);
     } finally {
       setLoading(false);
     }
   };
 
   const handleAdd = () => {
-    if (!selected || !author) return;
+    if (!selected) return;
+    const payload = {
+      name: selected.place_name,
+      category: selected.category_group_name || undefined,
+      address: selected.road_address_name || selected.address_name,
+      kakaoPlaceId: selected.id,
+      kakaoMapUrl: selected.place_url,
+    };
+    console.log(`[후보 등록] POST /api/v1/trips/{tripId}/wish-places`, payload);
     onAdd({
       id: uid(),
-      authorId: author.id,
-      authorName: author.name,
+      authorId: currentUser.id,
+      authorName: currentUser.name,
       placeName: selected.place_name,
       address: selected.road_address_name || selected.address_name,
       category: selected.category_group_name || undefined,
@@ -118,38 +128,19 @@ function AddCandidateSheet({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-white rounded-t-3xl max-h-[85vh] overflow-y-auto">
+      <div className="relative w-full max-w-md bg-white rounded-t-3xl min-h-[50vh] max-h-[85vh] overflow-y-auto sheet-slide-up">
         <div className="flex items-center justify-between px-4 pt-5 pb-3 border-b border-gray-100">
           <h2 className="text-lg font-bold">후보 올리기</h2>
           <button onClick={onClose} className="text-blue-500 font-medium">닫기</button>
         </div>
         <div className="p-4 flex flex-col gap-4">
-          {/* 등록자 */}
-          <div>
-            <label className="text-sm font-semibold mb-1.5 block">등록자</label>
-            <div className="flex flex-col gap-2">
-              {trip.members.map(m => (
-                <button
-                  key={m.id}
-                  onClick={() => setAuthorId(m.id)}
-                  className="flex items-center gap-3 p-3 rounded-xl text-left"
-                  style={{ background: authorId === m.id ? "#dbeafe" : "#f9fafb" }}
-                >
-                  <Avatar user={m} size={28} />
-                  <span className="text-sm font-medium flex-1">{m.name}</span>
-                  {authorId === m.id && <span className="text-blue-500">✓</span>}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* 장소 검색 */}
           <div>
             <label className="text-sm font-semibold mb-1.5 block">장소 검색</label>
             <div className="flex gap-2">
               <input
                 className="flex-1 p-3 bg-gray-100 rounded-xl text-sm outline-none"
-                placeholder="장소 이름으로 검색"
+                placeholder="검색어 입력해주세요"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && search()}
@@ -165,43 +156,40 @@ function AddCandidateSheet({
           </div>
 
           {/* 검색 결과 */}
-          {loading && <p className="text-sm text-gray-400 text-center">검색 중...</p>}
-          {loading && <p className="text-sm text-gray-400 text-center">검색 중...</p>}
-          {!loading && results.length > 0 && (
-            <div className="flex flex-col gap-2">
-              {results.map((place, i) => {
-                const isSelected = selected?.place_name === place.place_name && selected?.address_name === place.address_name;
-                const isDup = trip.candidates.some(c => c.placeName === place.place_name && c.address === (place.road_address_name || place.address_name));
-                return (
-                  <div
-                    key={i}
-                    className="p-3 rounded-xl border flex items-center gap-2 transition-all"
-                    style={{ background: isSelected ? "#dbeafe" : "#f9fafb", borderColor: isSelected ? "#3b82f6" : "transparent" }}
-                  >
-                    <button onClick={() => setSelected(place)} className="flex-1 text-left min-w-0">
-                      <p className="text-sm font-semibold truncate">{place.place_name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5 truncate">{place.road_address_name || place.address_name}</p>
-                      {place.category_group_name && <p className="text-xs text-gray-400">{place.category_group_name}</p>}
-                    </button>
-                    {isSelected && (
-                      isDup
-                        ? <span className="text-xs text-red-400 shrink-0">이미 등록됨</span>
-                        : <button
-                            onClick={handleAdd}
-                            className="shrink-0 px-4 py-2.5 rounded-xl text-sm font-semibold text-white"
-                            style={{ background: "#3b82f6" }}
-                          >
-                            등록
-                          </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          {!loading && query && results.length === 0 && (
-            <p className="text-sm text-gray-400 text-center">검색 결과가 없습니다.</p>
-          )}
+          <div className="rounded-2xl p-3 flex flex-col gap-2 min-h-[300px]" style={{ background: "#f1f5f9" }}>
+            {loading && <p className="text-sm text-gray-400 text-center py-4">검색 중...</p>}
+            {!loading && hasSearched && results.length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-4">검색 결과가 없습니다.</p>
+            )}
+            {!loading && results.length > 0 && results.map((place, i) => {
+              const isSelected = selected?.place_name === place.place_name && selected?.address_name === place.address_name;
+              const isDup = trip.candidates.some(c => c.placeName === place.place_name && c.address === (place.road_address_name || place.address_name));
+              return (
+                <div
+                  key={i}
+                  className="p-3 rounded-xl border flex items-center gap-2 transition-all"
+                  style={{ background: isSelected ? "#dbeafe" : "white", borderColor: isSelected ? "#3b82f6" : "transparent" }}
+                >
+                  <button onClick={() => setSelected(place)} className="flex-1 text-left min-w-0">
+                    <p className="text-sm font-semibold truncate">{place.place_name}</p>
+                    <p className="text-xs text-gray-400 mt-0.5 truncate">{place.road_address_name || place.address_name}</p>
+                    {place.category_group_name && <p className="text-xs text-gray-400">{place.category_group_name}</p>}
+                  </button>
+                  {isSelected && (
+                    isDup
+                      ? <span className="text-xs text-red-400 shrink-0">이미 등록됨</span>
+                      : <button
+                          onClick={handleAdd}
+                          className="shrink-0 px-4 py-2.5 rounded-xl text-sm font-semibold text-white"
+                          style={{ background: "#3b82f6" }}
+                        >
+                          등록
+                        </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
@@ -241,7 +229,6 @@ function TripCandidatePoolCard({ trip, onUpdate }: { trip: Trip; onUpdate: (t: T
                 <p className="text-xs text-gray-400 truncate">{c.address}</p>
                 <p className="text-xs text-gray-400">등록자 {c.authorName}</p>
               </div>
-              <span className="text-xs font-bold px-2 py-1 rounded-full shrink-0" style={{ background: "#dcfce7", color: "#16a34a" }}>전체 후보</span>
             </div>
           ))}
           {trip.candidates.length > 5 && (
@@ -284,13 +271,27 @@ type Tab = "trip" | "candidates" | "vote" | "timeline";
 export default function TripDetailPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const { trips, updateTrip } = useStore();
   const [showInvite, setShowInvite] = useState(false);
-  const [tab, setTab] = useState<Tab>("trip");
+  const [tab, setTab] = useState<Tab>((searchParams.get("tab") as Tab) ?? "trip");
   const [candidateBlink, setCandidateBlink] = useState(false);
   const trip = trips.find(t => t.id === id);
 
   const allDaysComplete = trip ? trip.days.length > 0 && trip.days.every(d => d.isPlanCompleted || d.isPlanSkipped) : false;
+
+  const tripStatus = (() => {
+    if (!trip) return "before";
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const startDate = new Date(trip.startDate); startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(trip.startDate); endDate.setDate(endDate.getDate() + trip.nights); endDate.setHours(23, 59, 59, 999);
+    return today < startDate ? "before" : today > endDate ? "after" : "during";
+  })();
+
+  useEffect(() => {
+    if (!id) return;
+    console.log(`[여행 상세] GET /api/v1/trips/${id}`);
+  }, [id]);
 
   useEffect(() => {
     if (!allDaysComplete || tab === "candidates") return;
@@ -300,6 +301,18 @@ export default function TripDetailPage() {
     }, 5000);
     return () => clearInterval(interval);
   }, [allDaysComplete, tab]);
+
+  useEffect(() => {
+    if (tab !== "timeline" || !trip) return;
+    if (tripStatus === "during") {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const startDate = new Date(trip.startDate); startDate.setHours(0, 0, 0, 0);
+      const daysSinceStart = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      router.push(`/trip/${trip.id}/day/${daysSinceStart + 1}/photos?from=timeline`);
+    } else if (tripStatus === "after") {
+      router.push(`/trip/${trip.id}/timeline`);
+    }
+  }, [tab, tripStatus, trip]);
 
   if (!trip) {
     return (
@@ -320,14 +333,22 @@ export default function TripDetailPage() {
           </svg>
         </button>
         <div className="flex-1 text-center">
-          <p className="font-semibold text-base">{trip.title}</p>
+          <p className="font-semibold text-base">{trip.name}</p>
           <p className="text-xs text-gray-400">{trip.region} · {trip.nights}박 {trip.nights + 1}일</p>
         </div>
-        <button onClick={() => setShowInvite(true)} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: "#dbeafe" }}>
-          <svg className="w-4 h-4" fill="none" stroke="#2563eb" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-          </svg>
-        </button>
+        {tab === "trip" ? (
+          <button onClick={() => setShowInvite(true)} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: "#dbeafe" }}>
+            <svg className="w-4 h-4" fill="none" stroke="#2563eb" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+          </button>
+        ) : tab === "timeline" && tripStatus === "during" ? (
+          <Link href={`/trip/${id}/timeline?from=timeline`} className="text-xs font-semibold text-blue-500">
+            전체보기
+          </Link>
+        ) : (
+          <div className="w-8" />
+        )}
       </div>
 
       {/* Tab content */}
@@ -388,14 +409,14 @@ export default function TripDetailPage() {
               </div>
             ) : (
               trip.days.map(day => {
-                const completedBlocks = day.blocks.filter(b => !day.isPlanSkipped);
-                if (day.isPlanSkipped || completedBlocks.length === 0) return (
-                  <div key={day.id} className="p-4 bg-gray-50 rounded-2xl flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-sm">{day.dayNumber}일차</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{formatDate(day.date)}</p>
+                if (day.isPlanSkipped || !day.isPlanCompleted) return (
+                  <div key={day.id} className="flex flex-col gap-2">
+                    <p className="text-sm font-semibold text-gray-500">{day.dayNumber}일차 · {formatDate(day.date)}</p>
+                    <div className="p-4 bg-gray-50 rounded-2xl flex items-center justify-center">
+                      <span className="text-xs text-gray-400">
+                        {day.isPlanSkipped ? "계획 건너뜀" : "일정 확정 후 투표 가능"}
+                      </span>
                     </div>
-                    <span className="text-xs text-gray-400">{day.isPlanSkipped ? "계획 건너뜀" : "시간 구간 없음"}</span>
                   </div>
                 );
                 return (
@@ -405,7 +426,7 @@ export default function TripDetailPage() {
                       const selectedId = day.selectedCandidateByBlock[block.id];
                       const selected = trip.candidates.find(c => c.id === selectedId);
                       return (
-                        <Link key={block.id} href={`/trip/${trip.id}/day/${day.dayNumber}/block/${block.id}`}>
+                        <Link key={block.id} href={`/trip/${trip.id}/day/${day.dayNumber}/block/${block.id}?from=vote`}>
                           <div className="p-4 bg-gray-50 rounded-2xl flex items-center justify-between">
                             <div className="flex-1 min-w-0">
                               <p className="text-xs text-gray-400">{block.order}번째 구간</p>
@@ -433,39 +454,37 @@ export default function TripDetailPage() {
           </div>
         )}
 
-        {tab === "timeline" && (
-          <div className="flex flex-col gap-3">
-            <p className="font-semibold">사진 기록</p>
-            {trip.days.map(day => (
-              day.isPlanCompleted ? (
-                <Link key={day.id} href={`/trip/${trip.id}/day/${day.dayNumber}/photos`}>
-                  <BigActionCard
-                    icon="📷"
-                    title={`${day.dayNumber}일차 사진 올리기`}
-                    subtitle={formatDate(day.date)}
-                    colorKey="green"
-                  />
-                </Link>
-              ) : (
-                <div key={day.id} className="p-4 bg-gray-50 rounded-2xl flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-sm">{day.dayNumber}일차</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{formatDate(day.date)}</p>
-                  </div>
-                  <span className="text-xs text-gray-400">계획 완료 후 가능</span>
+        {tab === "timeline" && (() => {
+
+          if (tripStatus === "before") {
+            return (
+              <div className="flex flex-col gap-5">
+                <div className="p-5 bg-blue-50 rounded-2xl flex flex-col gap-2">
+                  <p className="text-base font-bold">아직 여행 시작 전이에요</p>
+                  <p className="text-sm text-gray-500">계획을 한번 더 점검해보는 건 어때요?</p>
                 </div>
-              )
-            ))}
-            <Link href={`/trip/${trip.id}/timeline`}>
-              <BigActionCard
-                icon="📸"
-                title="전체 타임라인 보기"
-                subtitle="올린 사진과 기록을 일차별로 확인합니다."
-                colorKey="purple"
-              />
-            </Link>
-          </div>
-        )}
+                <div className="flex flex-col gap-2">
+                  {([
+                    { key: "trip", label: "여행 모임", bg: "#eff6ff", color: "#2563eb" },
+                    { key: "candidates", label: "후보 장소", bg: "#f0fdf4", color: "#16a34a" },
+                    { key: "vote", label: "투표", bg: "#fefce8", color: "#92400e" },
+                  ] as const).map(({ key, label, bg, color }) => (
+                    <button
+                      key={key}
+                      onClick={() => setTab(key)}
+                      className="w-full py-4 rounded-2xl font-semibold text-left px-5"
+                      style={{ background: bg, color }}
+                    >
+                      {label} →
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+
+          return null;
+        })()}
       </div>
 
       {/* Bottom tab bar */}

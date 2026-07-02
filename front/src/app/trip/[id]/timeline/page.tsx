@@ -1,13 +1,18 @@
 "use client";
 
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useStore } from "../../../store";
 import { formatDate } from "../../../lib";
 
 export default function TimelinePage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const { trips } = useStore();
+  const goBack = () => {
+    if (searchParams.get("from") === "timeline") router.push(`/trip/${id}?tab=timeline`);
+    else router.back();
+  };
   const trip = trips.find(t => t.id === id);
 
   if (!trip) return null;
@@ -15,7 +20,7 @@ export default function TimelinePage() {
   return (
     <div className="min-h-screen">
       <div className="flex items-center gap-3 px-4 pt-12 pb-2">
-        <button onClick={() => router.back()} className="text-blue-500 p-1 -ml-1">
+        <button onClick={goBack} className="text-blue-500 p-1 -ml-1">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
@@ -25,7 +30,7 @@ export default function TimelinePage() {
       </div>
 
       <div className="px-4 pb-10 flex flex-col gap-4">
-        <p className="text-2xl font-bold">{trip.title} 타임라인</p>
+        <p className="text-2xl font-bold">{trip.name} 타임라인</p>
 
         {trip.days.map(day => (
           <div key={day.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">

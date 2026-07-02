@@ -1,5 +1,6 @@
 package csh.back.domain.trip.timeline.controller;
 
+import csh.back.domain.trip.timeline.dto.request.TimeLineAllCreateRequest;
 import csh.back.domain.trip.timeline.dto.request.TimeLineConfirmPlaceRequest;
 import csh.back.domain.trip.timeline.dto.request.TimeLineCreateRequest;
 import csh.back.domain.trip.timeline.dto.request.TimeLineUpdateRequest;
@@ -15,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 //Swagger에서 여행 타임라인 API 그룹으로 표시
-@Tag(name = "여행 타임라인", description = "여행 타임라인 시간 구간 API")
+@Tag(name = "여행 타임라인", description = "단건 여행 타임라인 시간 구간 API")
 @RequiredArgsConstructor
 //공통 URL 경로 설정
 @RequestMapping("/api/v1/trips/{tripId}/timelines")
@@ -27,7 +28,7 @@ public class TimeLineV1Controller {
     private final TimeLineService timeLineService;
 
     //Swagger 문서에 타임라인 생성 API 설명 표시
-    @Operation(summary = "타임라인 시간 구간 생성")
+    @Operation(summary = "타임라인 시간 구간 단건 생성")
     //타임라인 시간 구간 등록
     @PostMapping
     public ResponseData<TimeLineResponse> createTimeLine(
@@ -35,8 +36,23 @@ public class TimeLineV1Controller {
             @RequestParam Long memberId,
             @Valid @RequestBody TimeLineCreateRequest request) {
         //로그인 기능 연동 후 memberId는 인증 정보에서 가져오도록 변경
-        //ResponseData로 감싸서 201 OK 반환
+        //ResponseData로 감싸서 201 Created 반환
         return new ResponseData<>(201, timeLineService.createTimeLine(tripId, memberId, request));
+    }
+
+    //타임라인 시간 구간 일괄 생성
+    @Tag(name = "여행 타임라인", description = "일광 여행 타임라인 시간 구간 API")
+    //Swagger 문서에 타임라인 생성 API 설명 표시
+    @Operation(summary = "타임라인 시간 구간 일괄 생성")
+    @PostMapping("/batch")
+    public ResponseData<List<TimeLineResponse>> createAllTimeLines(
+            @PathVariable Long tripId,
+            @RequestParam Long memberId,
+            @Valid @RequestBody TimeLineAllCreateRequest request) {
+
+        //로그인 기능 연동 후 memberId는 인증 정보에서 가져오도록 변경
+        //ResponseData로 감싸서 201 Created 반환
+        return new ResponseData<>(201, timeLineService.createAllTimeLines(tripId, memberId, request));
     }
 
     //Swagger 문서에 일차별 타임라인 목록 조회 API 설명 표시
