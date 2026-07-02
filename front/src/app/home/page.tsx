@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useStore, Trip } from "../store";
@@ -37,6 +37,10 @@ function TripCard({ trip }: { trip: Trip }) {
 export default function HomePage() {
   const router = useRouter();
   const { currentUser, trips, createTrip } = useStore();
+
+  useEffect(() => {
+    localStorage.removeItem("pendingInviteCode");
+  }, []);
 
   const [showCreate, setShowCreate] = useState(false);
   const [tripTitle, setTripTitle] = useState("");

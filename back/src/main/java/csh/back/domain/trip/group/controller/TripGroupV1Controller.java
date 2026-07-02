@@ -7,6 +7,7 @@ import csh.back.domain.trip.group.dto.request.TripGroupRequest;
 import csh.back.domain.trip.group.dto.response.TripGroupResponse;
 import csh.back.domain.trip.group.exception.NotFoundException;
 import csh.back.domain.trip.group.service.TripGroupService;
+import csh.back.global.annotation.ApiV1;
 import csh.back.global.dto.ResponseData;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@ApiV1
 @Tag(name = "여행 모임방", description = "여행 모임 관리 API")
 @RestController
 @RequestMapping("/trips")

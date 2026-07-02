@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "./store";
 
@@ -23,11 +23,12 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
+      const inviteCode = localStorage.getItem("pendingInviteCode") ?? undefined;
       const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email: email.trim(), password }),
+        body: JSON.stringify({ email: email.trim(), password, inviteCode }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -58,11 +59,12 @@ export default function LoginPage() {
         throw new Error(body?.message ?? "회원가입에 실패했습니다.");
       }
       // 가입 후 자동 로그인
+      const inviteCode = localStorage.getItem("pendingInviteCode") ?? undefined; //초대링크 접속 후 코드값을 찾기위해
       const loginRes = await fetch(`${API_BASE}/api/v1/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email: email.trim(), password }),
+        body: JSON.stringify({ email: email.trim(), password, inviteCode }),
       });
       if (!loginRes.ok) throw new Error("로그인에 실패했습니다. 다시 로그인해주세요.");
       login(name.trim());
