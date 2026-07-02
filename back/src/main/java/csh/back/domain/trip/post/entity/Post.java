@@ -29,22 +29,16 @@ public class Post extends BaseEntity {
     @JoinColumn(name = "timeline_id", nullable = false)
     private TimeLine timeLine;
 
-    //타입
-    //영상인지 이미지인지
+    //영상인지 이미지인지 논리판단
     private Boolean isImg;
-
-    //contentUrl
-    //이미지 불러오기
+    //불러오는 이미지 URL
     private String contentUrl;
-    //포스트 글 내용(임시)
+    //포스트 글 내용
     @Column(length = 1000)
     private String content;
-    //포스트에 포함 될 위치값
+    //위치값
     private String location;
 
-
-    //생성자
-    //빌드 사용
     @Builder
     private Post(
             TripMember author,
@@ -61,7 +55,6 @@ public class Post extends BaseEntity {
         this.location = location;
         this.contentUrl = contentUrl;
     }
-    //업데이트 함수
     public void update(String content, String location) {
         this.content = content;
         this.location = location;

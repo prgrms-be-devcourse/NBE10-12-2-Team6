@@ -41,12 +41,20 @@ public class VoteUser extends BaseEntity {
     @JoinColumn(name = "member_id",  nullable = false)
     private TripMember tripMember;
 
+    @Column(nullable = false)
+    private Integer updateCount;
+
     //생성자
     //빌드 사용
     @Builder
-    private VoteUser(Vote vote, VoteItem voteItem, TripMember tripMember) {
+    private VoteUser(Vote vote, VoteItem voteItem, TripMember tripMember, Integer updateCount) {
         this.vote = vote;
         this.voteItem = voteItem;
         this.tripMember = tripMember;
+        this.updateCount = updateCount;
+    }
+
+    public void increaseUpdateCount() {
+        this.updateCount++;
     }
 }

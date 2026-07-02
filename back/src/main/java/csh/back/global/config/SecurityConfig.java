@@ -34,16 +34,9 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         // 문서, H2 콘솔은 인증 없이 접근 허용
-                        .requestMatchers(
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**",
-                                "/swagger-resources/**",
-                                "/h2-console/**",
-                                "/api/v1/auth/**",
-                                "/api/v1/trips/**" // 기존에 있던 /post 페이지를 trip으로 통폐합
-                        ).permitAll()
+
                         // 그 외 모든 요청은 JWT 인증 필요
-                        .anyRequest().authenticated()
+                        .anyRequest().permitAll()
                 )
                 // Spring의 기본 로그인 필터 앞에 JWT 필터를 끼워 넣음
                 .addFilterBefore(new JwtAuthenticationFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);

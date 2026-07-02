@@ -41,4 +41,8 @@ public class VoteItem extends BaseEntity {
         this.vote = vote;
         this.tripPlace = tripPlace;
     }
+
+    public void updateTripPlace(TripPlace tripPlace) {
+        this.tripPlace = tripPlace;
+    }
 }

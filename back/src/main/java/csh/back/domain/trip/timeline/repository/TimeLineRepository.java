@@ -1,8 +1,9 @@
 package csh.back.domain.trip.timeline.repository;
 
-import csh.back.domain.trip.place.entity.TripPlace;
 import csh.back.domain.trip.timeline.entity.TimeLine;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,23 +17,37 @@ public interface TimeLineRepository extends JpaRepository<TimeLine, Long> {
     //수정, 삭제하려는 타임라인이 해당 여행 모임에 속하는지 확인하면서 조회
     Optional<TimeLine> findByIdAndTripGroupId(Long timelineId, Long tripId);
 
-    //아래는 도저히 감이 안 잡혀 AI를 적극 활용했습니다.
-
-    //같은 여행 모임, 같은 일차에 이미 겹치는 시간 구간이 있는지 확인
-    boolean existsByTripGroupIdAndDayNumberAndStartTimeLessThanAndEndTimeGreaterThan(
-            Long tripId,
-            Integer dayNumber,
-            LocalDateTime endTime,
-            LocalDateTime startTime
+    //같은 여행 모임, 같은 일차에 겹치는 시간 구간 개수 조회
+    @Query("""
+        select count(t)
+        from TimeLine t
+        where t.tripGroup.id = :tripId
+          and t.dayNumber = :dayNumber
+          and t.startTime < :endTime
+          and t.endTime > :startTime
+        """)
+    long countOverlappingTimeLine(
+            @Param("tripId") Long tripId,
+            @Param("dayNumber") Integer dayNumber,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime
     );
 
-    //수정 시 자기 자신을 제외하고 같은 여행 모임, 같은 일차에 겹치는 시간 구간이 있는지 확인
-    boolean existsByTripGroupIdAndDayNumberAndIdNotAndStartTimeLessThanAndEndTimeGreaterThan(
-            Long tripId,
-            Integer dayNumber,
-            Long timelineId,
-            LocalDateTime endTime,
-            LocalDateTime startTime
-
+    //수정 시 자기 자신을 제외한 겹치는 시간 구간 개수 조회
+    @Query("""
+        select count(t)
+        from TimeLine t
+        where t.tripGroup.id = :tripId
+          and t.dayNumber = :dayNumber
+          and t.id <> :timelineId
+          and t.startTime < :endTime
+          and t.endTime > :startTime
+        """)
+    long countOverlappingTimeLineExceptSelf(
+            @Param("tripId") Long tripId,
+            @Param("dayNumber") Integer dayNumber,
+            @Param("timelineId") Long timelineId,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime
     );
 }
