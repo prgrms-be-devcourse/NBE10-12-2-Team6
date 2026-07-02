@@ -44,7 +44,7 @@ public class PostService {
     @Transactional(readOnly = true)
     public List<PostResponse> getPosts(Long tripId) {
 
-        return postRepository.findByTimeLine_TripGroup_Id(tripId)
+        return postRepository.findByTimeLineTripGroupId(tripId)
                 .stream()
                 .map(PostResponse::from)
                 .toList();
