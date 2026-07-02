@@ -11,9 +11,11 @@ public record TimeLineWithConfirmedPlaceResponse(
         LocalDateTime startTime
 ) {
     public static TimeLineWithConfirmedPlaceResponse from(TimeLine timeLine) {
+        TripPlace tripPlace = timeLine.getConfirmedPlace();
+        String confirmedPlaceName = tripPlace == null ? "" : tripPlace.getName();
         return new TimeLineWithConfirmedPlaceResponse(
                 timeLine.getId(),
-                timeLine.getConfirmedPlace().getName(),
+                confirmedPlaceName,
                 timeLine.getStartTime()
         );
     }
