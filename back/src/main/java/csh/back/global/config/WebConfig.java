@@ -1,5 +1,6 @@
 package csh.back.global.config;
 
+import csh.back.global.annotation.ApiV1;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.method.HandlerTypePredicate;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
@@ -19,9 +20,9 @@ public class WebConfig implements WebMvcConfigurer {
                 .maxAge(3600); // 6. 프리플라이트(Preflight) 요청 캐싱 시간 (초 단위)
     }
 
-//    @Override
-//    public void configurePathMatch(PathMatchConfigurer configurer) {
-//        // @ApiV1이 붙은 컨트롤러는 /api/v1 매핑
-//        configurer.addPathPrefix("/api/v1", HandlerTypePredicate.forAnnotation(ApiV1.class));
-//    }
+    @Override
+    public void configurePathMatch(PathMatchConfigurer configurer) {
+        // @ApiV1이 붙은 컨트롤러는 /api/v1 매핑
+        configurer.addPathPrefix("/api/v1", HandlerTypePredicate.forAnnotation(ApiV1.class));
+    }
 }
