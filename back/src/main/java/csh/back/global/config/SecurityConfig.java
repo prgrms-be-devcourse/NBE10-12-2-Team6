@@ -34,6 +34,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         // 문서, H2 콘솔은 인증 없이 접근 허용
+                        .requestMatchers("/api/v1/**").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         // 그 외 모든 요청은 JWT 인증 필요
                         .anyRequest().permitAll()

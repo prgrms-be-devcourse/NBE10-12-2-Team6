@@ -37,7 +37,7 @@ public class TripPlaceV1Controller {
                 request.category(),
                 request.address(),
                 request.kakaoPlaceId(),
-                request.kakaoUrl()
+                request.kakaoMapUrl()
         );
         return new ResponseData(200, response);
     }
