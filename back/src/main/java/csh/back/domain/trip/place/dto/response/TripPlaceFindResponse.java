@@ -4,13 +4,18 @@ import csh.back.domain.trip.place.entity.TripPlace;
 
 public record TripPlaceFindResponse(Long placeId,
                                     String name,
-                                    String theme
+                                    String address,
+                                    String theme,
+                                    String createdBy
+
                                 ) {
         public static TripPlaceFindResponse from(TripPlace tripPlace) {
             return new TripPlaceFindResponse(
                     tripPlace.getId(),
                     tripPlace.getName(),
-                    tripPlace.getTheme()
+                    tripPlace.getAddress(),
+                    tripPlace.getTheme(),
+                    tripPlace.getCreatedBy().getMember().getName()
             );
         }
     }
