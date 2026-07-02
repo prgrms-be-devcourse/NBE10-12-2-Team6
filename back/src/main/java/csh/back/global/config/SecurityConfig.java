@@ -1,5 +1,6 @@
 package csh.back.global.config;
 
+import csh.back.domain.member.repository.MemberRepository;
 import csh.back.global.jwt.JwtAuthenticationFilter;
 import csh.back.global.jwt.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -19,27 +20,27 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
+    private final MemberRepository memberRepository;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // REST API는 CSRF 토큰 불필요
+                .csrf(csrf -> csrf.disable())
                 // JWT를 사용하므로 서버에 세션을 생성하지 않음
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                // H2 콘솔이 iframe을 사용하므로 동일 출처에 한해 허용
                 .headers(headers -> headers
                         .frameOptions(frame -> frame.sameOrigin())
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // 문서, H2 콘솔은 인증 없이 접근 허용
-
-                        // 그 외 모든 요청은 JWT 인증 필요
+                        // 회원가입, 로그인은 인증 없이 접근 허용
+                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        // 그 외 모든 요청은 JWT 필터를 거치되 인증 강제하지 않음
                         .anyRequest().permitAll()
                 )
                 // Spring의 기본 로그인 필터 앞에 JWT 필터를 끼워 넣음
-                .addFilterBefore(new JwtAuthenticationFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtAuthenticationFilter(jwtUtil, memberRepository), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

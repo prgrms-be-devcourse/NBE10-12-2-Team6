@@ -15,16 +15,13 @@ public class JwtUtil {
 
     private final SecretKey secretKey;
     private final long accessExpiration;
-    private final long refreshExpiration;
 
     public JwtUtil(
             @Value("${jwt.secret}") String secret,
-            @Value("${jwt.access-expiration}") long accessExpiration,
-            @Value("${jwt.refresh-expiration}") long refreshExpiration
+            @Value("${jwt.access-expiration}") long accessExpiration
     ) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.accessExpiration = accessExpiration;
-        this.refreshExpiration = refreshExpiration;
     }
 
     // Access Token 생성 (만료시간: 30분)
@@ -32,20 +29,15 @@ public class JwtUtil {
         return buildToken(memberId, email, accessExpiration);
     }
 
-    // Refresh Token 생성 (만료시간: 7일)
-    public String generateRefreshToken(Long memberId, String email) {
-        return buildToken(memberId, email, refreshExpiration);
-    }
-
     // 토큰 생성 공통 로직
     private String buildToken(Long memberId, String email, long expiration) {
         Date now = new Date();
         return Jwts.builder()
-                .subject(email)              // 토큰 주인 (이메일)
-                .claim("memberId", memberId) // 추가 데이터 (회원 ID)
-                .issuedAt(now)               // 생성 시간
-                .expiration(new Date(now.getTime() + expiration)) // 만료 시간
-                .signWith(secretKey)         // 서명
+                .subject(email)
+                .claim("memberId", memberId)
+                .issuedAt(now)
+                .expiration(new Date(now.getTime() + expiration))
+                .signWith(secretKey)
                 .compact();
     }
 
