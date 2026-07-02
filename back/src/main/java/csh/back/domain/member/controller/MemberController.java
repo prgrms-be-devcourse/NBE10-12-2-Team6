@@ -7,6 +7,7 @@ import csh.back.domain.member.dto.response.LoginResponseDto;
 import csh.back.domain.member.dto.response.MemberResponseDto;
 import csh.back.domain.member.dto.response.TokenResponseDto;
 import csh.back.domain.member.service.MemberService;
+import csh.back.global.annotation.ApiV1;
 import csh.back.global.dto.ResponseData;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 // 회원 관련 요청을 처리하는 컨트롤러
+@ApiV1
 @RequiredArgsConstructor
 @RequestMapping("/auth")
 @RestController

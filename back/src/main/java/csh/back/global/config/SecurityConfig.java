@@ -40,8 +40,7 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/h2-console/**",
                                 "/api/v1/auth/**",
-                                "/api/v1/trips/**", // 기존에 있던 /post 페이지를 trip으로 통폐합
-                                "/auth/**" // 개발 중 임시로 전체 허용 (로그아웃 구현 시 경로별로 제한 필요)
+                                "/api/v1/trips/**" // 기존에 있던 /post 페이지를 trip으로 통폐합
                         ).permitAll()
                         // 그 외 모든 요청은 JWT 인증 필요
                         .anyRequest().authenticated()
