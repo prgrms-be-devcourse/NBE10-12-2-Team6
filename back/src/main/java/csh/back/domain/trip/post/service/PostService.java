@@ -78,7 +78,7 @@ public class PostService {
             CreatePostRequest request
     ) {
         //타임라인 체크 메세지
-        TripMember trip_member_id = tripMemberRepository.findById(tripMemberId)
+        TripMember tripMemberId = tripMemberRepository.findById(tripMemberId)
                 .orElseThrow(() -> new IllegalArgumentException("여행 멤버가 존재하지 않습니다."));
 
         TimeLine timeline = timeLineRepository.findById(timelineId)
@@ -88,7 +88,7 @@ public class PostService {
             throw new IllegalArgumentException("해당 여행의 타임라인이 아닙니다.");
         }
         Post post = Post.builder()
-                .trip_member_id(trip_member_id)
+                .tripMemberId(tripMemberId)
                 .timeLine(timeline)
                 .content(request.content())
                 .location(request.location())
