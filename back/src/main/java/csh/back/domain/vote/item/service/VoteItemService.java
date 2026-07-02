@@ -27,9 +27,9 @@ public class VoteItemService {
     public VoteUserSaveResponseDto saveVoteItem(Long voteId, Long placeId) {
         log.info("장소 아이디 값 : {}", placeId.toString());
         log.info("투표 아이디 값 : {}", voteId.toString());
-        Vote vote = voteRepository.getReferenceById(voteId);
+        Vote vote = voteRepository.findById(voteId).orElseThrow(RuntimeException::new);
         TripPlace tripPlace = tripPlaceRepository.findById(placeId).orElseThrow(RuntimeException::new);
-        VoteItem voteItem = voteItemRepository.findByTripPlaceId(placeId);
+        VoteItem voteItem = voteItemRepository.findByTripPlaceId(placeId).orElseThrow(RuntimeException::new);
         if (voteItem == null) {
             voteItem = VoteItem
                     .builder()
