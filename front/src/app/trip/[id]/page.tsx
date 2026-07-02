@@ -10,7 +10,7 @@ import { Avatar, formatDate } from "../../lib";
 
 function InviteModal({ trip, onUpdate, onClose }: { trip: Trip; onUpdate: (t: Trip) => void; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
-  const inviteLink = `http://localhost:3000//invite/${trip.inviteCode}`;
+  const inviteLink = `http://localhost:3000/invite/${trip.inviteCode}`;
   // const inviteLink = `https://triplog.app/invite/${trip.inviteCode}`;
 
   const copyLink = () => {
