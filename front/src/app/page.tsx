@@ -12,7 +12,18 @@ export default function LoginPage() {
   const [nickname, setNickname] = useState("");
 
   useEffect(() => {
-    if (isLoggedIn) router.replace("/home");
+    if (!isLoggedIn) return;
+
+    const pendingCode = localStorage.getItem("pendingInviteCode");
+    if (pendingCode) {
+      localStorage.removeItem("pendingInviteCode");
+      fetch(`/api/trips/invite/${pendingCode}/join`, {
+        method: "POST",
+        credentials: "include",
+      }).finally(() => router.replace("/home"));
+    } else {
+      router.replace("/home");
+    }
   }, [isLoggedIn, router]);
 
   if (showSignup) {
