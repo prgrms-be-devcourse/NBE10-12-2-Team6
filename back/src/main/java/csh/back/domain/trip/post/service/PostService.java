@@ -73,12 +73,12 @@ public class PostService {
     @Transactional
     public PostResponse create(
             Long tripId,
-            Long tripMember,
+            Long tripMemberId,//동시선언 오류나서 임시로 설정
             Long timelineId,
             CreatePostRequest request
     ) {
         //타임라인 체크 메세지
-        TripMember tripMember = tripMemberRepository.findById(tripMember)
+        TripMember tripMember = tripMemberRepository.findById(tripMemberId)//동시선언 오류나서 임시로 설정
                 .orElseThrow(() -> new IllegalArgumentException("여행 멤버가 존재하지 않습니다."));
 
         TimeLine timeline = timeLineRepository.findById(timelineId)
