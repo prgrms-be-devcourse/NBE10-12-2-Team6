@@ -1,9 +1,6 @@
 package csh.back.domain.trip.timeline.controller;
 
-import csh.back.domain.trip.timeline.dto.request.TimeLineAllCreateRequest;
-import csh.back.domain.trip.timeline.dto.request.TimeLineConfirmPlaceRequest;
-import csh.back.domain.trip.timeline.dto.request.TimeLineCreateRequest;
-import csh.back.domain.trip.timeline.dto.request.TimeLineUpdateRequest;
+import csh.back.domain.trip.timeline.dto.request.*;
 import csh.back.domain.trip.timeline.dto.response.TimeLineResponse;
 import csh.back.domain.trip.timeline.service.TimeLineService;
 import csh.back.global.dto.ResponseData;
