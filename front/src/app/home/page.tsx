@@ -15,7 +15,7 @@ function TripCard({ trip }: { trip: Trip }) {
       <div className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
         <div className="flex items-start justify-between mb-3">
           <div>
-            <p className="font-bold text-base">{trip.title}</p>
+            <p className="font-bold text-base">{trip.name}</p>
             <p className="text-sm text-gray-500 mt-0.5">{trip.region} · {trip.nights}박 {trip.nights + 1}일</p>
           </div>
           <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-100 text-blue-600 shrink-0 ml-2 text-center leading-tight">
@@ -46,7 +46,16 @@ export default function HomePage() {
 
   const handleCreateTrip = () => {
     if (!tripTitle.trim() || !tripRegion.trim() || !tripDate) return;
-    const id = createTrip({ title: tripTitle, region: tripRegion, startDate: tripDate, nights: tripNights });
+
+    const payload = {
+      name: tripTitle.trim(),
+      startDate: tripDate,
+      region: tripRegion.trim(),
+      nights: tripNights,
+    };
+    console.log("[여행 만들기] POST /api/v1/trips", payload);
+
+    const id = createTrip({ name: tripTitle, region: tripRegion, startDate: tripDate, nights: tripNights });
     setShowCreate(false);
     setTripTitle(""); setTripRegion(""); setTripDate(""); setTripNights(2);
     router.push(`/trip/${id}`);

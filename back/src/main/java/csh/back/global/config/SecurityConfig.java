@@ -24,9 +24,10 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
-                                "/h2-console/**"
+                                "/h2-console/**",
+                                "/api/v1/auth/**",
+                                "/api/v1/trips/**" //기존에 있던 /post 페이지를 trip으로 통폐합
                         ).permitAll()
-                        .requestMatchers("/api/v1/auth/**", "/trips/**").permitAll()
                         .anyRequest().authenticated()
                 );
 

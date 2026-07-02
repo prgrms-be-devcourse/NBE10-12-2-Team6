@@ -10,6 +10,7 @@ import csh.back.domain.trip.group.repository.TripGroupRepository;
 import csh.back.domain.trip.member.entity.TripMember;
 import csh.back.domain.trip.member.repository.TripMemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,20 +39,15 @@ public class TripGroupService {
 	@Transactional
 	public TripGroupResponse writeGroup(TripGroupRequest request, Member owner) {
 		LocalDate startDate = LocalDate.parse(request.startDate());
-		LocalDate endDate = LocalDate.parse(request.endDate());
 
-		if (endDate.isBefore(startDate)) {
-			throw new IllegalArgumentException("종료일은 시작일보다 빠를 수 없습니다.");
-		}
+		LocalDate endDate = startDate.plusDays(request.nights());
 
-		int nights = (int) ChronoUnit.DAYS.between(startDate, endDate);
-		// FIXME joinUrl 생성함수를 넣어서 수정예정-윤선
 		TripGroup group = TripGroup.builder()
 				.owner(owner)
 				.name(request.name())
 				.region(request.region())
-				.nights(nights)
-				.joinUrl("welcomeTripGroup")
+				.nights(request.nights())
+				.joinCode(createJoinCode())
 				.startDate(startDate)
 				.endDate(endDate)
 				.build();
@@ -91,7 +87,18 @@ public class TripGroupService {
 		if (!group.getOwner().getId().equals(ownerId)) {
 			throw new IllegalArgumentException("해당 모임의 소유자가 아닙니다.");
 		}
+
 		group.modify(request);
 		return TripGroupResponse.from(group);
+	}
+
+	//초대링크 생성 함수
+	public String createJoinCode() {
+		String joinCode;
+		do {
+			//count: 글자수 제한, letters: 영문혼합, numbers: 숫자혼합
+			joinCode = RandomStringUtils.random(7, true, true); //setlog와 같은 문자열 생성
+		} while (tripGroupRepository.existsByJoinCode(joinCode)); //혹시라도 다른방과 url이 같은걸 막기위해
+		return joinCode;
 	}
 }
