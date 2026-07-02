@@ -31,6 +31,9 @@ public class TimeLineService {
     private final TripMemberRepository tripMemberRepository;
     private final TripPlaceRepository tripPlaceRepository;
 
+    //최소 일차
+    private static final int MINIMUM_DAY = 1;
+
     //단건 타임라인 생성
     public TimeLineResponse createTimeLine(Long tripId, Long memberId, TimeLineCreateRequest request) {
         //여행 모임 방장 여부 검증
@@ -45,8 +48,7 @@ public class TimeLineService {
                 request.endTime());
 
         //tripId로 여행 모임 조회
-        TripGroup tripGroup = tripGroupRepository.findById(tripId)
-                .orElseThrow(() -> new IllegalArgumentException("여행 모임을 찾을 수 없습니다."));
+        TripGroup tripGroup = findTripGroup(tripId);
 
         //타임라인 구간 생성
         TimeLine timeLine = TimeLine.builder()
@@ -84,8 +86,7 @@ public class TimeLineService {
         }
 
         //tripId로 여행 모임 조회
-        TripGroup tripGroup = tripGroupRepository.findById(tripId)
-                .orElseThrow(()-> new IllegalArgumentException("여행 모임을 찾을 수 없습니다."));
+        TripGroup tripGroup = findTripGroup(tripId);
 
         //요청으로 들어온 시간 구간들을 TimeLine 엔티티 목록으로 변환
         List<TimeLine> timeLines = new ArrayList<>();
@@ -115,10 +116,9 @@ public class TimeLineService {
     public List<TimeLineResponse> getTimeLines(Long tripId, Long memberId, int dayNumber) {
         //여행 모임 멤버 검증 여부 추가
         validateTripMember(tripId, memberId);
-
         //dayNumber 검증
-        if (dayNumber < 1) {
-            throw new IllegalArgumentException("일차는 1 이상이어야 합니다.");
+        if (dayNumber < MINIMUM_DAY) {
+            throw new IllegalArgumentException("일차는 " + MINIMUM_DAY + " 이상이어야 합니다.");
         }
         //tripId + dayNumber로 목록 조회
         //TimeLineResponse 리스트로 변환
@@ -136,8 +136,7 @@ public class TimeLineService {
         validateStartAndEndTime(request.startTime(), request.endTime());
 
         //tripId와 timelineId가 모두 일치하는 타임라인 조회
-        TimeLine timeLine = timeLineRepository.findByIdAndTripGroupId(timelineId, tripId)
-                .orElseThrow(() -> new IllegalArgumentException("타임라인을 찾을 수 없습니다."));
+        TimeLine timeLine = findTimeLine(tripId, timelineId);
         //수정 시 자기 자신을 제외하고 DB에 이미 저장된 타임라인과 시간이 겹치는지 검증
         validateTimeLineOverlapForUpdate(
                 tripId,
@@ -154,18 +153,6 @@ public class TimeLineService {
         return TimeLineResponse.from(timeLine);
     }
 
-    public void deleteTimeLine(Long tripId, Long timelineId, Long memberId) {
-        //여행 모임 방장 여부 검증
-        validateTripAdmin(tripId, memberId);
-
-        //tripId와 timeLineId가 모두 일치하는 타임라인 조회
-        TimeLine timeLine = timeLineRepository.findByIdAndTripGroupId(timelineId,tripId)
-                .orElseThrow(() -> new IllegalArgumentException("타임라인을 찾을 수 없습니다."));
-
-        //타임라인 제거
-        timeLineRepository.delete(timeLine);
-    }
-
     //확정된 장소 삽입하는 메서드
     public TimeLineResponse confirmTimeLinePlace(
             Long tripId,
@@ -176,8 +163,7 @@ public class TimeLineService {
         //여행 모임 멤버 여부 검증 추가
         validateTripMember(tripId, memberId);
         //tripId + timelineId로 타임라인 조회
-        TimeLine timeLine = timeLineRepository.findByIdAndTripGroupId(timelineId, tripId)
-                .orElseThrow(()-> new IllegalArgumentException("타임라인을 찾을 수 없습니다."));
+        TimeLine timeLine = findTimeLine(tripId, timelineId);
         //tripId + confirmedPlaceId로 후보 장소 조회
         TripPlace tripPlace = tripPlaceRepository.findByIdAndTripGroupId(request.confirmedPlaceId(), tripId)
                 .orElseThrow(()-> new IllegalArgumentException("확정된 장소가 없습니다."));
@@ -185,6 +171,23 @@ public class TimeLineService {
         timeLine.updateConfirmedPlace(tripPlace);
         //응답 반환
         return TimeLineResponse.from(timeLine);
+    }
+    //타임라인 삭제 메서드
+    public void deleteTimeLine(Long tripId, Long timelineId, Long memberId) {
+        //여행 모임 방장 여부 검증
+        validateTripAdmin(tripId, memberId);
+
+        //tripId와 timeLineId가 모두 일치하는 타임라인 조회
+        TimeLine timeLine = findTimeLine(tripId, timelineId);
+
+        //타임라인 제거
+        timeLineRepository.delete(timeLine);
+    }
+
+    // tripId로 여행 모임 조회
+    private TripGroup findTripGroup(Long tripId) {
+        return tripGroupRepository.findById(tripId)
+                .orElseThrow(() -> new IllegalArgumentException("여행 모임을 찾을 수 없습니다."));
     }
 
     //여행 모임 멤버 여부 검증
@@ -194,6 +197,12 @@ public class TimeLineService {
         if (!isMember) {
             throw new IllegalArgumentException("여행 모임 멤버만 접근할 수 있습니다.");
         }
+    }
+
+    //tripId와 timelineId가 모두 일치하는 타임라인 조회
+    private TimeLine findTimeLine(Long tripId, Long timelineId) {
+        return timeLineRepository.findByIdAndTripGroupId(timelineId, tripId)
+                .orElseThrow(() -> new IllegalArgumentException("타임라인을 찾을 수 없습니다."));
     }
 
     //방장 여부 검증
@@ -217,6 +226,10 @@ public class TimeLineService {
 
     //시작 시간이 종료 시간보다 빠른지 검증
     private void validateStartAndEndTime(LocalDateTime start, LocalDateTime end) {
+        if (start == null || end == null) {
+            throw new IllegalArgumentException("시작 시간과 종료 시간은 필수입니다.");
+        }
+
         //시작 시간이 종료 시간보다 전 시간대가 아닐 경우
         if (!start.isBefore(end)) {
             throw new IllegalArgumentException("종료 시간은 시작 시간보다 늦어야 합니다.");
@@ -251,28 +264,27 @@ public class TimeLineService {
 
     //DB에 이미 저장된 타임라인과 시간이 겹치는지 검증
     private void validateTimeLineOverlap(Long tripId, Integer dayNumber, LocalDateTime startTime, LocalDateTime endTime) {
-        boolean isOverLapped = timeLineRepository.existsByTripGroupIdAndDayNumberAndStartTimeLessThanAndEndTimeGreaterThan(
+        long overlapCount = timeLineRepository.countOverlappingTimeLine(
                 tripId,
                 dayNumber,
-                endTime,
-                startTime);
+                startTime,
+                endTime);
 
-        if (isOverLapped) {
+        if (overlapCount > 0) {
             throw new IllegalArgumentException("시간 카테고리가 겹치면 안 됩니다.");
         }
     }
 
     //수정 시 자기 자신을 제외하고 DB에 이미 저장된 타임라인과 시간이 겹치는지 검증
     private void validateTimeLineOverlapForUpdate(Long tripId, Long timelineId, Integer dayNumber, LocalDateTime startTime, LocalDateTime endTime) {
-
-        boolean isOverLapped = timeLineRepository.existsByTripGroupIdAndDayNumberAndIdNotAndStartTimeLessThanAndEndTimeGreaterThan(
+        long overlapCount = timeLineRepository.countOverlappingTimeLineExceptSelf(
                 tripId,
                 dayNumber,
                 timelineId,
-                endTime,
-                startTime);
+                startTime,
+                endTime);
 
-        if (isOverLapped) {
+        if (overlapCount > 0) {
             throw new IllegalArgumentException("시간 카테고리가 겹치면 안 됩니다.");
         }
     }
