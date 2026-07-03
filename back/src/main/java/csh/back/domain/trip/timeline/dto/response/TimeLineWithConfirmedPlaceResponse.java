@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 
 public record TimeLineWithConfirmedPlaceResponse(
         Long voteId,
+        Long timeLineId,
         String confirmedPlaceName,
         LocalDateTime startTime
 ) {
@@ -15,6 +16,7 @@ public record TimeLineWithConfirmedPlaceResponse(
         String confirmedPlaceName = tripPlace == null ? "" : tripPlace.getName();
         return new TimeLineWithConfirmedPlaceResponse(
                 voteId,
+                timeLine.getId(),
                 confirmedPlaceName,
                 timeLine.getStartTime()
         );

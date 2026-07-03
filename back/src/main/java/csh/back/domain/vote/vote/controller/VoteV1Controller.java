@@ -1,6 +1,8 @@
 package csh.back.domain.vote.vote.controller;
 
 import csh.back.domain.member.dto.response.AuthFilterDto;
+import csh.back.domain.vote.vote.dto.request.VoteCreateRequest;
+import csh.back.domain.vote.vote.dto.response.VoteCreateResponse;
 import csh.back.domain.vote.vote.dto.response.VoteFindListResponse;
 import csh.back.domain.vote.vote.dto.response.VoteFindResponse;
 import csh.back.domain.vote.vote.dto.response.VoteFindUserResponse;
@@ -26,6 +28,19 @@ public class VoteV1Controller {
             @AuthenticationPrincipal AuthFilterDto member
     ) {
         return new ResponseData<>(200, voteService.findVoteList(tripId, member.id()));
+    }
+
+    @PostMapping
+    public ResponseData<VoteCreateResponse> createVote(
+            @PathVariable Long tripId,
+            @RequestBody VoteCreateRequest request,
+            @AuthenticationPrincipal AuthFilterDto member
+    ) {
+
+        return new ResponseData<>(
+                201,
+                voteService.wrapperCreateVote(tripId, member.id(), request.timeLindId())
+        );
     }
 
     @GetMapping("/{voteId}")

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface TimeLineRepository extends JpaRepository<TimeLine, Long> {
+    List<TimeLine> findAllByTripGroupId(Long tripId);
 
     //특정 여행 모임의 특정 일차 타임라인 목록을 시작 시간 기준으로 조회
     List<TimeLine> findByTripGroupIdAndDayNumberOrderByStartTimeAsc(Long tripId, int dayNumber);
