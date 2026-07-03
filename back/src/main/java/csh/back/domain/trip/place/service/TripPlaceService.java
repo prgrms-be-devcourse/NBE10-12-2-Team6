@@ -1,6 +1,10 @@
 package csh.back.domain.trip.place.service;
 
 
+import csh.back.domain.trip.group.entity.TripGroup;
+import csh.back.domain.trip.group.repository.TripGroupRepository;
+import csh.back.domain.trip.member.entity.TripMember;
+import csh.back.domain.trip.member.repository.TripMemberRepository;
 import csh.back.domain.trip.place.dto.response.TripPlaceFindResponse;
 import csh.back.domain.trip.place.dto.response.TripPlaceSaveResponse;
 import csh.back.domain.trip.place.entity.TripPlace;
@@ -16,10 +20,11 @@ import java.util.List;
 @Service
 public class TripPlaceService {
     private final TripPlaceRepository tripPlaceRepository;
-//    private final TripGroupRepository tripGroupRepository;
+    private final TripGroupRepository tripGroupRepository;
+    private final TripMemberRepository tripMemberRepository;
 
     public List<TripPlaceFindResponse> findWishPlaces(Long tripId) {
-        List<TripPlace> tripPlaces = tripPlaceRepository.findAllByTripGroupId(tripId);
+        List<TripPlace> tripPlaces = tripPlaceRepository.findAllByTripGroupId(1L);
         return tripPlaces
                 .stream()
                 .map(TripPlaceFindResponse::from)
@@ -32,16 +37,18 @@ public class TripPlaceService {
                                            String theme,
                                            String address,
                                            String kakaoPlaceId,
-                                           String kakaoUrl) {
-    //        TripGroup tripGroup = tripGroupRepository.findById(tripId).orElseThrow(RuntimeException::new);
+                                           String kakaoMapUrl) {
+        TripGroup tripGroup = tripGroupRepository.findById(1L).orElseThrow(RuntimeException::new);
+        TripMember tripMember = tripMemberRepository.findByMemberIdAndTripGroupId(100L, 1L).orElseThrow(RuntimeException::new);
         TripPlace place = TripPlace
                 .builder()
-    //                .tripGroup(tripGroup)
+                .tripGroup(tripGroup)
                 .name(name)
                 .theme(theme)
                 .address(address)
                 .kakaoPlaceId(kakaoPlaceId)
-                .kakaoMapUrl(kakaoUrl)
+                .kakaoMapUrl(kakaoMapUrl)
+//                .createdBy(tripMember)
                 .build();
         TripPlace saveResult = tripPlaceRepository.save(place);
         TripPlaceSaveResponse response = TripPlaceSaveResponse.from(saveResult);

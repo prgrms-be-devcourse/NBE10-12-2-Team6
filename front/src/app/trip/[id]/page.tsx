@@ -3,30 +3,19 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useStore, Trip, TripDay, PlanCandidate, uid, MOCK_USERS } from "../../store";
+import { useStore, Trip, TripDay, PlanCandidate, uid } from "../../store";
 import { Avatar, formatDate } from "../../lib";
 
 // ── InviteModal ───────────────────────────────────────────────────────────────
 
-function InviteModal({ trip, onUpdate, onClose }: { trip: Trip; onUpdate: (t: Trip) => void; onClose: () => void }) {
+function InviteSheet({ trip, onClose }: { trip: Trip; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
-  const inviteLink = `http://localhost:3000/invite/${trip.inviteCode}`;
-  // const inviteLink = `https://triplog.app/invite/${trip.inviteCode}`;
+  const code = trip.inviteCode;
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(inviteLink).catch(() => {});
+  const copyCode = () => {
+    navigator.clipboard.writeText(code).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const joinMockMember = () => {
-    const user = MOCK_USERS[trip.inviteJoinIndex % MOCK_USERS.length];
-    const alreadyIn = trip.members.some(m => m.id === user.id);
-    onUpdate({
-      ...trip,
-      members: alreadyIn ? trip.members : [...trip.members, user],
-      inviteJoinIndex: trip.inviteJoinIndex + 1,
-    });
   };
 
   return (
@@ -34,35 +23,23 @@ function InviteModal({ trip, onUpdate, onClose }: { trip: Trip; onUpdate: (t: Tr
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative w-full max-w-md bg-white rounded-t-3xl p-6 flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <p className="text-lg font-bold">초대 링크</p>
+          <p className="text-lg font-bold">초대 코드</p>
           <button onClick={onClose} className="text-blue-500 font-medium">닫기</button>
         </div>
 
-        <div>
-          <p className="text-xs font-bold text-gray-400 mb-1">초대 코드</p>
-          <p className="text-2xl font-bold tracking-widest">{trip.inviteCode}</p>
+        <p className="text-sm text-gray-500">아래 코드를 친구에게 공유해주세요.</p>
+
+        <div className="flex items-center justify-center py-6 rounded-2xl" style={{ background: "#eff6ff" }}>
+          <p className="text-3xl font-bold tracking-[0.25em] text-blue-600">{code}</p>
         </div>
 
-        <div className="p-3 rounded-xl text-xs text-blue-500 truncate" style={{ background: "#eff6ff" }}>
-          {inviteLink}
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            onClick={copyLink}
-            className="flex-1 py-3 rounded-xl text-sm font-semibold"
-            style={{ background: "#dbeafe", color: "#2563eb" }}
-          >
-            {copied ? "복사 완료 ✓" : "링크 복사"}
-          </button>
-          <button
-            onClick={joinMockMember}
-            className="flex-1 py-3 rounded-xl text-sm font-semibold"
-            style={{ background: "#dcfce7", color: "#16a34a" }}
-          >
-            예시 멤버 입장
-          </button>
-        </div>
+        <button
+          onClick={copyCode}
+          className="w-full py-3.5 rounded-2xl text-sm font-semibold"
+          style={{ background: "#dbeafe", color: "#2563eb" }}
+        >
+          {copied ? "복사 완료 ✓" : "코드 복사"}
+        </button>
       </div>
     </div>
   );
@@ -104,25 +81,34 @@ function AddCandidateSheet({
     }
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!selected) return;
-    const payload = {
-      name: selected.place_name,
-      category: selected.category_group_name || undefined,
-      address: selected.road_address_name || selected.address_name,
-      kakaoPlaceId: selected.id,
-      kakaoMapUrl: selected.place_url,
-    };
-    console.log(`[후보 등록] POST /api/v1/trips/{tripId}/wish-places`, payload);
-    onAdd({
-      id: uid(),
-      authorId: currentUser.id,
-      authorName: currentUser.name,
-      placeName: selected.place_name,
-      address: selected.road_address_name || selected.address_name,
-      category: selected.category_group_name || undefined,
-    });
-    onClose();
+    try {
+      const res = await fetch(`http://localhost:8080/api/v1/trips/${trip.id}/wish-places`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: selected.place_name,
+          category: selected.category_group_name || undefined,
+          address: selected.road_address_name || selected.address_name,
+          kakaoPlaceId: Number(selected.id),
+          kakaoMapUrl: selected.place_url,
+        }),
+      });
+      const body = await res.json();
+      onAdd({
+        id: String(body.data?.id ?? uid()),
+        authorId: currentUser.id,
+        authorName: currentUser.name,
+        placeName: selected.place_name,
+        address: selected.road_address_name || selected.address_name,
+        category: selected.category_group_name || undefined,
+      });
+      onClose();
+    } catch (e) {
+      console.error("[후보 등록 실패]", e);
+    }
   };
 
   return (
@@ -289,8 +275,41 @@ export default function TripDetailPage() {
   })();
 
   useEffect(() => {
-    if (!id) return;
-    console.log(`[여행 상세] GET /api/v1/trips/${id}`);
+    if (!id || !trip) return;
+
+    Promise.all([
+      fetch(`http://localhost:8080/api/v1/trips/${id}`, { credentials: "include" }).then(r => r.json()),
+      fetch(`http://localhost:8080/api/v1/trips/${id}/timelines/count`, { credentials: "include" }).then(r => r.json()),
+      fetch(`http://localhost:8080/api/v1/trips/${id}/wish-places`, { credentials: "include" }).then(r => r.json()),
+    ]).then(([tripBody, countBody, wishBody]) => {
+      const inviteCode = tripBody.data?.joinCode ?? trip.inviteCode;
+      const counts: { day: number; count: number }[] = countBody.data ?? [];
+      const wishes: { placeId: number; name: string; address: string; theme: string; createdBy: string }[] = wishBody.data ?? [];
+
+      const updatedDays = trip.days.map(day => {
+        const entry = counts.find(c => c.day === day.dayNumber);
+        if (!entry || entry.count === 0) return day;
+        const blocks = Array.from({ length: entry.count }, (_, i) => ({
+          id: `${day.dayNumber}-${i}`,
+          order: i + 1,
+          theme: "etc" as const,
+          startMinute: 0,
+          endMinute: 0,
+        }));
+        return { ...day, blocks, isPlanCompleted: true };
+      });
+
+      const candidates = wishes.map(w => ({
+        id: String(w.placeId),
+        authorId: 0,
+        authorName: w.createdBy,
+        placeName: w.name,
+        address: w.address,
+        category: w.theme,
+      }));
+
+      updateTrip({ ...trip, inviteCode, days: updatedDays, candidates });
+    }).catch(() => {});
   }, [id]);
 
   useEffect(() => {
@@ -539,7 +558,7 @@ export default function TripDetailPage() {
       </div>
 
       {showInvite && (
-        <InviteModal trip={trip} onUpdate={updateTrip} onClose={() => setShowInvite(false)} />
+        <InviteSheet trip={trip} onClose={() => setShowInvite(false)} />
       )}
     </div>
   );

@@ -1,12 +1,15 @@
 package csh.back.domain.member.entity;
 
 import csh.back.global.entity.BaseEntity;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.util.UUID;
 
 //멤버 엔티티
 @Getter
@@ -21,6 +24,9 @@ public class Member extends BaseEntity {
     //회원 이름 혹은 닉네임
     private String name;
 
+    @Column(unique = true)
+    private String refreshToken;
+
     //생성자
     //빌드 사용
     @Builder
@@ -28,5 +34,6 @@ public class Member extends BaseEntity {
         this.email = email;
         this.password = password;
         this.name = name;
+        this.refreshToken = UUID.randomUUID().toString();
     }
 }

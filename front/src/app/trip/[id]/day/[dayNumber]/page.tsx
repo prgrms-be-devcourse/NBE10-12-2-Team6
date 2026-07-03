@@ -4,9 +4,15 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useStore, Trip, TripDay, ActivityBlock, PlanTheme, uid } from "../../../../store";
-import { THEME, ThemeBadge, BigActionCard, timeText, durationText, formatDate } from "../../../../lib";
+import { THEME, ThemeBadge, timeText, durationText } from "../../../../lib";
 
 const THEMES: PlanTheme[] = ["meal", "cafe", "activity", "etc"];
+const API_BASE = "http://localhost:8080";
+
+const isoToMinutes = (iso: string) => {
+  const [h, m] = iso.split("T")[1].split(":").map(Number);
+  return h * 60 + (m || 0);
+};
 
 const toTimeStr = (minutes: number) =>
   `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
@@ -91,9 +97,24 @@ export default function DayPlanPage() {
   const [validationError, setValidationError] = useState("");
 
   useEffect(() => {
-    if (!id) return;
-    console.log(`[일차 계획] GET /api/v1/trips/${id}/timelines`);
-  }, [id]);
+    if (!id || !trip || dayIdx < 0) return;
+    fetch(`${API_BASE}/api/v1/trips/${id}/timelines?dayNumber=${dayNum}`, { credentials: "include" })
+      .then(r => r.json())
+      .then(body => {
+        const items: { timeLineId?: number; timelineId?: number; dayNumber: number; startTime: string; endTime: string }[] = body.data ?? [];
+        if (items.length === 0) return;
+        const blocks: ActivityBlock[] = items.map((item, i) => ({
+          id: String(item.timeLineId ?? item.timelineId ?? i),
+          order: i + 1,
+          theme: THEMES[i % THEMES.length],
+          startMinute: isoToMinutes(item.startTime),
+          endMinute: isoToMinutes(item.endTime),
+        }));
+        const currentDay = trip.days[dayIdx];
+        updateTrip({ ...trip, days: trip.days.map((d, i) => i === dayIdx ? { ...currentDay, blocks, isPlanCompleted: true } : d) });
+      })
+      .catch(() => {});
+  }, [id, dayNum]);
 
   if (!trip || dayIdx < 0) return null;
 
@@ -138,7 +159,7 @@ export default function DayPlanPage() {
     setDay({ ...day, blocks: normalizeOrders(day.blocks.map(b => b.id === blockId ? { ...b, startMinute: start, endMinute: end } : b)) });
   };
 
-  const completePlan = () => {
+  const completePlan = async () => {
     const hasInvalid = day.blocks.some(b => b.endMinute <= b.startMinute);
     if (hasInvalid) {
       setValidationError("종료 시간이 시작 시간보다 늦어야 합니다.");
@@ -161,12 +182,21 @@ export default function DayPlanPage() {
       const m = String(mins % 60).padStart(2, "0");
       return `${dateStr}T${h}:${m}:00`;
     };
-    const payload = sorted.map(block => ({
+    const timeLines = sorted.map(block => ({
       dayNumber: dayNum,
       startTime: toDateTime(block.startMinute),
       endTime: toDateTime(block.endMinute),
     }));
-    console.log(`[시간 범위 설정] POST /api/v1/trips/${id}/timelines`, payload);
+    try {
+      await fetch(`${API_BASE}/api/v1/trips/${id}/timelines/batch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ dayNumber: dayNum, timeLines }),
+      });
+    } catch (e) {
+      console.error("[타임라인 저장 실패]", e);
+    }
     setDay({ ...day, blocks: normalizeOrders(day.blocks), isPlanCompleted: true, isPlanSkipped: false, records: [] });
     router.push(`/trip/${id}`);
   };
@@ -263,15 +293,6 @@ export default function DayPlanPage() {
           </div>
         )}
 
-        {/* Photo section */}
-        {day.isPlanCompleted && (
-          <div className="flex flex-col gap-3">
-            <p className="font-semibold">사진 기록</p>
-            <Link href={`/trip/${id}/day/${dayNum}/photos`}>
-              <BigActionCard icon="📷" title={`${dayNum}일차 사진 올리기`} subtitle="확정된 계획 순서대로 사진을 올리거나 건너뜁니다." colorKey="green" />
-            </Link>
-          </div>
-        )}
       </div>
 
       {/* 하단 고정 버튼 */}

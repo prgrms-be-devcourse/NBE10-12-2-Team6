@@ -1,6 +1,7 @@
 package csh.back.domain.trip.timeline.controller;
 
 import csh.back.domain.trip.timeline.dto.request.*;
+import csh.back.domain.trip.timeline.dto.response.TimeLineCountResponse;
 import csh.back.domain.trip.timeline.dto.response.TimeLineResponse;
 import csh.back.domain.trip.timeline.service.TimeLineService;
 import csh.back.global.dto.ResponseData;
@@ -63,6 +64,18 @@ public class TimeLineV1Controller {
         //로그인 기능 연동 후 memberId는 인증 정보에서 가져오도록 변경
         //ResponseData로 감싸서 200 OK 반환
         return new ResponseData<>(200, timeLineService.getTimeLines(tripId, memberId, dayNumber));
+    }
+
+    //Swagger 문서에 방 내 전체 타임라인 개수 목록 API 설명 표시
+    @Operation(summary = "방 내 전체 타임라인 개수 목록 반환")
+//방 내 전체 타임라인 개수 목록 조회
+    @GetMapping("/count")
+    public ResponseData<List<TimeLineCountResponse>> getTimeLinesCount(
+            @PathVariable Long tripId) {
+        //로그인 기능 연동 후 memberId는 인증 정보에서 가져오도록 변경
+        //ResponseData로 감싸서 200 OK 반환
+        Long memberId = 1L;
+        return new ResponseData<>(200, timeLineService.getTimeLinesCount(tripId, memberId));
     }
 
     //Swagger 문서에 타임라인 수정 API 설명 표시
