@@ -1,5 +1,6 @@
 package csh.back.global.jwt;
 
+import csh.back.domain.member.dto.response.AuthFilterDto;
 import csh.back.domain.member.repository.MemberRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -50,8 +51,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     // SecurityContextHolder에 인증 정보 등록 - principal: email, details: memberId
     private void setAuthentication(String email, Long memberId) {
+        AuthFilterDto principal = new AuthFilterDto(memberId, email);
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                email,
+                principal,
                 null,
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );

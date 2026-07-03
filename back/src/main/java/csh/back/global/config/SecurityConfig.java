@@ -35,7 +35,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         // 회원가입, 로그인은 인증 없이 접근 허용
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/auth/signup").permitAll()
                         // 그 외 모든 요청은 JWT 필터를 거치되 인증 강제하지 않음
                         .anyRequest().permitAll()
                 )

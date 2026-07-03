@@ -1,6 +1,7 @@
 package csh.back.domain.trip.group.service;
 
 import csh.back.domain.member.entity.Member;
+import csh.back.domain.member.repository.MemberRepository;
 import csh.back.domain.trip.group.dto.request.TripGroupModifyRequest;
 import csh.back.domain.trip.group.dto.request.TripGroupRequest;
 import csh.back.domain.trip.group.dto.response.TripGroupResponse;
@@ -24,6 +25,7 @@ public class TripGroupService {
 
 	private final TripGroupRepository tripGroupRepository;
 	private final TripMemberRepository tripMemberRepository;
+	private final MemberRepository memberRepository;
 
 	// 모임방 조회
 	@Transactional(readOnly = true)
@@ -37,10 +39,13 @@ public class TripGroupService {
 
 	// 모임방 생성
 	@Transactional
-	public TripGroupResponse writeGroup(TripGroupRequest request, Member owner) {
+	public TripGroupResponse writeGroup(TripGroupRequest request, Long ownerId) {
 		LocalDate startDate = LocalDate.parse(request.startDate());
 
 		LocalDate endDate = startDate.plusDays(request.nights());
+
+		Member owner = memberRepository.findById(ownerId)
+				.orElseThrow(() -> new NotFoundException("존재하지 않는 유저"));
 
 		TripGroup group = TripGroup.builder()
 				.owner(owner)
