@@ -1,15 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useStore, Trip } from "../store";
+import { useStore } from "../store";
 import { formatDate } from "../lib";
 
-function TripCard({ trip }: { trip: Trip }) {
-  const completedDays = trip.days.filter(d => d.isPlanCompleted).length;
-  const skippedDays = trip.days.filter(d => d.isPlanSkipped).length;
+const API_BASE = "http://localhost:8080";
 
+type ApiTrip = {
+  id: number;
+  name: string;
+  region: string;
+  nights: number;
+  startDate: string;
+  joinUrl?: string;
+  joinCode?: string;
+};
+
+function TripCard({ trip }: { trip: ApiTrip }) {
   return (
     <Link href={`/trip/${trip.id}`} className="block">
       <div className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
@@ -22,13 +31,7 @@ function TripCard({ trip }: { trip: Trip }) {
             전체 후보 등록 후<br />일차별 선택
           </span>
         </div>
-        <div className="flex items-center gap-3 text-xs text-gray-400">
-          <span>👥 {trip.members.length}명</span>
-          <span>✅ {completedDays}일 완료</span>
-          <span>📍 {trip.candidates.length}개 후보</span>
-          {skippedDays > 0 && <span>⏭ {skippedDays}일 건너뜀</span>}
-        </div>
-        <p className="text-xs text-gray-400 mt-2">{formatDate(trip.startDate)} 시작</p>
+        <p className="text-xs text-gray-400">{formatDate(trip.startDate)} 시작</p>
       </div>
     </Link>
   );
@@ -36,33 +39,54 @@ function TripCard({ trip }: { trip: Trip }) {
 
 export default function HomePage() {
   const router = useRouter();
-  const { currentUser, trips, createTrip } = useStore();
+  const { currentUser, loadTrips } = useStore();
 
-  useEffect(() => {
-    localStorage.removeItem("pendingInviteCode");
-  }, []);
+  const [trips, setTrips] = useState<ApiTrip[]>([]);
+  const [loading, setLoading] = useState(true);
 
+  const tripTitleRef = useRef<HTMLInputElement>(null);
   const [showCreate, setShowCreate] = useState(false);
+  useEffect(() => { if (showCreate) setTimeout(() => tripTitleRef.current?.focus(), 50); }, [showCreate]);
   const [tripTitle, setTripTitle] = useState("");
   const [tripRegion, setTripRegion] = useState("");
   const [tripDate, setTripDate] = useState("");
   const [tripNights, setTripNights] = useState(2);
 
-  const handleCreateTrip = () => {
+  useEffect(() => {
+    localStorage.removeItem("pendingInviteCode");
+    fetch(`${API_BASE}/api/v1/trips`, { credentials: "include" })
+      .then(res => res.json())
+      .then(body => { if (body.data) { setTrips(body.data); loadTrips(body.data); } })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleCreateTrip = async () => {
     if (!tripTitle.trim() || !tripRegion.trim() || !tripDate) return;
-
-    const payload = {
-      name: tripTitle.trim(),
-      startDate: tripDate,
-      region: tripRegion.trim(),
-      nights: tripNights,
-    };
-    console.log("[여행 만들기] POST /api/v1/trips", payload);
-
-    const id = createTrip({ name: tripTitle, region: tripRegion, startDate: tripDate, nights: tripNights });
-    setShowCreate(false);
-    setTripTitle(""); setTripRegion(""); setTripDate(""); setTripNights(2);
-    router.push(`/trip/${id}`);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/trips`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: tripTitle.trim(),
+          region: tripRegion.trim(),
+          startDate: tripDate,
+          nights: String(tripNights),
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.message ?? "생성 실패");
+      const newTrip: ApiTrip = body.data;
+      const updated = [...trips, newTrip];
+      setTrips(updated);
+      loadTrips(updated.map(t => ({ ...t, joinUrl: t.joinUrl ?? t.joinCode })));
+      setShowCreate(false);
+      setTripTitle(""); setTripRegion(""); setTripDate(""); setTripNights(2);
+      router.push(`/trip/${newTrip.id}`);
+    } catch (e) {
+      console.error("[여행 만들기 실패]", e);
+    }
   };
 
   return (
@@ -82,7 +106,11 @@ export default function HomePage() {
           <p className="text-sm text-gray-500 mt-1">여행 모임을 만들고 초대 링크로 멤버를 초대해보세요.</p>
         </div>
 
-        {trips.length === 0 ? (
+        {loading ? (
+          <div className="flex justify-center py-10">
+            <p className="text-sm text-gray-400">불러오는 중...</p>
+          </div>
+        ) : trips.length === 0 ? (
           <div className="flex flex-col items-center gap-4 p-7 bg-gray-50 rounded-2xl text-center">
             <span className="text-5xl">🔗</span>
             <p className="font-semibold">아직 여행 모임이 없어요</p>
@@ -109,7 +137,7 @@ export default function HomePage() {
             <div className="p-4 flex flex-col gap-5">
               <div>
                 <label className="text-sm font-semibold mb-1.5 block">여행 이름</label>
-                <input className="w-full p-3 bg-gray-100 rounded-xl text-sm outline-none" placeholder="여행 이름을 입력해주세요" value={tripTitle} onChange={e => setTripTitle(e.target.value)} />
+                <input ref={tripTitleRef} className="w-full p-3 bg-gray-100 rounded-xl text-sm outline-none" placeholder="여행 이름을 입력해주세요" value={tripTitle} onChange={e => setTripTitle(e.target.value)} />
               </div>
               <div>
                 <label className="text-sm font-semibold mb-1.5 block">지역</label>

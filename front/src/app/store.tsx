@@ -68,6 +68,15 @@ interface CreateTripData {
   nights: number;
 }
 
+interface ApiTripItem {
+  id: number;
+  name: string;
+  region: string;
+  nights: number;
+  startDate: string;
+  joinUrl?: string;
+}
+
 interface StoreCtx {
   isLoggedIn: boolean;
   currentUser: User;
@@ -76,6 +85,7 @@ interface StoreCtx {
   signup: (nickname: string) => void;
   createTrip: (data: CreateTripData) => string;
   updateTrip: (trip: Trip) => void;
+  loadTrips: (items: ApiTripItem[]) => void;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -167,8 +177,23 @@ export function TripLogProvider({ children }: { children: ReactNode }) {
     setTrips(t => t.map(x => (x.id === trip.id ? trip : x)));
   };
 
+  const loadTrips = (items: ApiTripItem[]) => {
+    setTrips(items.map(item => ({
+      id: String(item.id),
+      name: item.name,
+      region: item.region,
+      startDate: item.startDate,
+      nights: item.nights,
+      members: [],
+      days: Array.from({ length: item.nights + 1 }, (_, i) => makeDay(i + 1, item.startDate, i)),
+      candidates: [],
+      inviteCode: item.joinUrl ?? "",
+      inviteJoinIndex: 0,
+    })));
+  };
+
   return (
-    <Ctx.Provider value={{ isLoggedIn, currentUser, trips, login, signup, createTrip, updateTrip }}>
+    <Ctx.Provider value={{ isLoggedIn, currentUser, trips, login, signup, createTrip, updateTrip, loadTrips }}>
       {children}
     </Ctx.Provider>
   );

@@ -50,4 +50,9 @@ public interface TimeLineRepository extends JpaRepository<TimeLine, Long> {
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime
     );
+
+    List<TimeLine> findAllByTripGroupId(Long tripId);
+
+    @Query("SELECT vu.dayNumber, COUNT(vu) FROM TimeLine vu WHERE vu.tripGroup.id = :tripId GROUP BY vu.dayNumber")
+    List<Object[]> countGroupByDayNumberId(Long tripId);
 }

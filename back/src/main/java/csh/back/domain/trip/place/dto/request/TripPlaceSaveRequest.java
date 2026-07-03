@@ -4,7 +4,7 @@ public record TripPlaceSaveRequest(String name,
                                    String category,
                                    String address,
                                    String kakaoPlaceId,
-                                   String kakaoUrl
+                                   String kakaoMapUrl
     ) {
 
     }

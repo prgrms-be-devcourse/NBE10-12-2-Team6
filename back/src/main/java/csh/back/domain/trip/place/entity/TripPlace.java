@@ -1,6 +1,7 @@
 package csh.back.domain.trip.place.entity;
 
 import csh.back.domain.trip.group.entity.TripGroup;
+import csh.back.domain.trip.member.entity.TripMember;
 import csh.back.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -35,15 +36,20 @@ public class TripPlace extends BaseEntity {
     //카카오멥 URL
     private String kakaoMapUrl;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by", nullable = false)
+    private TripMember createdBy;
+
     //생성자
     //빌드 사용
     @Builder
-    private TripPlace(TripGroup tripGroup, String name, String theme, String address, String kakaoPlaceId, String kakaoMapUrl) {
+    private TripPlace(TripGroup tripGroup, String name, String theme, String address, String kakaoPlaceId, String kakaoMapUrl, TripMember createdBy) {
         this.tripGroup = tripGroup;
         this.name = name;
         this.theme = theme;
         this.address = address;
         this.kakaoPlaceId = kakaoPlaceId;
         this.kakaoMapUrl = kakaoMapUrl;
+        this.createdBy = createdBy;
     }
 }

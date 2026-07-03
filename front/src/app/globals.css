@@ -24,8 +24,20 @@ body {
   animation: slideUp 0.5s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-.time-input::-webkit-calendar-picker-indicator {
+.time-input::-webkit-calendar-picker-indicator,
+input[type="date"]::-webkit-calendar-picker-indicator {
   transform: scale(1.6);
   cursor: pointer;
   opacity: 0.6;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
 }
