@@ -5,6 +5,8 @@ import csh.back.domain.trip.group.entity.TripGroup;
 import csh.back.domain.trip.group.repository.TripGroupRepository;
 import csh.back.domain.trip.member.entity.TripMember;
 import csh.back.domain.trip.member.repository.TripMemberRepository;
+import csh.back.domain.trip.member.service.TripMemberService;
+import csh.back.domain.trip.member.validator.TripMemberValidator;
 import csh.back.domain.trip.place.dto.response.TripPlaceFindResponse;
 import csh.back.domain.trip.place.dto.response.TripPlaceSaveResponse;
 import csh.back.domain.trip.place.entity.TripPlace;
@@ -22,9 +24,13 @@ public class TripPlaceService {
     private final TripPlaceRepository tripPlaceRepository;
     private final TripGroupRepository tripGroupRepository;
     private final TripMemberRepository tripMemberRepository;
+    private final TripMemberValidator tripMemberValidator;
 
-    public List<TripPlaceFindResponse> findWishPlaces(Long tripId) {
-        List<TripPlace> tripPlaces = tripPlaceRepository.findAllByTripGroupId(1L);
+    public List<TripPlaceFindResponse> findWishPlaces(Long tripId, Long memberId) {
+
+        tripMemberValidator.validMember(tripId, memberId);
+
+        List<TripPlace> tripPlaces = tripPlaceRepository.findAllByTripGroupId(tripId);
         return tripPlaces
                 .stream()
                 .map(TripPlaceFindResponse::from)
@@ -37,9 +43,13 @@ public class TripPlaceService {
                                            String theme,
                                            String address,
                                            String kakaoPlaceId,
-                                           String kakaoMapUrl) {
-        TripGroup tripGroup = tripGroupRepository.findById(1L).orElseThrow(RuntimeException::new);
-        TripMember tripMember = tripMemberRepository.findByMemberIdAndTripGroupId(100L, 1L).orElseThrow(RuntimeException::new);
+                                           String kakaoMapUrl,
+                                           Long memberId) {
+
+        tripMemberValidator.validMember(tripId, memberId);
+
+        TripGroup tripGroup = tripGroupRepository.findById(tripId).orElseThrow(RuntimeException::new);
+        TripMember tripMember = tripMemberRepository.findByMemberIdAndTripGroupId(memberId, tripId).orElseThrow(RuntimeException::new);
         TripPlace place = TripPlace
                 .builder()
                 .tripGroup(tripGroup)
@@ -48,7 +58,7 @@ public class TripPlaceService {
                 .address(address)
                 .kakaoPlaceId(kakaoPlaceId)
                 .kakaoMapUrl(kakaoMapUrl)
-//                .createdBy(tripMember)
+                .createdBy(tripMember)
                 .build();
         TripPlace saveResult = tripPlaceRepository.save(place);
         TripPlaceSaveResponse response = TripPlaceSaveResponse.from(saveResult);
