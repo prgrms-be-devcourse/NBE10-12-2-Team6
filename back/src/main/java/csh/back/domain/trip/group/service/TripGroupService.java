@@ -72,15 +72,15 @@ public class TripGroupService {
 
 	//모임 상세 조회
 	@Transactional(readOnly = true)
-	public TripGroupDetailResponse getGroupDetail(Long groupId, Long ownerId) {
-		boolean isMember = tripMemberRepository.existsByTripGroupIdAndMemberId(groupId, ownerId);
+	public TripGroupDetailResponse getGroupDetail(Long tripId, Long ownerId) {
+		boolean isMember = tripMemberRepository.existsByTripGroupIdAndMemberId(tripId, ownerId);
 		if (!isMember) {
 			throw new IllegalArgumentException("해당 모임의 멤버가 아닙니다.");
 		}
-		TripGroup group = tripGroupRepository.findById(groupId)
+		TripGroup group = tripGroupRepository.findById(tripId)
 				.orElseThrow(() -> new NotFoundException("존재하지 않는 모임입니다."));
 
-		List<TripMemeberResponse> members = tripMemberRepository.findByTripGroupId(groupId)
+		List<TripMemeberResponse> members = tripMemberRepository.findByTripGroupId(tripId)
 				.stream()
 				.map(tm -> TripMemeberResponse.from(tm))
 				.toList();
@@ -91,8 +91,8 @@ public class TripGroupService {
 	//모임 상세 수정
 	//TODO 1차 mvp에서는 name만 수정, 혹시몰라 patch로 진행
 	@Transactional
-	public TripGroupResponse modifyGroupDetail(Long groupId, Long ownerId, TripGroupModifyRequest request) {
-		TripGroup group = tripGroupRepository.findById(groupId)
+	public TripGroupResponse modifyGroupDetail(Long tripId, Long ownerId, TripGroupModifyRequest request) {
+		TripGroup group = tripGroupRepository.findById(tripId)
 				.orElseThrow(() -> new NotFoundException("존재하지 않는 모임입니다."));
 
 		if (!group.getOwner().getId().equals(ownerId)) {
