@@ -24,20 +24,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        // Authorization: Bearer <apiKey(UUID)> <accessToken(JWT)>
+        // Authorization: Bearer <refreshToken(UUID)> <accessToken(JWT)>
         String header = request.getHeader("Authorization");
 
         if (header != null && header.startsWith("Bearer ")) {
             String[] parts = header.substring(7).split(" ");
-            String apiKey = parts[0];
+            String refreshToken = parts[0];
             String accessToken = parts.length > 1 ? parts[1] : null;
 
             if (accessToken != null && jwtUtil.isValid(accessToken)) {
                 // accessToken 유효 → 인증 처리
                 setAuthentication(jwtUtil.getEmail(accessToken), jwtUtil.getMemberId(accessToken));
             } else { // <- 분기점 (백에서 엑세스 토큰 갱신 로직을 수행하는 방식 v1 : Authorization 헤더에 실어서 보내는 방식) <-- 강사님 피드백
-                // accessToken 만료 또는 없음 → apiKey로 DB 조회 후 새 accessToken 발급
-                memberRepository.findByRefreshToken(apiKey).ifPresent(member -> {
+                // accessToken 만료 또는 없음 → refreshToken으로 DB 조회 후 새 accessToken 발급
+                memberRepository.findByRefreshToken(refreshToken).ifPresent(member -> {
                     String newAccessToken = jwtUtil.generateAccessToken(member.getId(), member.getEmail());
                     response.setHeader("Authorization", "Bearer " + member.getRefreshToken() + " " + newAccessToken);
                     setAuthentication(member.getEmail(), member.getId());
