@@ -9,12 +9,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 //Swagger에서 여행 타임라인 API 그룹으로 표시
-@Tag(name = "여행 타임라인", description = "단건 여행 타임라인 시간 구간 API")
+@Tag(name = "여행 타임라인", description = "여행 타임라인 시간 구간 API")
 @RequiredArgsConstructor
 //공통 URL 경로 설정
 @RequestMapping("/api/v1/trips/{tripId}/timelines")
@@ -31,24 +32,26 @@ public class TimeLineV1Controller {
     @PostMapping
     public ResponseData<TimeLineResponse> createTimeLine(
             @PathVariable Long tripId,
-            @RequestParam Long memberId,
+            Authentication authentication,
             @Valid @RequestBody TimeLineCreateRequest request) {
-        //로그인 기능 연동 후 memberId는 인증 정보에서 가져오도록 변경
+        //로그인 정보에서 가져옴
+        Long memberId = getLoginMemberId(authentication);
         //ResponseData로 감싸서 201 Created 반환
         return new ResponseData<>(201, timeLineService.createTimeLine(tripId, memberId, request));
     }
 
     //타임라인 시간 구간 일괄 생성
-    @Tag(name = "여행 타임라인", description = "일광 여행 타임라인 시간 구간 API")
+    @Tag(name = "여행 타임라인", description = "일괄 여행 타임라인 시간 구간 API")
     //Swagger 문서에 타임라인 생성 API 설명 표시
     @Operation(summary = "타임라인 시간 구간 일괄 생성")
     @PostMapping("/batch")
     public ResponseData<List<TimeLineResponse>> createAllTimeLines(
             @PathVariable Long tripId,
-            @RequestParam Long memberId,
+            Authentication authentication,
             @Valid @RequestBody TimeLineAllCreateRequest request) {
 
-        //로그인 기능 연동 후 memberId는 인증 정보에서 가져오도록 변경
+        //로그인 정보에서 가져옴
+        Long memberId = getLoginMemberId(authentication);
         //ResponseData로 감싸서 201 Created 반환
         return new ResponseData<>(201, timeLineService.createAllTimeLines(tripId, memberId, request));
     }
@@ -59,22 +62,24 @@ public class TimeLineV1Controller {
     @GetMapping
     public ResponseData<List<TimeLineResponse>> getTimeLines(
             @PathVariable Long tripId,
-            @RequestParam Long memberId,
+            Authentication authentication,
             @RequestParam int dayNumber) {
-        //로그인 기능 연동 후 memberId는 인증 정보에서 가져오도록 변경
+        //로그인 정보에서 가져옴
+        Long memberId = getLoginMemberId(authentication);
         //ResponseData로 감싸서 200 OK 반환
         return new ResponseData<>(200, timeLineService.getTimeLines(tripId, memberId, dayNumber));
     }
 
     //Swagger 문서에 방 내 전체 타임라인 개수 목록 API 설명 표시
     @Operation(summary = "방 내 전체 타임라인 개수 목록 반환")
-//방 내 전체 타임라인 개수 목록 조회
+    //방 내 전체 타임라인 개수 목록 조회
     @GetMapping("/count")
     public ResponseData<List<TimeLineCountResponse>> getTimeLinesCount(
-            @PathVariable Long tripId) {
-        //로그인 기능 연동 후 memberId는 인증 정보에서 가져오도록 변경
+            @PathVariable Long tripId,
+            Authentication authentication) {
+        //로그인 정보에서 가져옴
+        Long memberId = getLoginMemberId(authentication);
         //ResponseData로 감싸서 200 OK 반환
-        Long memberId = 1L;
         return new ResponseData<>(200, timeLineService.getTimeLinesCount(tripId, memberId));
     }
 
@@ -85,9 +90,10 @@ public class TimeLineV1Controller {
     public ResponseData<TimeLineResponse> updateTimeLine(
             @PathVariable Long tripId,
             @PathVariable Long timelineId,
-            @RequestParam Long memberId,
+            Authentication authentication,
             @Valid @RequestBody TimeLineUpdateRequest request) {
-        //로그인 기능 연동 후 memberId는 인증 정보에서 가져오도록 변경
+        //로그인 정보에서 가져옴
+        Long memberId = getLoginMemberId(authentication);
         return new ResponseData<>(200, timeLineService.updateTimeLine(tripId, timelineId, memberId, request));
     }
 
@@ -98,9 +104,11 @@ public class TimeLineV1Controller {
     public ResponseData<TimeLineResponse> confirmTimeLinePlace(
             @PathVariable Long tripId,
             @PathVariable Long timelineId,
-            @RequestParam Long memberId,
+            Authentication authentication,
             @Valid @RequestBody TimeLineConfirmPlaceRequest request) {
 
+        //로그인 정보에서 가져옴
+        Long memberId = getLoginMemberId(authentication);
         //확정 장소 반영 서비스 호출
         return new ResponseData<>(200, timeLineService.confirmTimeLinePlace(tripId, timelineId, memberId, request));
     }
@@ -112,10 +120,16 @@ public class TimeLineV1Controller {
     public ResponseData<Void> deleteTimeLine(
             @PathVariable Long tripId,
             @PathVariable Long timelineId,
-            @RequestParam Long memberId) {
-        //로그인 기능 연동 후 memberId는 인증 정보에서 가져오도록 변경
+            Authentication authentication) {
+        //로그인 정보에서 가져옴
+        Long memberId = getLoginMemberId(authentication);
         timeLineService.deleteTimeLine(tripId, timelineId, memberId);
 
         return new ResponseData<>(200, null);
+    }
+
+    //로그인 인증 정보에서 memberId를 가져오는 메서드
+    private Long getLoginMemberId(Authentication authentication) {
+        return (Long) authentication.getDetails();
     }
 }
