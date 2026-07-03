@@ -12,6 +12,10 @@ import java.util.Optional;
 
 public interface TripGroupRepository extends JpaRepository<TripGroup, Long> {
 	List<TripGroup> findAllByOwnerIdOrderByStartDateDesc(Long memberId);
+
+	@Query("SELECT tg FROM TripGroup tg JOIN TripMember tm ON tm.tripGroup = tg WHERE tm.member.id = :memberId ORDER BY tg.startDate DESC")
+	List<TripGroup> findAllByMemberId(@Param("memberId") Long memberId);
+
 	boolean existsByJoinCode(String joinCode);
 	Optional<TripGroup> findByJoinCode(String joinCode);
 

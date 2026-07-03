@@ -4,10 +4,12 @@ import csh.back.domain.member.entity.Member;
 import csh.back.domain.member.repository.MemberRepository;
 import csh.back.domain.trip.group.dto.request.TripGroupModifyRequest;
 import csh.back.domain.trip.group.dto.request.TripGroupRequest;
+import csh.back.domain.trip.group.dto.response.TripGroupDetailResponse;
 import csh.back.domain.trip.group.dto.response.TripGroupResponse;
 import csh.back.domain.trip.group.entity.TripGroup;
 import csh.back.domain.trip.group.exception.NotFoundException;
 import csh.back.domain.trip.group.repository.TripGroupRepository;
+import csh.back.domain.trip.member.dto.response.TripMemeberResponse;
 import csh.back.domain.trip.member.entity.TripMember;
 import csh.back.domain.trip.member.repository.TripMemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -30,7 +31,7 @@ public class TripGroupService {
 	// 모임방 조회
 	@Transactional(readOnly = true)
 	public List<TripGroupResponse> getGroups(Long ownerId) {
-		List<TripGroup> tripGroups = tripGroupRepository.findAllByOwnerIdOrderByStartDateDesc(ownerId);
+		List<TripGroup> tripGroups = tripGroupRepository.findAllByMemberId(ownerId);
 		return tripGroups
 				.stream()
 				.map(TripGroupResponse::from)
@@ -71,7 +72,7 @@ public class TripGroupService {
 
 	//모임 상세 조회
 	@Transactional(readOnly = true)
-	public TripGroupResponse getGroupDetail(Long groupId, Long ownerId) {
+	public TripGroupDetailResponse getGroupDetail(Long groupId, Long ownerId) {
 		boolean isMember = tripMemberRepository.existsByTripGroupIdAndMemberId(groupId, ownerId);
 		if (!isMember) {
 			throw new IllegalArgumentException("해당 모임의 멤버가 아닙니다.");
@@ -79,7 +80,12 @@ public class TripGroupService {
 		TripGroup group = tripGroupRepository.findById(groupId)
 				.orElseThrow(() -> new NotFoundException("존재하지 않는 모임입니다."));
 
-		return TripGroupResponse.from(group);
+		List<TripMemeberResponse> members = tripMemberRepository.findByTripGroupId(groupId)
+				.stream()
+				.map(tm -> TripMemeberResponse.from(tm))
+				.toList();
+
+		return TripGroupDetailResponse.from(group, members);
 	}
 
 	//모임 상세 수정

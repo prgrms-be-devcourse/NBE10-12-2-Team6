@@ -3,6 +3,7 @@ package csh.back.domain.trip.group.controller;
 import csh.back.domain.member.dto.response.AuthFilterDto;
 import csh.back.domain.trip.group.dto.request.TripGroupModifyRequest;
 import csh.back.domain.trip.group.dto.request.TripGroupRequest;
+import csh.back.domain.trip.group.dto.response.TripGroupDetailResponse;
 import csh.back.domain.trip.group.dto.response.TripGroupResponse;
 import csh.back.domain.trip.group.service.TripGroupService;
 import csh.back.global.annotation.ApiV1;
@@ -26,6 +27,8 @@ import java.util.List;
 public class TripGroupV1Controller {
 
 	private final TripGroupService tripGroupService;
+
+	//FIXME 정렬 및 여러 검색어로 조회가 가능하게 동시적
 
 	//Swagger 문서 표시
 	@Operation(summary = "모임방 목록 조회(로그인한 사용자 기준)")
@@ -52,7 +55,7 @@ public class TripGroupV1Controller {
 	@Operation(summary = "상세 모임방 조회")
 	//모임방 상세페이지 조회
 	@GetMapping("/{groupId}")
-	public ResponseData<TripGroupResponse> getGroupDetail(
+	public ResponseData<TripGroupDetailResponse> getGroupDetail(
 			@PathVariable Long groupId,
 			@AuthenticationPrincipal AuthFilterDto owner
 	) {
