@@ -158,6 +158,8 @@ public class TimeLineService {
     public TimeLineResponse updateTimeLine(Long tripId, Long timelineId, Long memberId, TimeLineUpdateRequest request) {
         //여행 모임 멤버 여부 검증 추가
         validateTripMember(tripId, memberId);
+        //같은 여행 모임의 타임라인 시간 수정 요청을 순차적으로 처리하기 위함
+        lockTripGroup(tripId);
         //시작 시간과 종료 시간의 순서 검증
         validateStartAndEndTime(request.startTime(), request.endTime());
 
@@ -208,6 +210,12 @@ public class TimeLineService {
 
         //타임라인 제거
         timeLineRepository.delete(timeLine);
+    }
+
+    //같은 여행 모임의 타임라인 시간 수정 요청을 순차적으로 처리하기 위한 락 메서드
+    private void lockTripGroup(Long tripId) {
+        tripGroupRepository.findByIdWithLock(tripId)
+                .orElseThrow(() -> new IllegalArgumentException("여행 모임을 찾을 수 없습니다."));
     }
 
     // tripId로 여행 모임 조회
