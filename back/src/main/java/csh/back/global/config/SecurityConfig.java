@@ -43,11 +43,13 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                                 // 회원가입, 로그인은 인증 없이 접근 허용
+
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
-                                "/h2-console/**"
+                                "/h2-console/**",
+                                "/api/v1/auth/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // 그 외 모든 요청은 JWT 필터를 거치되 인증 강제하지 않음
