@@ -67,4 +67,18 @@ public class TripGroupV1ControllerTest {
 			resultActions.andExpect(jsonPath("$.data[%d].ownerId".formatted(i)).value(trip.ownerId()));
 		}
 	}
+
+	@Test
+	@DisplayName("user 정보 없이 모임방 조회")
+	void t2() throws Exception {
+		ResultActions resultActions = mvc
+				.perform(
+						get(BASE_URL+"/trips")
+				)
+				.andDo(print());
+
+		resultActions
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.message").value("존재하지 않는 유저"));
+	}
 }

@@ -5,6 +5,7 @@ import csh.back.domain.trip.group.dto.request.TripGroupModifyRequest;
 import csh.back.domain.trip.group.dto.request.TripGroupRequest;
 import csh.back.domain.trip.group.dto.response.TripGroupDetailResponse;
 import csh.back.domain.trip.group.dto.response.TripGroupResponse;
+import csh.back.domain.trip.group.exception.NotFoundException;
 import csh.back.domain.trip.group.service.TripGroupService;
 import csh.back.global.annotation.ApiV1;
 import csh.back.global.dto.ResponseData;
@@ -37,6 +38,8 @@ public class TripGroupV1Controller {
 	public ResponseData<List<TripGroupResponse>> getAllGroups(
 			@AuthenticationPrincipal AuthFilterDto owner
 	) {
+		if (owner == null) throw new NotFoundException("존재하지 않는 유저");
+
 		return new ResponseData<>(200, tripGroupService.getGroups(owner.id()));
 	}
 
