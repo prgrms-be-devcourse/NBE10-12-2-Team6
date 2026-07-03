@@ -8,6 +8,6 @@ import java.util.List;
 
 public interface VoteRepository extends JpaRepository<Vote, Long> {
 
-    @Query("SELECT v, tl  FROM Vote v JOIN FETCH TimeLine tl WHERE tl.tripGroup.id = :tripId")
+    @Query("SELECT v FROM Vote v JOIN FETCH v.timeLine tl WHERE tl.tripGroup.id = :tripId")
     List<Vote> findVotesWithTimeLineByTripId(Long tripId);
 }

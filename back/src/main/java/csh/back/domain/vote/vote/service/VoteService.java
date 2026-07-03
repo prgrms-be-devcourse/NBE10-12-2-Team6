@@ -114,7 +114,7 @@ public class VoteService {
     public VoteCreateResponse createVote(Long tripId, Long memberId, TimeLine timeLine) {
         tripMemberValidator.validMember(tripId, memberId);
         TripGroup tripGroup = tripGroupRepository.findById(tripId).orElseThrow(RuntimeException::new);
-        TripMember tripMember = tripMemberRepository.findByMemberId(memberId).orElseThrow(RuntimeException::new);
+        TripMember tripMember = tripMemberRepository.findByMemberIdAndTripGroupId(memberId, tripId).orElseThrow(RuntimeException::new);
         Vote vote = Vote
                 .builder()
                 .tripGroup(tripGroup)

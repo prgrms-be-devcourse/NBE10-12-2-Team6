@@ -39,7 +39,7 @@ public class VoteV1Controller {
 
         return new ResponseData<>(
                 201,
-                voteService.wrapperCreateVote(tripId, member.id(), request.timeLindId())
+                voteService.wrapperCreateVote(tripId, member.id(), request.timeLineId())
         );
     }
 
