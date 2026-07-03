@@ -23,26 +23,27 @@ public class VoteV1Controller {
     @GetMapping("{tripId}/votes")
     public ResponseData<List<VoteFindListResponse>> findVoteList(
             @PathVariable Long tripId,
-            @AuthenticationPrincipal AuthFilterDto member) {
+            @AuthenticationPrincipal AuthFilterDto member
+    ) {
         return new ResponseData<>(200, voteService.findVoteList(tripId, member.id()));
     }
 
     @GetMapping("/{voteId}")
     public ResponseData<List<VoteFindResponse>> findVoteItemAndCount(
-            @PathVariable Long voteId,
-            @AuthenticationPrincipal AuthFilterDto member) {
+            @PathVariable Long voteId
+    ) {
         return new ResponseData<>(
                 200,
-                voteService.findVoteItemAndCount(voteId, member.id())
+                voteService.findVoteItemAndCount(voteId)
         );
     }
 
     @GetMapping("/{voteId}/places/{placeId}")
     public ResponseData<List<VoteFindUserResponse>> findVoteUserThisPlace(
             @PathVariable Long voteId,
-            @PathVariable Long placeId,
-            @AuthenticationPrincipal AuthFilterDto member) {
-        return new ResponseData<>(200, voteService.findUserVoteThisPlace(voteId, placeId, member.id()));
+            @PathVariable Long placeId
+    ) {
+        return new ResponseData<>(200, voteService.findUserVoteThisPlace(voteId, placeId));
     }
 
 

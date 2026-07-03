@@ -2,6 +2,7 @@ package csh.back.domain.vote.vote.service;
 
 import csh.back.domain.trip.group.entity.TripGroup;
 import csh.back.domain.trip.group.repository.TripGroupRepository;
+import csh.back.domain.trip.member.validator.TripMemberValidator;
 import csh.back.domain.trip.timeline.dto.response.TimeLineWithConfirmedPlaceResponse;
 import csh.back.domain.trip.timeline.entity.TimeLine;
 import csh.back.domain.trip.timeline.repository.TimeLineRepository;
@@ -29,8 +30,11 @@ public class VoteService {
     private final VoteItemRepository voteItemRepository;
     private final TripGroupRepository tripGroupRepository;
     private final TimeLineRepository timeLineRepository;
+    private final TripMemberValidator tripMemberValidator;
 
-    public List<VoteFindListResponse> findVoteList(Long tripId) {
+    public List<VoteFindListResponse> findVoteList(Long tripId, Long memberId) {
+        tripMemberValidator.validMember(tripId, memberId);
+
         TripGroup tripGroup = tripGroupRepository.findById(tripId).orElseThrow(RuntimeException::new);
 
         Integer totalDays = tripGroup.getNights() + 1;

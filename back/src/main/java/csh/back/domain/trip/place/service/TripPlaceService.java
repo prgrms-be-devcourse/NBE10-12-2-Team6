@@ -5,7 +5,6 @@ import csh.back.domain.trip.group.entity.TripGroup;
 import csh.back.domain.trip.group.repository.TripGroupRepository;
 import csh.back.domain.trip.member.entity.TripMember;
 import csh.back.domain.trip.member.repository.TripMemberRepository;
-import csh.back.domain.trip.member.service.TripMemberService;
 import csh.back.domain.trip.member.validator.TripMemberValidator;
 import csh.back.domain.trip.place.dto.response.TripPlaceFindResponse;
 import csh.back.domain.trip.place.dto.response.TripPlaceSaveResponse;
