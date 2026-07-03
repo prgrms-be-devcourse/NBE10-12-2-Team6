@@ -5,6 +5,7 @@ import csh.back.domain.trip.place.dto.response.TripPlaceFindResponse;
 import csh.back.domain.trip.place.dto.response.TripPlaceSaveResponse;
 import csh.back.domain.trip.place.service.TripPlaceService;
 
+import csh.back.global.annotation.ApiV1;
 import csh.back.global.dto.ResponseData;
 import lombok.RequiredArgsConstructor;
 
@@ -16,7 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@RequestMapping("/api/v1/trips")
+@ApiV1
+@RequestMapping("/trips")
 @RequiredArgsConstructor
 @RestController
 public class TripPlaceV1Controller {
@@ -24,21 +26,25 @@ public class TripPlaceV1Controller {
 
     @GetMapping("/{tripId}/wish-places")
     public ResponseData<List<TripPlaceFindResponse>> findWishPlaces(@PathVariable Long tripId) {
-        List<TripPlaceFindResponse> wishPlaces = tripPlaceService.findWishPlaces(tripId);
-        return new ResponseData<>(200, wishPlaces);
+        return new ResponseData<>(
+                200,
+                tripPlaceService.findWishPlaces(tripId)
+        );
     }
 
 
     @PostMapping("/{tripId}/wish-places")
-    public ResponseData saveWishPlace(@RequestBody TripPlaceSaveRequest request, @PathVariable Long tripId) {
-        TripPlaceSaveResponse response = tripPlaceService.savePlace(
-                tripId,
-                request.name(),
-                request.category(),
-                request.address(),
-                request.kakaoPlaceId(),
-                request.kakaoUrl()
+    public ResponseData<TripPlaceSaveResponse> saveWishPlace(@RequestBody TripPlaceSaveRequest request, @PathVariable Long tripId) {
+        return new ResponseData(
+                200,
+                tripPlaceService.savePlace(
+                        tripId,
+                        request.name(),
+                        request.category(),
+                        request.address(),
+                        request.kakaoPlaceId(),
+                        request.kakaoMapUrl()
+                )
         );
-        return new ResponseData(200, response);
     }
 }

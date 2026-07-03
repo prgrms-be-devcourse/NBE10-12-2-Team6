@@ -57,10 +57,6 @@ export default function BlockDetailPage() {
   };
   const { trips, updateTrip, currentUser } = useStore();
 
-  useEffect(() => {
-    if (!id) return;
-    console.log(`[후보 목록] GET /api/v1/trips/${id}/wish-places`);
-  }, [id]);
 
   const [showTie, setShowTie] = useState(false);
   const [tieCandidates, setTieCandidates] = useState<PlanCandidate[]>([]);

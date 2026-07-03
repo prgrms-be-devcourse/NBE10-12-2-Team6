@@ -52,4 +52,7 @@ public interface TimeLineRepository extends JpaRepository<TimeLine, Long> {
     );
 
     List<TimeLine> findAllByTripGroupId(Long tripId);
+
+    @Query("SELECT vu.dayNumber, COUNT(vu) FROM TimeLine vu WHERE vu.tripGroup.id = :tripId GROUP BY vu.dayNumber")
+    List<Object[]> countGroupByDayNumberId(Long tripId);
 }

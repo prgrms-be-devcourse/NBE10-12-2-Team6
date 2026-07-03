@@ -9,6 +9,7 @@ import csh.back.domain.trip.timeline.dto.request.TimeLineAllCreateRequest;
 import csh.back.domain.trip.timeline.dto.request.TimeLineConfirmPlaceRequest;
 import csh.back.domain.trip.timeline.dto.request.TimeLineCreateRequest;
 import csh.back.domain.trip.timeline.dto.request.TimeLineUpdateRequest;
+import csh.back.domain.trip.timeline.dto.response.TimeLineCountResponse;
 import csh.back.domain.trip.timeline.dto.response.TimeLineResponse;
 import csh.back.domain.trip.timeline.entity.TimeLine;
 import csh.back.domain.trip.timeline.repository.TimeLineRepository;
@@ -19,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -126,6 +129,29 @@ public class TimeLineService {
                 .stream()
                 .map(TimeLineResponse::from)
                 .toList();
+
+    }
+
+    @Transactional(readOnly = true)
+    public List<TimeLineCountResponse> getTimeLinesCount(Long tripId, Long memberId) {
+        //여행 모임 멤버 검증 여부 추가
+        validateTripMember(tripId, memberId);
+        Map<Integer, Long> countMap = timeLineRepository.countGroupByDayNumberId(tripId)
+                .stream()
+                .collect(Collectors.toMap(
+                        row -> (Integer) row[0],
+                        row -> (Long) row[1]
+                ));
+
+        List<TimeLineCountResponse> responses = countMap.entrySet().stream().map(
+                entry -> TimeLineCountResponse.of(entry.getKey(), entry.getValue()
+                )
+        ).toList();
+
+
+        //tripId + dayNumber로 목록 조회
+        //TimeLineResponse 리스트로 변환
+        return responses;
 
     }
 
