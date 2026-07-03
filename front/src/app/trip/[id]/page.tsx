@@ -1,19 +1,31 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useStore, Trip, TripDay, PlanCandidate, uid } from "../../store";
-import { Avatar, formatDate } from "../../lib";
+import { Avatar, formatDate, apiFetch, useAuthGuard, API_BASE } from "../../lib";
 
 // ── InviteModal ───────────────────────────────────────────────────────────────
 
 function InviteSheet({ trip, onClose }: { trip: Trip; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
+  const [origin, setOrigin] = useState("");
+  useEffect(() => { setOrigin(window.location.origin); }, []);
   const code = trip.inviteCode;
+  const inviteLink = `${origin}/invite/${code}`;
 
-  const copyCode = () => {
-    navigator.clipboard.writeText(code).catch(() => {});
+  const copyLink = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(inviteLink).catch(() => {});
+    } else {
+      const el = document.createElement("input");
+      el.value = inviteLink;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -23,22 +35,22 @@ function InviteSheet({ trip, onClose }: { trip: Trip; onClose: () => void }) {
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative w-full max-w-md bg-white rounded-t-3xl p-6 flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <p className="text-lg font-bold">초대 코드</p>
+          <p className="text-lg font-bold">초대 링크</p>
           <button onClick={onClose} className="text-blue-500 font-medium">닫기</button>
         </div>
 
-        <p className="text-sm text-gray-500">아래 코드를 친구에게 공유해주세요.</p>
+        <p className="text-sm text-gray-500">아래 링크를 친구에게 공유해주세요.</p>
 
         <div className="flex items-center justify-center py-6 rounded-2xl" style={{ background: "#eff6ff" }}>
-          <p className="text-3xl font-bold tracking-[0.25em] text-blue-600">{code}</p>
+          <p className="text-sm font-semibold text-blue-600 break-all text-center px-2">{inviteLink}</p>
         </div>
 
         <button
-          onClick={copyCode}
+          onClick={copyLink}
           className="w-full py-3.5 rounded-2xl text-sm font-semibold"
           style={{ background: "#dbeafe", color: "#2563eb" }}
         >
-          {copied ? "복사 완료 ✓" : "코드 복사"}
+          {copied ? "복사 완료 ✓" : "링크 복사"}
         </button>
       </div>
     </div>
@@ -84,10 +96,9 @@ function AddCandidateSheet({
   const handleAdd = async () => {
     if (!selected) return;
     try {
-      const res = await fetch(`http://localhost:8080/api/v1/trips/${trip.id}/wish-places`, {
+      const res = await apiFetch(`${API_BASE}/api/v1/trips/${trip.id}/wish-places`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           name: selected.place_name,
           category: selected.category_group_name || undefined,
@@ -254,14 +265,38 @@ function statusBadge(day: TripDay) {
 
 type Tab = "trip" | "candidates" | "vote" | "timeline";
 
+interface VoteTimeline {
+  voteId: number | null;
+  timeLineId: number;
+  confirmedPlaceName: string;
+  startTime: string;
+}
+interface VoteDay {
+  date: string;
+  timeLines: VoteTimeline[];
+}
+
 export default function TripDetailPage() {
+  useAuthGuard();
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
-  const searchParams = useSearchParams();
-  const { trips, updateTrip } = useStore();
+  const { trips, updateTrip, upsertTrip } = useStore();
   const [showInvite, setShowInvite] = useState(false);
-  const [tab, setTab] = useState<Tab>((searchParams.get("tab") as Tab) ?? "trip");
+  const [tab, setTab] = useState<Tab>("trip");
+
+  useEffect(() => {
+    const returnTab = sessionStorage.getItem(`return-tab-${id}`) as Tab | null;
+    if (returnTab) {
+      setTab(returnTab);
+      sessionStorage.removeItem(`return-tab-${id}`);
+    }
+  }, []);
+
+  const changeTab = (t: Tab) => {
+    setTab(t);
+  };
   const [candidateBlink, setCandidateBlink] = useState(false);
+  const [voteData, setVoteData] = useState<VoteDay[] | null>(null);
   const trip = trips.find(t => t.id === id);
 
   const allDaysComplete = trip ? trip.days.length > 0 && trip.days.every(d => d.isPlanCompleted || d.isPlanSkipped) : false;
@@ -275,18 +310,36 @@ export default function TripDetailPage() {
   })();
 
   useEffect(() => {
-    if (!id || !trip) return;
+    if (!id) return;
 
     Promise.all([
-      fetch(`http://localhost:8080/api/v1/trips/${id}`, { credentials: "include" }).then(r => r.json()),
-      fetch(`http://localhost:8080/api/v1/trips/${id}/timelines/count`, { credentials: "include" }).then(r => r.json()),
-      fetch(`http://localhost:8080/api/v1/trips/${id}/wish-places`, { credentials: "include" }).then(r => r.json()),
-    ]).then(([tripBody, countBody, wishBody]) => {
-      const inviteCode = tripBody.data?.joinCode ?? trip.inviteCode;
+      apiFetch(`${API_BASE}/api/v1/trips/${id}`).then(r => r.json()),
+      apiFetch(`${API_BASE}/api/v1/trips/${id}/timelines/count`).then(r => r.json()),
+    ]).then(([tripBody, countBody]) => {
+      const tripData = tripBody.data;
+      if (!tripData) return;
+      const inviteCode = tripData.joinCode ?? "";
       const counts: { day: number; count: number }[] = countBody.data ?? [];
-      const wishes: { placeId: number; name: string; address: string; theme: string; createdBy: string }[] = wishBody.data ?? [];
 
-      const updatedDays = trip.days.map(day => {
+      const COLORS = ["blue", "orange", "green", "purple", "pink", "teal", "indigo", "cyan"];
+      const members: { id: number; name: string; color: string }[] =
+        (tripData.members ?? []).map((m: { memberId: number; name: string; admin: boolean }, i: number) => ({
+          id: m.memberId,
+          name: m.name,
+          color: COLORS[i % COLORS.length],
+        }));
+
+      const baseDays = trip?.days ?? Array.from(
+        { length: (tripData.nights ?? 0) + 1 },
+        (_, i) => {
+          const d = new Date(tripData.startDate + "T00:00:00");
+          d.setDate(d.getDate() + i);
+          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          return { id: `day-${i + 1}`, dayNumber: i + 1, date: dateStr, blocks: [{ id: uid(), order: 1, theme: "meal" as const, startMinute: 9 * 60, endMinute: 10 * 60 }], isPlanCompleted: false, isPlanSkipped: false, selectedCandidateByBlock: {}, votedUserIDsByBlockAndCandidate: {}, records: [] };
+        }
+      );
+
+      const updatedDays = baseDays.map(day => {
         const entry = counts.find(c => c.day === day.dayNumber);
         if (!entry || entry.count === 0) return day;
         const blocks = Array.from({ length: entry.count }, (_, i) => ({
@@ -299,16 +352,20 @@ export default function TripDetailPage() {
         return { ...day, blocks, isPlanCompleted: true };
       });
 
-      const candidates = wishes.map(w => ({
-        id: String(w.placeId),
-        authorId: 0,
-        authorName: w.createdBy,
-        placeName: w.name,
-        address: w.address,
-        category: w.theme,
-      }));
-
-      updateTrip({ ...trip, inviteCode, days: updatedDays, candidates });
+      upsertTrip({
+        ...(trip ?? {
+          id: String(tripData.id),
+          name: tripData.name,
+          region: tripData.region,
+          startDate: tripData.startDate,
+          nights: tripData.nights,
+          candidates: [],
+          inviteJoinIndex: 0,
+        }),
+        inviteCode,
+        members,
+        days: updatedDays,
+      });
     }).catch(() => {});
   }, [id]);
 
@@ -333,11 +390,38 @@ export default function TripDetailPage() {
     }
   }, [tab, tripStatus, trip]);
 
+  useEffect(() => {
+    if (tab !== "vote" || !id) return;
+    setVoteData(null);
+    apiFetch(`${API_BASE}/api/v1/trip/${id}/votes`)
+      .then(r => r.json())
+      .then(body => setVoteData(body.data ?? []))
+      .catch(() => setVoteData([]));
+  }, [tab, id]);
+
+  useEffect(() => {
+    if (tab !== "candidates" || !id || !trip) return;
+    apiFetch(`${API_BASE}/api/v1/trips/${id}/wish-places`)
+      .then(r => r.json())
+      .then(body => {
+        const wishes: { placeId: number; name: string; address: string; theme: string; createdBy: string }[] = body.data ?? [];
+        const candidates = wishes.map(w => ({
+          id: String(w.placeId),
+          authorId: 0,
+          authorName: w.createdBy,
+          placeName: w.name,
+          address: w.address,
+          category: w.theme,
+        }));
+        updateTrip({ ...trip, candidates });
+      })
+      .catch(() => {});
+  }, [tab, id]);
+
   if (!trip) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-        <p className="text-gray-500">여행을 찾을 수 없습니다.</p>
-        <button onClick={() => router.push("/home")} className="text-blue-500 font-medium">홈으로</button>
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-400 text-sm">불러오는 중...</p>
       </div>
     );
   }
@@ -419,42 +503,70 @@ export default function TripDetailPage() {
           <TripCandidatePoolCard trip={trip} onUpdate={updateTrip} />
         )}
 
-        {tab === "vote" && (
-          <div className="flex flex-col gap-4">
-            <p className="font-semibold">일차별 투표</p>
-            {trip.candidates.length === 0 ? (
-              <div className="p-4 bg-gray-50 rounded-2xl">
-                <p className="text-sm text-gray-400">후보 장소를 먼저 등록해야 투표할 수 있습니다.</p>
-              </div>
-            ) : (
-              trip.days.map(day => {
-                if (day.isPlanSkipped || !day.isPlanCompleted) return (
-                  <div key={day.id} className="flex flex-col gap-2">
-                    <p className="text-sm font-semibold text-gray-500">{day.dayNumber}일차 · {formatDate(day.date)}</p>
-                    <div className="p-4 bg-gray-50 rounded-2xl flex items-center justify-center">
-                      <span className="text-xs text-gray-400">
-                        {day.isPlanSkipped ? "계획 건너뜀" : "일정 확정 후 투표 가능"}
-                      </span>
-                    </div>
-                  </div>
-                );
+        {tab === "vote" && (() => {
+          const toDayNumber = (date: string) => {
+            const start = new Date(trip.startDate + "T00:00:00");
+            const d = new Date(date + "T00:00:00");
+            return Math.round((d.getTime() - start.getTime()) / 86400000) + 1;
+          };
+          const toTimeStr = (iso: string) => (iso.split("T")[1] ?? "").slice(0, 5);
+
+          const createVote = async (timeLineId: number) => {
+            await apiFetch(`${API_BASE}/api/v1/trip/${id}/votes`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ timeLineId }),
+            });
+            const r = await apiFetch(`${API_BASE}/api/v1/trip/${id}/votes`);
+            const body = await r.json();
+            setVoteData(body.data ?? []);
+          };
+
+          return (
+            <div className="flex flex-col gap-4">
+              <p className="font-semibold">일차별 투표</p>
+              {voteData === null ? (
+                <div className="p-4 bg-gray-50 rounded-2xl">
+                  <p className="text-sm text-gray-400">불러오는 중...</p>
+                </div>
+              ) : voteData.map(dayEntry => {
+                const dayNumber = toDayNumber(dayEntry.date);
                 return (
-                  <div key={day.id} className="flex flex-col gap-2">
-                    <p className="text-sm font-semibold text-gray-500">{day.dayNumber}일차 · {formatDate(day.date)}</p>
-                    {[...day.blocks].sort((a, b) => a.startMinute - b.startMinute).map(block => {
-                      const selectedId = day.selectedCandidateByBlock[block.id];
-                      const selected = trip.candidates.find(c => c.id === selectedId);
+                  <div key={dayEntry.date} className="flex flex-col gap-2">
+                    <p className="text-sm font-semibold text-gray-500">{dayNumber}일차 · {formatDate(dayEntry.date)}</p>
+                    {dayEntry.timeLines.length === 0 ? (
+                      <div className="p-4 bg-gray-50 rounded-2xl flex items-center justify-center">
+                        <span className="text-xs text-gray-400">일정 확정 후 투표 가능</span>
+                      </div>
+                    ) : dayEntry.timeLines.map((tl, tlIdx) => {
+                      if (tl.voteId === null) {
+                        return (
+                          <div key={tl.timeLineId} className="p-4 bg-gray-50 rounded-2xl flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-gray-400">{toTimeStr(tl.startTime)} 시작</p>
+                              <p className="text-sm font-semibold mt-0.5 text-gray-400">투표 없음</p>
+                            </div>
+                            <button
+                              onClick={() => createVote(tl.timeLineId)}
+                              className="text-xs font-bold px-3 py-1.5 rounded-full"
+                              style={{ background: "#eff6ff", color: "#2563eb" }}
+                            >
+                              투표 생성하기
+                            </button>
+                          </div>
+                        );
+                      }
                       return (
-                        <Link key={block.id} href={`/trip/${trip.id}/day/${day.dayNumber}/block/${block.id}?from=vote`}>
+                        <Link key={tl.voteId} href={`/trip/${trip.id}/day/${dayNumber}/block/${tl.voteId}?from=vote`} onClick={() => { localStorage.setItem(`block-order-${tl.voteId}`, String(tlIdx + 1)); sessionStorage.setItem(`return-tab-${id}`, "vote"); }}>
                           <div className="p-4 bg-gray-50 rounded-2xl flex items-center justify-between">
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs text-gray-400">{block.order}번째 구간</p>
+                              <p className="text-xs text-gray-400">{toTimeStr(tl.startTime)} 시작</p>
                               <p className="text-sm font-semibold mt-0.5 truncate">
-                                {selected ? selected.placeName : "미확정"}
+                                {tl.confirmedPlaceName || "미확정"}
                               </p>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
-                              {selected
+                              {tl.confirmedPlaceName
                                 ? <span className="text-xs font-bold px-2 py-1 rounded-full" style={{ background: "#dcfce7", color: "#16a34a" }}>확정됨</span>
                                 : <span className="text-xs font-bold px-2 py-1 rounded-full" style={{ background: "#dbeafe", color: "#2563eb" }}>투표하기</span>
                               }
@@ -468,10 +580,10 @@ export default function TripDetailPage() {
                     })}
                   </div>
                 );
-              })
-            )}
-          </div>
-        )}
+              })}
+            </div>
+          );
+        })()}
 
         {tab === "timeline" && (() => {
 
@@ -490,7 +602,7 @@ export default function TripDetailPage() {
                   ] as const).map(({ key, label, bg, color }) => (
                     <button
                       key={key}
-                      onClick={() => setTab(key)}
+                      onClick={() => changeTab(key)}
                       className="w-full py-4 rounded-2xl font-semibold text-left px-5"
                       style={{ background: bg, color }}
                     >
@@ -538,7 +650,7 @@ export default function TripDetailPage() {
             return (
               <button
                 key={key}
-                onClick={() => setTab(key)}
+                onClick={() => changeTab(key)}
                 className="flex-1 flex flex-col items-center gap-0.5 py-2 transition-all"
                 style={{ color: active ? "#3b82f6" : isBlinking ? "#f97316" : "#9ca3af" }}
               >

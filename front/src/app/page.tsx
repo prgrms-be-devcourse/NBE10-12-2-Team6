@@ -3,14 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "./store";
-
-const API_BASE = "http://localhost:8080";
+import { API_BASE } from "./lib";
 
 type Mode = "landing" | "login" | "signup";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, signup } = useStore();
+  const { login } = useStore();
   const [mode, setMode] = useState<Mode>("landing");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,18 +22,27 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      const inviteCode = localStorage.getItem("pendingInviteCode") ?? undefined;
+      const joinCode = localStorage.getItem("pendingInviteCode") ?? undefined;
       const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email: email.trim(), password, inviteCode }),
+        body: JSON.stringify({ email: email.trim(), password, joinCode }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.message ?? "이메일 또는 비밀번호가 올바르지 않아요.");
       }
-      login();
+      const authHeader = res.headers.get("authorization");
+      if (authHeader) {
+        const parts = authHeader.split(" ");
+        if (parts.length === 3) {
+          localStorage.setItem("refreshToken", parts[1]);
+          localStorage.setItem("accessToken", parts[2]);
+        }
+      }
+      const body = await res.json().catch(() => ({}));
+      login(body.data?.name, body.data?.id);
       router.replace("/home");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "로그인에 실패했습니다.");
@@ -58,18 +66,10 @@ export default function LoginPage() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.message ?? "회원가입에 실패했습니다.");
       }
-      // 가입 후 자동 로그인
-      const inviteCode = localStorage.getItem("pendingInviteCode") ?? undefined; //초대링크 접속 후 코드값을 찾기위해
-      const loginRes = await fetch(`${API_BASE}/api/v1/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email: email.trim(), password, inviteCode }),
-      });
-      if (!loginRes.ok) throw new Error("로그인에 실패했습니다. 다시 로그인해주세요.");
-      login(name.trim());
-      signup(name.trim());
-      router.replace("/home");
+      setEmail("");
+      setPassword("");
+      setName("");
+      setMode("login");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "회원가입에 실패했습니다.");
     } finally {
@@ -80,7 +80,7 @@ export default function LoginPage() {
   // ── 랜딩 ──────────────────────────────────────────────────────────────────────
   if (mode === "landing") {
     return (
-      <div className="flex flex-col min-h-screen px-6 pb-8">
+      <div className="flex flex-col px-6" style={{ height: "100dvh", paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}>
         <div className="flex-1 flex flex-col items-center justify-center gap-4">
           <span className="text-6xl">🗺️</span>
           <h1 className="text-4xl font-bold tracking-tight">TripLog</h1>
@@ -179,15 +179,6 @@ export default function LoginPage() {
 
       <div className="flex flex-col gap-5 pt-8">
         <div>
-          <label className="text-sm font-semibold mb-1.5 block">이름</label>
-          <input
-            className="w-full p-3.5 bg-gray-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-300"
-            placeholder="이름을 입력해주세요"
-            value={name}
-            onChange={e => setName(e.target.value)}
-          />
-        </div>
-        <div>
           <label className="text-sm font-semibold mb-1.5 block">이메일</label>
           <input
             className="w-full p-3.5 bg-gray-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-300"
@@ -207,6 +198,15 @@ export default function LoginPage() {
             autoComplete="new-password"
             value={password}
             onChange={e => setPassword(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="text-sm font-semibold mb-1.5 block">이름</label>
+          <input
+            className="w-full p-3.5 bg-gray-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-300"
+            placeholder="이름을 입력해주세요"
+            value={name}
+            onChange={e => setName(e.target.value)}
           />
         </div>
 
