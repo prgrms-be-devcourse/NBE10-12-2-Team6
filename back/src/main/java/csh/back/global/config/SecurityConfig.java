@@ -34,10 +34,10 @@ public class SecurityConfig {
                         .frameOptions(frame -> frame.sameOrigin())
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // 회원가입, 로그인은 인증 없이 접근 허용
-                        .requestMatchers("/api/v1/auth/signup").permitAll()
-                        // 그 외 모든 요청은 JWT 필터를 거치되 인증 강제하지 않음
-                        .anyRequest().permitAll()
+                                // 회원가입, 로그인은 인증 없이 접근 허용
+                                .requestMatchers("/api/v1/auth/**").permitAll()
+                                // 그 외 모든 요청은 JWT 필터를 거치되 인증 강제하지 않음
+                                .anyRequest().permitAll()
                 )
                 // Spring의 기본 로그인 필터 앞에 JWT 필터를 끼워 넣음
                 .addFilterBefore(new JwtAuthenticationFilter(jwtUtil, memberRepository), UsernamePasswordAuthenticationFilter.class);

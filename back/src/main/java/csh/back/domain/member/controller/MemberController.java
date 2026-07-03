@@ -7,7 +7,6 @@ import csh.back.domain.member.dto.response.MemberResponseDto;
 import csh.back.domain.member.service.MemberService;
 import csh.back.domain.trip.member.service.TripMemberService;
 import csh.back.global.annotation.ApiV1;
-import csh.back.domain.trip.member.service.TripMemberService;
 import csh.back.global.dto.ResponseData;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
