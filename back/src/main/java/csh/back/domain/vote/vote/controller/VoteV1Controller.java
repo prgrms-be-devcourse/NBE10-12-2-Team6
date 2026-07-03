@@ -16,11 +16,11 @@ import java.util.List;
 @ApiV1
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/trip/votes")
+@RequestMapping("/trip/{tripId}/votes")
 public class VoteV1Controller {
     private final VoteService voteService;
 
-    @GetMapping("{tripId}/votes")
+    @GetMapping
     public ResponseData<List<VoteFindListResponse>> findVoteList(
             @PathVariable Long tripId,
             @AuthenticationPrincipal AuthFilterDto member
@@ -30,20 +30,24 @@ public class VoteV1Controller {
 
     @GetMapping("/{voteId}")
     public ResponseData<List<VoteFindResponse>> findVoteItemAndCount(
-            @PathVariable Long voteId
+            @PathVariable Long tripId,
+            @PathVariable Long voteId,
+            @AuthenticationPrincipal AuthFilterDto member
     ) {
         return new ResponseData<>(
                 200,
-                voteService.findVoteItemAndCount(voteId)
+                voteService.findVoteItemAndCount(tripId, voteId, member.id())
         );
     }
 
     @GetMapping("/{voteId}/places/{placeId}")
     public ResponseData<List<VoteFindUserResponse>> findVoteUserThisPlace(
+            @PathVariable Long tripId,
             @PathVariable Long voteId,
-            @PathVariable Long placeId
+            @PathVariable Long placeId,
+            @AuthenticationPrincipal AuthFilterDto member
     ) {
-        return new ResponseData<>(200, voteService.findUserVoteThisPlace(voteId, placeId));
+        return new ResponseData<>(200, voteService.findUserVoteThisPlace(tripId, voteId, placeId, member.id()));
     }
 
 
