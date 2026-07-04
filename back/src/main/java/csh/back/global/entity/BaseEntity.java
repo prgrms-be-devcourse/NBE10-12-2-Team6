@@ -36,7 +36,7 @@ public abstract class BaseEntity {
         Class<?> otherEffectiveClass = Hibernate.getClass(o);
         if (thisEffectiveClass != otherEffectiveClass) return false;
         BaseEntity that = (BaseEntity) o;
-        return id != null && id.equals(that.id);
+        return id != null && id.equals(that.getId());
     }
 
     @Override
