@@ -33,7 +33,7 @@ public class VoteItemService {
 
         Vote vote = voteRepository.findById(voteId).orElseThrow(RuntimeException::new);
         TripPlace tripPlace = tripPlaceRepository.findById(placeId).orElseThrow(RuntimeException::new);
-        VoteItem voteItem = voteItemRepository.findByTripPlaceId(placeId).orElse(null);
+        VoteItem voteItem = voteItemRepository.findByVoteIdAndTripPlaceId(voteId, placeId).orElse(null);
         if (voteItem == null) {
             voteItem = VoteItem
                     .builder()

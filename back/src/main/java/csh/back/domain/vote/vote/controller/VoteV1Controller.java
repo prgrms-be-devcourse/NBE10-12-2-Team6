@@ -18,7 +18,7 @@ import java.util.List;
 @ApiV1
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/trip/{tripId}/votes")
+@RequestMapping("/trips/{tripId}/votes")
 public class VoteV1Controller {
     private final VoteService voteService;
 
@@ -43,7 +43,7 @@ public class VoteV1Controller {
         );
     }
 
-    @GetMapping("/{voteId}")
+    @GetMapping("/{voteId}/count")
     public ResponseData<List<VoteFindResponse>> findVoteItemAndCount(
             @PathVariable Long tripId,
             @PathVariable Long voteId,
