@@ -15,14 +15,14 @@ import org.springframework.web.bind.annotation.*;
 @ApiV1
 @Tag(name = "여행 맴버", description = "여행 멤버 관리 API")
 @RestController
-@RequestMapping("/trip_member")
+@RequestMapping("/trips")
 @RequiredArgsConstructor
 public class TripMemberV1Controller {
 	private final TripMemberService tripMemberService;
 
 	//Swagger 문서 표시
 	@Operation(summary = "초대 코드를 통한 여행 멤버 등록")
-	@PostMapping("/{joinCode}")
+	@PostMapping("/member/{joinCode}")
 	public ResponseData<Void> createJoinMember(
 			@AuthenticationPrincipal AuthFilterDto member,
 			@PathVariable String joinCode

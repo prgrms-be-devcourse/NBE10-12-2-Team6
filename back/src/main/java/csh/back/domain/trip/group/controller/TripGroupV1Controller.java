@@ -37,6 +37,7 @@ public class TripGroupV1Controller {
 	public ResponseData<List<TripGroupResponse>> getAllGroups(
 			@AuthenticationPrincipal AuthFilterDto owner
 	) {
+		log.info("owner = {}", owner);
 		return new ResponseData<>(200, tripGroupService.getGroups(owner.id()));
 	}
 

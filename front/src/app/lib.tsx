@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { User, PlanTheme } from "./store";
 
 // ── Colors ────────────────────────────────────────────────────────────────────
@@ -54,6 +56,41 @@ export function ThemeBadge({ theme }: { theme: PlanTheme }) {
       {t.icon} {t.label}
     </span>
   );
+}
+
+// ── API base ──────────────────────────────────────────────────────────────────
+
+export const API_BASE = typeof window !== "undefined"
+  ? `http://${window.location.hostname}:8080`
+  : "http://localhost:8080";
+
+// ── Auth guard ────────────────────────────────────────────────────────────────
+
+export function useAuthGuard() {
+  const router = useRouter();
+  useEffect(() => {
+    if (!localStorage.getItem("accessToken")) {
+      router.replace("/");
+    }
+  }, []);
+}
+
+// ── API fetch helper ──────────────────────────────────────────────────────────
+
+export async function apiFetch(input: string, init: RequestInit = {}): Promise<Response> {
+  const accessToken = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+  const refreshToken = typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null;
+  const headers: Record<string, string> = {
+    ...(init.headers as Record<string, string>),
+    ...(accessToken ? { Authorization: `Bearer ${refreshToken} ${accessToken}` } : {}),
+  };
+  const res = await fetch(input, { ...init, headers, credentials: "include" });
+  if (res.status === 401) {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    window.location.replace("/");
+  }
+  return res;
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────────

@@ -54,7 +54,8 @@ public class VoteUser extends BaseEntity {
         this.updateCount = updateCount;
     }
 
-    public void increaseUpdateCount() {
+    public void updateVoteItemAndincreaseUpdateCount(VoteItem voteItem) {
+        this.voteItem = voteItem;
         this.updateCount++;
     }
 }

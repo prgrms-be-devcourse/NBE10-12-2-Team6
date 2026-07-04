@@ -13,6 +13,7 @@ import csh.back.domain.trip.timeline.dto.response.TimeLineCountResponse;
 import csh.back.domain.trip.timeline.dto.response.TimeLineResponse;
 import csh.back.domain.trip.timeline.entity.TimeLine;
 import csh.back.domain.trip.timeline.repository.TimeLineRepository;
+import csh.back.domain.vote.vote.service.VoteService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +34,7 @@ public class TimeLineService {
     private final TripGroupRepository tripGroupRepository;
     private final TripMemberRepository tripMemberRepository;
     private final TripPlaceRepository tripPlaceRepository;
+    private final VoteService voteService;
 
     //최소 일차
     private static final int MINIMUM_DAY = 1;
@@ -62,7 +64,7 @@ public class TimeLineService {
                 .build();
 
         TimeLine savedTimeLine = timeLineRepository.save(timeLine);
-
+        voteService.createVote(tripId, memberId, savedTimeLine);
         return TimeLineResponse.from(savedTimeLine);
     }
 
@@ -108,6 +110,8 @@ public class TimeLineService {
 
         //타임라인 목록을 한 번에 저장
         List<TimeLine> savedTimeLines = timeLineRepository.saveAll(timeLines);
+        voteService.createVoteBatch(tripId, memberId, savedTimeLines);
+
 
         //저장된 타임라인 목록을 응답 DTO 목록으로 변환
         return savedTimeLines.stream()

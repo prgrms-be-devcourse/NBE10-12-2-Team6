@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useStore, TripDay, PlanCandidate } from "../../../../../../store";
-import { timeText } from "../../../../../../lib";
+import { timeText, useAuthGuard, apiFetch, API_BASE } from "../../../../../../lib";
 
 // ── Tie random pick sheet ─────────────────────────────────────────────────────
 
@@ -45,48 +45,119 @@ function TieRandomSheet({
   );
 }
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface VoteDetail {
+  placeId: number;
+  count: number;
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function BlockDetailPage() {
+  useAuthGuard();
   const router = useRouter();
   const { id, dayNumber, blockId } = useParams<{ id: string; dayNumber: string; blockId: string }>();
   const searchParams = useSearchParams();
-  const goBack = () => {
-    if (searchParams.get("from") === "vote") router.push(`/trip/${id}?tab=vote`);
-    else router.back();
-  };
+  const goBack = () => router.back();
   const { trips, updateTrip, currentUser } = useStore();
 
 
+  const fromVote = searchParams.get("from") === "vote";
   const [showTie, setShowTie] = useState(false);
   const [tieCandidates, setTieCandidates] = useState<PlanCandidate[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [pendingVote, setPendingVote] = useState<string | null>(null);
   const [showHostMenu, setShowHostMenu] = useState(false);
+  const [voteDetails, setVoteDetails] = useState<VoteDetail[] | null>(null);
+  const [wishPlaces, setWishPlaces] = useState<PlanCandidate[] | null>(null);
+  const [blockOrder, setBlockOrder] = useState<number | null>(null);
+  const [myVotedPlaceId, setMyVotedPlaceId] = useState<string | null>(null);
+  const [voteLoading, setVoteLoading] = useState(false);
 
   const trip = trips.find(t => t.id === id);
   const dayNum = parseInt(dayNumber);
   const dayIdx = trip?.days.findIndex(d => d.dayNumber === dayNum) ?? -1;
-  if (!trip || dayIdx < 0) return null;
 
-  const day = trip.days[dayIdx];
-  const block = day.blocks.find(b => b.id === blockId);
-  if (!block) return null;
+  useEffect(() => {
+    if (!fromVote || !blockId) return;
+    const saved = localStorage.getItem(`block-order-${blockId}`);
+    if (saved) setBlockOrder(Number(saved));
+  }, [blockId]);
 
-  const selectedId = day.selectedCandidateByBlock[blockId];
-  const selected = trip.candidates.find(c => c.id === selectedId);
+  useEffect(() => {
+    if (!fromVote || !id || !blockId) return;
+    apiFetch(`${API_BASE}/api/v1/trip/${id}/votes/${blockId}`)
+      .then(r => r.json())
+      .then(body => setVoteDetails(body.data ?? []));
+
+    if (trip && trip.candidates.length > 0) {
+      setWishPlaces(trip.candidates);
+    } else {
+      apiFetch(`${API_BASE}/api/v1/trips/${id}/wish-places`)
+        .then(r => r.json())
+        .then(body => setWishPlaces((body.data ?? []).map((w: { placeId: number; name: string; address: string; theme: string; createdBy: string }) => ({
+          id: String(w.placeId),
+          authorId: 0,
+          authorName: w.createdBy,
+          placeName: w.name,
+          address: w.address,
+          category: w.theme,
+        }))));
+    }
+  }, [fromVote, id, blockId]);
+
+  if (!trip && !fromVote) return null;
+
+  if (!fromVote && dayIdx < 0) return null;
+
+  const day = trip?.days[dayIdx];
+  const block = day?.blocks.find(b => b.id === blockId);
+  if (!fromVote && !block) return null;
+
+  const candidates = fromVote ? (wishPlaces ?? (trip?.candidates ?? [])) : (trip?.candidates ?? []);
+
+  const selectedId = day?.selectedCandidateByBlock[blockId];
+  const selected = candidates.find(c => c.id === selectedId);
 
   const setDay = (updated: TripDay) => {
+    if (!trip) return;
     updateTrip({ ...trip, days: trip.days.map((d, i) => i === dayIdx ? updated : d) });
   };
 
-  const voteCount = (candidateId: string): number =>
-    day.votedUserIDsByBlockAndCandidate[blockId]?.[candidateId]?.length ?? 0;
+  const voteCount = (candidateId: string): number => {
+    if (fromVote) return voteDetails?.find(v => String(v.placeId) === candidateId)?.count ?? 0;
+    return day?.votedUserIDsByBlockAndCandidate[blockId]?.[candidateId]?.length ?? 0;
+  };
 
-  const isVoted = (candidateId: string): boolean =>
-    day.votedUserIDsByBlockAndCandidate[blockId]?.[candidateId]?.includes(currentUser.id) ?? false;
+  const isVoted = (candidateId: string): boolean => {
+    if (fromVote) return myVotedPlaceId === candidateId;
+    return day?.votedUserIDsByBlockAndCandidate[blockId]?.[candidateId]?.includes(currentUser.id) ?? false;
+  };
 
-  const vote = (candidateId: string) => {
+  const refetchVoteDetails = () => {
+    apiFetch(`${API_BASE}/api/v1/trip/${id}/votes/${blockId}`)
+      .then(r => r.json())
+      .then(body => setVoteDetails(body.data ?? []));
+  };
+
+  const vote = async (candidateId: string) => {
+    if (fromVote) {
+      setVoteLoading(true);
+      try {
+        await apiFetch(`${API_BASE}/api/v1/trips/${id}/votes/${blockId}/vote`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ placeId: Number(candidateId) }),
+        });
+        setMyVotedPlaceId(candidateId);
+        refetchVoteDetails();
+      } finally {
+        setVoteLoading(false);
+      }
+      return;
+    }
+    if (!day) return;
     const blockVotes = { ...(day.votedUserIDsByBlockAndCandidate[blockId] ?? {}) };
     for (const cid of Object.keys(blockVotes)) {
       blockVotes[cid] = (blockVotes[cid] ?? []).filter(uid => uid !== currentUser.id);
@@ -96,24 +167,24 @@ export default function BlockDetailPage() {
   };
 
   const randomVote = () => {
-    if (trip.candidates.length === 0) return;
-    const picked = trip.candidates[Math.floor(Math.random() * trip.candidates.length)];
+    if (candidates.length === 0) return;
+    const picked = candidates[Math.floor(Math.random() * candidates.length)];
     vote(picked.id);
   };
 
   const randomConfirm = () => {
-    if (trip.candidates.length === 0) return;
-    const picked = trip.candidates[Math.floor(Math.random() * trip.candidates.length)];
+    if (candidates.length === 0 || !day) return;
+    const picked = candidates[Math.floor(Math.random() * candidates.length)];
     setDay({ ...day, selectedCandidateByBlock: { ...day.selectedCandidateByBlock, [blockId]: picked.id } });
     setShowHostMenu(false);
   };
 
-  const isHost = currentUser.id === trip.members[0]?.id;
+  const isHost = currentUser.id === (trip?.members[0]?.id);
 
   const decideByVote = () => {
-    if (trip.candidates.length === 0) return;
-    const maxVote = Math.max(...trip.candidates.map(c => voteCount(c.id)));
-    const winners = trip.candidates.filter(c => voteCount(c.id) === maxVote);
+    if (candidates.length === 0 || !day) return;
+    const maxVote = Math.max(...candidates.map(c => voteCount(c.id)));
+    const winners = candidates.filter(c => voteCount(c.id) === maxVote);
     if (winners.length === 1) {
       setDay({ ...day, selectedCandidateByBlock: { ...day.selectedCandidateByBlock, [blockId]: winners[0].id } });
     } else {
@@ -135,7 +206,7 @@ export default function BlockDetailPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="font-semibold text-base flex-1 text-center">{block.order}번째 구간</h1>
+        <h1 className="font-semibold text-base flex-1 text-center">{dayNum}일차 {(block?.order ?? blockOrder) ? `${block?.order ?? blockOrder}번째 ` : ""}후보 투표</h1>
         {isHost ? (
           <div className="relative">
             <button
@@ -151,7 +222,7 @@ export default function BlockDetailPage() {
                 <div className="absolute right-0 top-9 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 flex flex-col gap-1 w-36">
                   <button
                     onClick={randomConfirm}
-                    disabled={trip.candidates.length === 0}
+                    disabled={candidates.length === 0}
                     className="w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-left disabled:opacity-40"
                     style={{ background: "#f3e8ff", color: "#9333ea" }}
                   >
@@ -159,7 +230,7 @@ export default function BlockDetailPage() {
                   </button>
                   <button
                     onClick={decideByVote}
-                    disabled={trip.candidates.length === 0}
+                    disabled={candidates.length === 0}
                     className="w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-left disabled:opacity-40"
                     style={{ background: "#dcfce7", color: "#16a34a" }}
                   >
@@ -177,8 +248,8 @@ export default function BlockDetailPage() {
       <div className="flex-1 overflow-y-scroll px-4 pt-2 pb-4 flex flex-col gap-5">
         {/* Header */}
         <div>
-          <p className="text-xs text-gray-400 font-bold">{timeText(block.startMinute)} ~ {timeText(block.endMinute)}</p>
-          <p className="text-2xl font-bold mt-1">{block.order}번째 구간 후보 보기</p>
+          {block && <p className="text-xs text-gray-400 font-bold">{timeText(block.startMinute)} ~ {timeText(block.endMinute)}</p>}
+          <p className="text-2xl font-bold mt-1">{dayNum}일차 {(block?.order ?? blockOrder) ? `${block?.order ?? blockOrder}번째 ` : ""}후보 투표</p>
         </div>
 
         {/* Selected */}
@@ -208,13 +279,13 @@ export default function BlockDetailPage() {
         <div>
           <div className="flex items-center justify-between mb-3">
             <p className="font-semibold">전체 후보 목록</p>
-            <span className="text-xs text-gray-400 font-bold">{trip.candidates.length}개</span>
+            <span className="text-xs text-gray-400 font-bold">{candidates.length}개</span>
           </div>
 
           {/* 동적 카테고리 필터 */}
-          {trip.candidates.length > 0 && (() => {
-            const namedCategories = Array.from(new Set(trip.candidates.map(c => c.category).filter(Boolean))) as string[];
-            const hasUncategorized = trip.candidates.some(c => !c.category);
+          {candidates.length > 0 && (() => {
+            const namedCategories = Array.from(new Set(candidates.map(c => c.category).filter(Boolean))) as string[];
+            const hasUncategorized = candidates.some(c => !c.category);
             const categories = [...namedCategories, ...(hasUncategorized ? ["기타"] : [])];
             if (categories.length === 0) return null;
             return (
@@ -240,13 +311,13 @@ export default function BlockDetailPage() {
             );
           })()}
 
-          {trip.candidates.length === 0 ? (
+          {candidates.length === 0 ? (
             <div className="p-4 bg-gray-50 rounded-2xl">
               <p className="text-sm text-gray-400">아직 후보가 없습니다. 여행 모임 상세 화면에서 후보를 먼저 올려주세요.</p>
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {trip.candidates.filter(c => {
+              {candidates.filter(c => {
                 if (!activeCategory) return true;
                 if (activeCategory === "기타") return !c.category;
                 return c.category === activeCategory;
@@ -296,19 +367,19 @@ export default function BlockDetailPage() {
       <div className="px-4 py-4 border-t border-gray-100 flex gap-2 bg-white">
         <button
           onClick={randomVote}
-          disabled={trip.candidates.length === 0}
+          disabled={candidates.length === 0}
           className="flex-1 py-4 rounded-2xl font-semibold disabled:opacity-40"
           style={{ background: "#f3e8ff", color: "#9333ea" }}
         >
           🔀 랜덤 투표
         </button>
         <button
-          onClick={() => { if (pendingVote) { vote(pendingVote); setPendingVote(null); } }}
-          disabled={!pendingVote}
+          onClick={() => { if (pendingVote && !voteLoading) { vote(pendingVote); setPendingVote(null); } }}
+          disabled={!pendingVote || voteLoading}
           className="flex-1 py-4 rounded-2xl font-semibold disabled:opacity-40"
           style={{ background: "#dbeafe", color: "#2563eb" }}
         >
-          투표하기
+          {voteLoading ? "투표 중..." : "투표하기"}
         </button>
       </div>
 

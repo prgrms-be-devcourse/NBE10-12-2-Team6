@@ -3,11 +3,11 @@
 import { useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useStore } from "../../store";
+import { apiFetch, API_BASE } from "../../lib";
 
 async function joinTripByInviteCode(code: string) {
-  await fetch(`/api/trips/member/${code}`, {
+  await apiFetch(`${API_BASE}/api/v1/trips/member/${code}`, {
     method: "POST",
-    credentials: "include",
   });
 }
 
