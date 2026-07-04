@@ -2,10 +2,7 @@ package csh.back.domain.vote.vote.controller;
 
 import csh.back.domain.member.dto.response.AuthFilterDto;
 import csh.back.domain.vote.vote.dto.request.VoteCreateRequest;
-import csh.back.domain.vote.vote.dto.response.VoteCreateResponse;
-import csh.back.domain.vote.vote.dto.response.VoteFindListResponse;
-import csh.back.domain.vote.vote.dto.response.VoteFindResponse;
-import csh.back.domain.vote.vote.dto.response.VoteFindUserResponse;
+import csh.back.domain.vote.vote.dto.response.*;
 import csh.back.domain.vote.vote.service.VoteService;
 import csh.back.global.annotation.ApiV1;
 import csh.back.global.dto.ResponseData;
@@ -44,7 +41,7 @@ public class VoteV1Controller {
     }
 
     @GetMapping("/{voteId}/count")
-    public ResponseData<List<VoteFindResponse>> findVoteItemAndCount(
+    public ResponseData<VoteFindWithUpdateCountResponse> findVoteItemAndCount(
             @PathVariable Long tripId,
             @PathVariable Long voteId,
             @AuthenticationPrincipal AuthFilterDto member

@@ -14,6 +14,4 @@ public interface VoteUserRepository extends JpaRepository<VoteUser, Long> {
     List<VoteUser> findByVoteItemId(Long voteItemId);
 
     Optional<VoteUser> findByVoteIdAndTripMemberId(Long voteId, Long tripMemberId);
-
-
 }

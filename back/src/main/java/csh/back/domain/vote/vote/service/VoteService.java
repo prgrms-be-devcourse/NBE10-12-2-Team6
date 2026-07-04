@@ -12,10 +12,7 @@ import csh.back.domain.vote.item.entity.VoteItem;
 import csh.back.domain.vote.item.repository.VoteItemRepository;
 import csh.back.domain.vote.user.entity.VoteUser;
 import csh.back.domain.vote.user.repository.VoteUserRepository;
-import csh.back.domain.vote.vote.dto.response.VoteCreateResponse;
-import csh.back.domain.vote.vote.dto.response.VoteFindListResponse;
-import csh.back.domain.vote.vote.dto.response.VoteFindResponse;
-import csh.back.domain.vote.vote.dto.response.VoteFindUserResponse;
+import csh.back.domain.vote.vote.dto.response.*;
 import csh.back.domain.vote.vote.entity.Vote;
 import csh.back.domain.vote.vote.repository.VoteRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -40,6 +38,8 @@ public class VoteService {
     private final TimeLineRepository timeLineRepository;
     private final TripMemberValidator tripMemberValidator;
     private final TripMemberRepository tripMemberRepository;
+
+    private final int DEFAULT_UPDATE_COUNT = 0;
 
     public List<VoteFindListResponse> findVoteList(Long tripId, Long memberId) {
         tripMemberValidator.validMember(tripId, memberId);
@@ -71,12 +71,14 @@ public class VoteService {
         return voteFindListResponses;
     }
 
-    public List<VoteFindResponse> findVoteItemAndCount(Long tripId, Long voteId, Long memberId) {
+    public VoteFindWithUpdateCountResponse findVoteItemAndCount(Long tripId, Long voteId, Long memberId) {
         tripMemberValidator.validMember(tripId, memberId);
 
-        //투표된 장소 목록을 조회해 옴
-        List<VoteItem> voteItemList = voteItemRepository.findByVoteIdWithTripPlace(voteId);
+        TripMember tripMember = tripMemberRepository.findByMemberId(memberId).orElseThrow(RuntimeException::new); // 이게 없으면 에러가 맞지
+        VoteUser voteUser = voteUserRepository.findByVoteIdAndTripMemberId(voteId ,tripMember.getId()).orElse(null); // 이건 없을수있지
 
+        //투표된 장소 목록을 조회해 옴
+        List<VoteItem> voteItemList = voteItemRepository.findAllByVoteIdWithTripPlace(voteId);
         //각 장소에 몇포가 투표 되었는지 카운팅
         Map<Long, Long> countMap = voteUserRepository.countGroupByVoteId(voteId)
                 .stream()
@@ -85,14 +87,20 @@ public class VoteService {
                         row -> (Long) row[1]
                 ));
 
-        //장소의 아이디를 키로 하여 위의 맵에서 횟수를 매핑하여 반환
-        return voteItemList.stream()
-                .map(vi -> VoteFindResponse.from(
+        VoteItem voteItem = voteUser != null ? voteUser.getVoteItem() : null;
+        int updateCount = voteUser != null ? voteUser.getUpdateCount() : DEFAULT_UPDATE_COUNT;
+
+        List<VoteFindResponse> voteFindResponses = voteItemList.stream()
+                .map(vi -> VoteFindResponse.of(
                         vi.getTripPlace().getId(),
                         vi.getTripPlace().getName(),
-                        countMap.getOrDefault(vi.getId(), 0L)
+                        countMap.getOrDefault(vi.getId(), 0L),
+                        vi.equals(voteItem)
                 ))
                 .toList();
+
+        //장소의 아이디를 키로 하여 위의 맵에서 횟수를 매핑하여 반환
+        return VoteFindWithUpdateCountResponse.of(voteFindResponses, updateCount);
     }
 
     public List<VoteFindUserResponse> findUserVoteThisPlace(Long tripId, Long voteId, Long placeId, Long memberId) {
