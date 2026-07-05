@@ -225,4 +225,50 @@ public class TripGroupV1ControllerTest {
 					.andExpect(jsonPath("$.data.members[%d].name".formatted(i)).value(tripGroup.members().get(i).name()));
 		}
 	}
+
+	@Test
+	@DisplayName("모임방 상세 조회 with 참여자가 아닌 경우")
+	@WithMockLoginUser(id = 2L, email = "member2@admin.com")
+	void t7() throws Exception {
+		Long id = 1L;
+
+		AuthFilterDto owner = (AuthFilterDto) SecurityContextHolder.getContext()
+				.getAuthentication()
+				.getPrincipal();
+
+		ResultActions resultActions = mvc
+				.perform(
+						get(BASE_URL+"/trips/" + id)
+				)
+				.andDo(print());
+
+		resultActions
+				.andExpect(handler().handlerType(TripGroupV1Controller.class))
+				.andExpect(handler().methodName("getGroupDetail"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.message").value("해당 모임의 멤버가 아닙니다."));
+	}
+
+	@Test
+	@DisplayName("모임방 상세 조회 with 존재하지 않는 모임")
+	@WithMockLoginUser()
+	void t8() throws Exception {
+		Long id = 10L;
+
+		AuthFilterDto owner = (AuthFilterDto) SecurityContextHolder.getContext()
+				.getAuthentication()
+				.getPrincipal();
+
+		ResultActions resultActions = mvc
+				.perform(
+						get(BASE_URL+"/trips/" + id)
+				)
+				.andDo(print());
+
+		resultActions
+				.andExpect(handler().handlerType(TripGroupV1Controller.class))
+				.andExpect(handler().methodName("getGroupDetail"))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.message").value("존재하지 않는 모임입니다."));
+	}
 }
