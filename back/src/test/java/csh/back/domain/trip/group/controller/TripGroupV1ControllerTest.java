@@ -159,4 +159,32 @@ public class TripGroupV1ControllerTest {
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.message").value("존재하지 않는 유저".stripIndent().trim()));
 	}
+
+	@Test
+	@DisplayName("모임방 생성 with request 필드 중 하나가 전달되지 않은 경우")
+	@WithMockLoginUser()
+	void t5() throws Exception {
+		AuthFilterDto owner = (AuthFilterDto) SecurityContextHolder.getContext()
+				.getAuthentication()
+				.getPrincipal();
+
+		ResultActions resultActions = mvc
+				.perform(
+						post(BASE_URL + "/trips")
+								.contentType(MediaType.APPLICATION_JSON)
+								.content("""
+										{
+											"name": "test travel",
+											"region" : "test region",
+											"startDate" : "2026-07-01"
+										}
+										""")
+				).andDo(print());
+
+		resultActions
+				.andExpect(handler().handlerType(TripGroupV1Controller.class))
+				.andExpect(handler().methodName("saveGroup"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("nights: must not be null".stripIndent().trim()));
+	}
 }
