@@ -187,4 +187,42 @@ public class TripGroupV1ControllerTest {
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.message").value("nights: must not be null".stripIndent().trim()));
 	}
+
+	@Test
+	@DisplayName("모임방 상세 조회")
+	@WithMockLoginUser()
+	void t6() throws Exception {
+		Long id = 1L;
+
+		AuthFilterDto owner = (AuthFilterDto) SecurityContextHolder.getContext()
+				.getAuthentication()
+				.getPrincipal();
+
+		ResultActions resultActions = mvc
+				.perform(
+						get(BASE_URL+"/trips/" + id)
+				)
+				.andDo(print());
+
+		TripGroupDetailResponse tripGroup = tripGroupService.getGroupDetail(id, owner.id());
+
+		resultActions
+				.andExpect(handler().handlerType(TripGroupV1Controller.class))
+				.andExpect(handler().methodName("getGroupDetail"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.id").value(tripGroup.id()))
+				.andExpect(jsonPath("$.data.name").value(tripGroup.name()))
+				.andExpect(jsonPath("$.data.ownerId").value(tripGroup.ownerId()))
+				.andExpect(jsonPath("$.data.region").value(tripGroup.region()))
+				.andExpect(jsonPath("$.data.joinCode").value(tripGroup.joinCode()))
+				.andExpect(jsonPath("$.data.nights").value(tripGroup.nights()))
+				.andExpect(jsonPath("$.data.startDate").value(Matchers.startsWith(tripGroup.startDate().toString())))
+				.andExpect(jsonPath("$.data.endDate").value(Matchers.startsWith(tripGroup.endDate().toString())));
+
+		for (int i= 0; i<tripGroup.members().size(); i++) {
+			resultActions
+					.andExpect(jsonPath("$.data.members[%d].memberId".formatted(i)).value(tripGroup.members().get(i).memberId()))
+					.andExpect(jsonPath("$.data.members[%d].name".formatted(i)).value(tripGroup.members().get(i).name()));
+		}
+	}
 }

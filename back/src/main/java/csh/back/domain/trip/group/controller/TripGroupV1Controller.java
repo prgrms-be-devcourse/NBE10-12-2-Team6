@@ -56,23 +56,23 @@ public class TripGroupV1Controller {
 	//Swagger 문서 표시
 	@Operation(summary = "상세 모임방 조회")
 	//모임방 상세페이지 조회
-	@GetMapping("/{groupId}")
+	@GetMapping("/{tripGroupId}")
 	public ResponseData<TripGroupDetailResponse> getGroupDetail(
-			@PathVariable Long groupId,
+			@PathVariable Long tripGroupId,
 			@AuthenticationPrincipal AuthFilterDto owner
 	) {
-		return new ResponseData<>(200, tripGroupService.getGroupDetail(groupId, owner.id()));
+		return new ResponseData<>(200, tripGroupService.getGroupDetail(tripGroupId, owner.id()));
 	}
 
 	//Swagger 문서 표시
-	@Operation(summary = "상세 모임방 수")
+	@Operation(summary = "상세 모임방 수정")
 	//모임방 상세 수정 - name
-	@PatchMapping("/{groupId}")
+	@PatchMapping("/{tripGroupId}")
 	public ResponseData<TripGroupResponse> modifyGroupName(
-			@PathVariable Long groupId,
+			@PathVariable Long tripGroupId,
 			@AuthenticationPrincipal AuthFilterDto owner,
 			@RequestBody TripGroupModifyRequest request
 			) {
-		return new ResponseData<>(200, tripGroupService.modifyGroupDetail(groupId, owner.id(), request));
+		return new ResponseData<>(200, tripGroupService.modifyGroupDetail(tripGroupId, owner.id(), request));
 	}
 }
