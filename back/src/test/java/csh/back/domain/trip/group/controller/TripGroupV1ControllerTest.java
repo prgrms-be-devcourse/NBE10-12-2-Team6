@@ -1,15 +1,23 @@
 package csh.back.domain.trip.group.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import csh.back.domain.member.dto.response.AuthFilterDto;
+import csh.back.domain.trip.group.dto.response.TripGroupDetailResponse;
 import csh.back.domain.trip.group.dto.response.TripGroupResponse;
 import csh.back.domain.trip.group.service.TripGroupService;
+import csh.back.domain.trip.group.support.WithMockLoginUser;
 import csh.back.global.jwt.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.test.context.support.WithUserDetails;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -17,6 +25,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -33,6 +42,7 @@ public class TripGroupV1ControllerTest {
 	MockMvc mvc;  // 실제 서버 안 띄우고 요청/응답 테스트성
 	@Autowired
 	JwtUtil jwtUtil;
+
 	@Autowired
 	private TripGroupService tripGroupService;
 
@@ -44,13 +54,12 @@ public class TripGroupV1ControllerTest {
 
 	private String BASE_URL = "/api/v1";
 
-	회
-//	@WithMockLoginUser // jwt 인증 없이 테스트 진행하고 싶으면
+	@WithMockLoginUser // jwt 인증 없이 테스트 진행하고 싶으면 -> SecurityContext 직접 주입
 	void t1() throws Exception {
 		ResultActions resultActions = mvc
 				.perform(
 						get(BASE_URL+"/trips")
-								.header("Authorization", "Bearer " + token + " " + token))
+				)
 				.andDo(print());
 
 		Long memberId = jwtUtil.getMemberId(token);
@@ -77,13 +86,48 @@ public class TripGroupV1ControllerTest {
 				.andDo(print());
 
 		resultActions
-				.andExpect(status().isNotFound())
-				.andExpect(jsonPath("$.message").value("존재하지 않는 유저"));
+				.andExpect(status().isForbidden());
 	}
 
 	@Test
 	@DisplayName("모임방 생성")
+	@WithMockLoginUser
 	void t3() throws Exception {
-		
+		//Mock user로부터 등록된 security에서 user 정보 꺼내기
+		AuthFilterDto owner = (AuthFilterDto) SecurityContextHolder.getContext()
+				.getAuthentication()
+				.getPrincipal();
+
+		ResultActions resultActions = mvc
+				.perform(
+						post(BASE_URL + "/trips")
+								.contentType(MediaType.APPLICATION_JSON)
+								.content("""
+										{
+											"name": "test travel",
+											"region" : "test region",
+											"startDate" : "2026-07-01",
+											"nights": 4
+										}
+										""")
+				).andDo(print());
+
+		String body = resultActions.andReturn().getResponse().getContentAsString();
+		Long id = new ObjectMapper().readTree(body).get("data").get("id").asLong();
+
+		TripGroupDetailResponse tripGroup = tripGroupService.getGroupDetail(id, owner.id());
+
+		resultActions
+				.andExpect(handler().handlerType(TripGroupV1Controller.class))
+				.andExpect(handler().methodName("saveGroup"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.id").value(tripGroup.id()))
+				.andExpect(jsonPath("$.data.name").value(tripGroup.name()))
+				.andExpect(jsonPath("$.data.ownerId").value(tripGroup.ownerId()))
+				.andExpect(jsonPath("$.data.region").value(tripGroup.region()))
+				.andExpect(jsonPath("$.data.joinCode").value(tripGroup.joinCode()))
+				.andExpect(jsonPath("$.data.nights").value(tripGroup.nights()))
+				.andExpect(jsonPath("$.data.startDate").value(Matchers.startsWith(tripGroup.startDate().toString())))
+				.andExpect(jsonPath("$.data.endDate").value(Matchers.startsWith(tripGroup.endDate().toString())));
 	}
 }

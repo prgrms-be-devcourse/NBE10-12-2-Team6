@@ -38,8 +38,6 @@ public class TripGroupV1Controller {
 	public ResponseData<List<TripGroupResponse>> getAllGroups(
 			@AuthenticationPrincipal AuthFilterDto owner
 	) {
-		if (owner == null) throw new NotFoundException("존재하지 않는 유저");
-
 		log.info("owner = {}", owner);
 		return new ResponseData<>(200, tripGroupService.getGroups(owner.id()));
 	}
