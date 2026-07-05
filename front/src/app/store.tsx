@@ -18,6 +18,7 @@ export interface ActivityBlock {
   theme: PlanTheme;
   startMinute: number;
   endMinute: number;
+  voteId?: string | null;
 }
 
 export interface PlanCandidate {

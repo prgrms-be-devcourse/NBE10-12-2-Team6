@@ -12,7 +12,12 @@ import lombok.NoArgsConstructor;
 //여행방 멤버
 @Getter
 @Entity
-@Table(name = "trip_members")
+@Table(name = "trip_members",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_trip_member",
+                columnNames = {"trip_id", "member_id"}  // vote_id 기준
+        )
+)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class TripMember extends BaseEntity {
     //방장

@@ -1,8 +1,11 @@
 package csh.back.domain.trip.timeline.controller;
 
-import csh.back.domain.trip.timeline.dto.request.*;
+import csh.back.domain.trip.timeline.dto.request.TimeLineAllCreateRequest;
+import csh.back.domain.trip.timeline.dto.request.TimeLineCreateRequest;
+import csh.back.domain.trip.timeline.dto.request.TimeLineUpdateRequest;
 import csh.back.domain.trip.timeline.dto.response.TimeLineCountResponse;
 import csh.back.domain.trip.timeline.dto.response.TimeLineResponse;
+import csh.back.domain.trip.timeline.dto.response.TimeLineWithVoteIdResponse;
 import csh.back.domain.trip.timeline.service.TimeLineService;
 import csh.back.global.annotation.ApiV1;
 import csh.back.global.dto.ResponseData;
@@ -10,11 +13,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Slf4j
 @ApiV1
 //Swagger에서 여행 타임라인 API 그룹으로 표시
 @Tag(name = "여행 타임라인", description = "여행 타임라인 시간 구간 API")
@@ -62,7 +67,7 @@ public class TimeLineV1Controller {
     @Operation(summary = "일차별 타임라인 시간 구간 목록 조회")
     //특정 여행 모임의 특정 일차 타임라인 목록 조회
     @GetMapping
-    public ResponseData<List<TimeLineResponse>> getTimeLines(
+    public ResponseData<List<TimeLineWithVoteIdResponse>> getTimeLines(
             @PathVariable Long tripId,
             Authentication authentication,
             @RequestParam int dayNumber) {
@@ -97,22 +102,6 @@ public class TimeLineV1Controller {
         //로그인 정보에서 가져옴
         Long memberId = getLoginMemberId(authentication);
         return new ResponseData<>(200, timeLineService.updateTimeLine(tripId, timelineId, memberId, request));
-    }
-
-    //Swagger 문서에 확정 장소 반영 API 설명 표시
-    @Operation(summary = "확정 장소 반영")
-    //특정 여행 모임의 특정 타임라인 시간 구간에 확정 장소를 반영
-    @PatchMapping("/{timelineId}/confirm-place")
-    public ResponseData<TimeLineResponse> confirmTimeLinePlace(
-            @PathVariable Long tripId,
-            @PathVariable Long timelineId,
-            Authentication authentication,
-            @Valid @RequestBody TimeLineConfirmPlaceRequest request) {
-
-        //로그인 정보에서 가져옴
-        Long memberId = getLoginMemberId(authentication);
-        //확정 장소 반영 서비스 호출
-        return new ResponseData<>(200, timeLineService.confirmTimeLinePlace(tripId, timelineId, memberId, request));
     }
 
     //Swagger 문서에 타임라인 삭제 API 설명 표시
