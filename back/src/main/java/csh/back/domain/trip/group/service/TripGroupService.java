@@ -98,7 +98,7 @@ public class TripGroupService {
 				.orElseThrow(() -> new NotFoundException("존재하지 않는 모임입니다."));
 
 		if (!group.getOwner().getId().equals(ownerId)) {
-			throw new IllegalArgumentException("해당 모임의 소유자가 아닙니다.");
+			throw new NonMemberException("해당 모임의 소유자가 아닙니다.");
 		}
 
 		group.modify(request);

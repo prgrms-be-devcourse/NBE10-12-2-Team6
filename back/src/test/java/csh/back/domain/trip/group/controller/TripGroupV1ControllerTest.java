@@ -24,8 +24,7 @@ import org.springframework.test.web.servlet.ResultActions;
 
 import java.util.List;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -47,18 +46,21 @@ public class TripGroupV1ControllerTest {
 	private TripGroupService tripGroupService;
 
 	String token;
-	@BeforeEach //테스트 마다 매번 호출됨
+
+	@BeforeEach
+		//테스트 마다 매번 호출됨
 	void setUserToken() {
 		token = jwtUtil.generateAccessToken(1L, "admin@admin.com");
 	}
 
 	private String BASE_URL = "/api/v1";
 
-	@WithMockLoginUser // jwt 인증 없이 테스트 진행하고 싶으면 -> SecurityContext 직접 주입
+	@WithMockLoginUser
+		// jwt 인증 없이 테스트 진행하고 싶으면 -> SecurityContext 직접 주입
 	void t1() throws Exception {
 		ResultActions resultActions = mvc
 				.perform(
-						get(BASE_URL+"/trips")
+						get(BASE_URL + "/trips")
 				)
 				.andDo(print());
 
@@ -70,7 +72,7 @@ public class TripGroupV1ControllerTest {
 				.andExpect(handler().methodName("getAllGroups"))
 				.andExpect(status().isOk());
 
-		for (int i= 0; i<tripGroups.size(); i++) {
+		for (int i = 0; i < tripGroups.size(); i++) {
 			TripGroupResponse trip = tripGroups.get(i);
 			resultActions.andExpect(jsonPath("$.data[%d].ownerId".formatted(i)).value(trip.ownerId()));
 		}
@@ -81,7 +83,7 @@ public class TripGroupV1ControllerTest {
 	void t2() throws Exception {
 		ResultActions resultActions = mvc
 				.perform(
-						get(BASE_URL+"/trips")
+						get(BASE_URL + "/trips")
 				)
 				.andDo(print());
 
@@ -200,7 +202,7 @@ public class TripGroupV1ControllerTest {
 
 		ResultActions resultActions = mvc
 				.perform(
-						get(BASE_URL+"/trips/" + id)
+						get(BASE_URL + "/trips/" + id)
 				)
 				.andDo(print());
 
@@ -219,7 +221,7 @@ public class TripGroupV1ControllerTest {
 				.andExpect(jsonPath("$.data.startDate").value(Matchers.startsWith(tripGroup.startDate().toString())))
 				.andExpect(jsonPath("$.data.endDate").value(Matchers.startsWith(tripGroup.endDate().toString())));
 
-		for (int i= 0; i<tripGroup.members().size(); i++) {
+		for (int i = 0; i < tripGroup.members().size(); i++) {
 			resultActions
 					.andExpect(jsonPath("$.data.members[%d].memberId".formatted(i)).value(tripGroup.members().get(i).memberId()))
 					.andExpect(jsonPath("$.data.members[%d].name".formatted(i)).value(tripGroup.members().get(i).name()));
@@ -238,7 +240,7 @@ public class TripGroupV1ControllerTest {
 
 		ResultActions resultActions = mvc
 				.perform(
-						get(BASE_URL+"/trips/" + id)
+						get(BASE_URL + "/trips/" + id)
 				)
 				.andDo(print());
 
@@ -261,7 +263,7 @@ public class TripGroupV1ControllerTest {
 
 		ResultActions resultActions = mvc
 				.perform(
-						get(BASE_URL+"/trips/" + id)
+						get(BASE_URL + "/trips/" + id)
 				)
 				.andDo(print());
 
@@ -270,5 +272,72 @@ public class TripGroupV1ControllerTest {
 				.andExpect(handler().methodName("getGroupDetail"))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.message").value("존재하지 않는 모임입니다."));
+	}
+
+	@Test
+	@DisplayName("모임방 상세 조회 수정")
+	@WithMockLoginUser()
+	void t9() throws Exception {
+		Long id = 1L;
+
+		AuthFilterDto owner = (AuthFilterDto) SecurityContextHolder.getContext()
+				.getAuthentication()
+				.getPrincipal();
+
+		ResultActions resultActions = mvc
+				.perform(
+						patch(BASE_URL + "/trips/" + id)
+								.contentType(MediaType.APPLICATION_JSON)
+								.content("""
+										{
+										    "name": "테스트 제목 수정"
+										}
+										""")
+				)
+				.andDo(print());
+
+		TripGroupDetailResponse tripGroup = tripGroupService.getGroupDetail(id, owner.id());
+
+		resultActions
+				.andExpect(handler().handlerType(TripGroupV1Controller.class))
+				.andExpect(handler().methodName("modifyGroupName"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.id").value(tripGroup.id()))
+				.andExpect(jsonPath("$.data.name").value(tripGroup.name()))
+				.andExpect(jsonPath("$.data.ownerId").value(tripGroup.ownerId()))
+				.andExpect(jsonPath("$.data.region").value(tripGroup.region()))
+				.andExpect(jsonPath("$.data.joinCode").value(tripGroup.joinCode()))
+				.andExpect(jsonPath("$.data.nights").value(tripGroup.nights()))
+				.andExpect(jsonPath("$.data.startDate").value(Matchers.startsWith(tripGroup.startDate().toString())))
+				.andExpect(jsonPath("$.data.endDate").value(Matchers.startsWith(tripGroup.endDate().toString())));
+	}
+
+	@Test
+	@DisplayName("모임방 상세 조회 수정 with 모임 소유자가 아닌 사용자 접근")
+	@WithMockLoginUser(id = 2L, email = "memer2@admin.com")
+	void t10() throws Exception {
+		Long id = 1L;
+
+		AuthFilterDto owner = (AuthFilterDto) SecurityContextHolder.getContext()
+				.getAuthentication()
+				.getPrincipal();
+
+		ResultActions resultActions = mvc
+				.perform(
+						patch(BASE_URL + "/trips/" + id)
+								.contentType(MediaType.APPLICATION_JSON)
+								.content("""
+										{
+										    "name": "테스트 제목 수정"
+										}
+										""")
+				)
+				.andDo(print());
+
+		resultActions
+				.andExpect(handler().handlerType(TripGroupV1Controller.class))
+				.andExpect(handler().methodName("modifyGroupName"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.message").value("해당 모임의 소유자가 아닙니다."));
 	}
 }
