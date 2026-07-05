@@ -130,4 +130,33 @@ public class TripGroupV1ControllerTest {
 				.andExpect(jsonPath("$.data.startDate").value(Matchers.startsWith(tripGroup.startDate().toString())))
 				.andExpect(jsonPath("$.data.endDate").value(Matchers.startsWith(tripGroup.endDate().toString())));
 	}
+
+	@Test
+	@DisplayName("모임방 생성 with 존재 하지 않는 사용자")
+	@WithMockLoginUser(id = 10L, email = "excep@excep.com")
+	void t4() throws Exception {
+		AuthFilterDto owner = (AuthFilterDto) SecurityContextHolder.getContext()
+				.getAuthentication()
+				.getPrincipal();
+
+		ResultActions resultActions = mvc
+				.perform(
+						post(BASE_URL + "/trips")
+								.contentType(MediaType.APPLICATION_JSON)
+								.content("""
+										{
+											"name": "test travel",
+											"region" : "test region",
+											"startDate" : "2026-07-01",
+											"nights": 4
+										}
+										""")
+				).andDo(print());
+
+		resultActions
+				.andExpect(handler().handlerType(TripGroupV1Controller.class))
+				.andExpect(handler().methodName("saveGroup"))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.message").value("존재하지 않는 유저".stripIndent().trim()));
+	}
 }
