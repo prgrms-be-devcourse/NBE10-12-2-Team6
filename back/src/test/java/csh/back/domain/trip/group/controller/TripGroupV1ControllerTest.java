@@ -6,10 +6,8 @@ import csh.back.domain.trip.group.dto.response.TripGroupDetailResponse;
 import csh.back.domain.trip.group.dto.response.TripGroupResponse;
 import csh.back.domain.trip.group.service.TripGroupService;
 import csh.back.domain.trip.group.support.WithMockLoginUser;
-import csh.back.global.jwt.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.hamcrest.Matchers;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +15,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.test.context.support.WithUserDetails;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -39,19 +36,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class TripGroupV1ControllerTest {
 	@Autowired
 	MockMvc mvc;  // 실제 서버 안 띄우고 요청/응답 테스트성
-	@Autowired
-	JwtUtil jwtUtil;
 
 	@Autowired
 	private TripGroupService tripGroupService;
-
-	String token;
-
-	@BeforeEach
-		//테스트 마다 매번 호출됨
-	void setUserToken() {
-		token = jwtUtil.generateAccessToken(1L, "admin@admin.com");
-	}
 
 	private String BASE_URL = "/api/v1";
 
@@ -64,8 +51,11 @@ public class TripGroupV1ControllerTest {
 				)
 				.andDo(print());
 
-		Long memberId = jwtUtil.getMemberId(token);
-		List<TripGroupResponse> tripGroups = tripGroupService.getGroups(memberId);
+		AuthFilterDto member = (AuthFilterDto) SecurityContextHolder.getContext()
+				.getAuthentication()
+				.getPrincipal();
+
+		List<TripGroupResponse> tripGroups = tripGroupService.getGroups(member.id());
 
 		resultActions
 				.andExpect(handler().handlerType(TripGroupV1Controller.class))
@@ -137,10 +127,6 @@ public class TripGroupV1ControllerTest {
 	@DisplayName("모임방 생성 with 존재 하지 않는 사용자")
 	@WithMockLoginUser(id = 10L, email = "excep@excep.com")
 	void t4() throws Exception {
-		AuthFilterDto owner = (AuthFilterDto) SecurityContextHolder.getContext()
-				.getAuthentication()
-				.getPrincipal();
-
 		ResultActions resultActions = mvc
 				.perform(
 						post(BASE_URL + "/trips")
@@ -166,10 +152,6 @@ public class TripGroupV1ControllerTest {
 	@DisplayName("모임방 생성 with request 필드 중 하나가 전달되지 않은 경우")
 	@WithMockLoginUser()
 	void t5() throws Exception {
-		AuthFilterDto owner = (AuthFilterDto) SecurityContextHolder.getContext()
-				.getAuthentication()
-				.getPrincipal();
-
 		ResultActions resultActions = mvc
 				.perform(
 						post(BASE_URL + "/trips")
@@ -234,10 +216,6 @@ public class TripGroupV1ControllerTest {
 	void t7() throws Exception {
 		Long id = 1L;
 
-		AuthFilterDto owner = (AuthFilterDto) SecurityContextHolder.getContext()
-				.getAuthentication()
-				.getPrincipal();
-
 		ResultActions resultActions = mvc
 				.perform(
 						get(BASE_URL + "/trips/" + id)
@@ -256,10 +234,6 @@ public class TripGroupV1ControllerTest {
 	@WithMockLoginUser()
 	void t8() throws Exception {
 		Long id = 10L;
-
-		AuthFilterDto owner = (AuthFilterDto) SecurityContextHolder.getContext()
-				.getAuthentication()
-				.getPrincipal();
 
 		ResultActions resultActions = mvc
 				.perform(
@@ -317,10 +291,6 @@ public class TripGroupV1ControllerTest {
 	@WithMockLoginUser(id = 2L, email = "memer2@admin.com")
 	void t10() throws Exception {
 		Long id = 1L;
-
-		AuthFilterDto owner = (AuthFilterDto) SecurityContextHolder.getContext()
-				.getAuthentication()
-				.getPrincipal();
 
 		ResultActions resultActions = mvc
 				.perform(
