@@ -4,9 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useStore } from "../store";
-import { formatDate } from "../lib";
-
-const API_BASE = "http://localhost:8080";
+import { formatDate, apiFetch, useAuthGuard, API_BASE } from "../lib";
 
 type ApiTrip = {
   id: number;
@@ -38,6 +36,7 @@ function TripCard({ trip }: { trip: ApiTrip }) {
 }
 
 export default function HomePage() {
+  useAuthGuard();
   const router = useRouter();
   const { currentUser, loadTrips } = useStore();
 
@@ -54,7 +53,7 @@ export default function HomePage() {
 
   useEffect(() => {
     localStorage.removeItem("pendingInviteCode");
-    fetch(`${API_BASE}/api/v1/trips`, { credentials: "include" })
+    apiFetch(`${API_BASE}/api/v1/trips`)
       .then(res => res.json())
       .then(body => { if (body.data) { setTrips(body.data); loadTrips(body.data); } })
       .catch(() => {})
@@ -64,10 +63,9 @@ export default function HomePage() {
   const handleCreateTrip = async () => {
     if (!tripTitle.trim() || !tripRegion.trim() || !tripDate) return;
     try {
-      const res = await fetch(`${API_BASE}/api/v1/trips`, {
+      const res = await apiFetch(`${API_BASE}/api/v1/trips`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           name: tripTitle.trim(),
           region: tripRegion.trim(),

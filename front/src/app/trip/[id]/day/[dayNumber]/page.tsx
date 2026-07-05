@@ -4,10 +4,9 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useStore, Trip, TripDay, ActivityBlock, PlanTheme, uid } from "../../../../store";
-import { THEME, ThemeBadge, timeText, durationText } from "../../../../lib";
+import { THEME, ThemeBadge, timeText, durationText, apiFetch, useAuthGuard, API_BASE } from "../../../../lib";
 
 const THEMES: PlanTheme[] = ["meal", "cafe", "activity", "etc"];
-const API_BASE = "http://localhost:8080";
 
 const isoToMinutes = (iso: string) => {
   const [h, m] = iso.split("T")[1].split(":").map(Number);
@@ -85,6 +84,7 @@ function BlockCard({
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function DayPlanPage() {
+  useAuthGuard();
   const router = useRouter();
   const { id, dayNumber } = useParams<{ id: string; dayNumber: string }>();
   const { trips, updateTrip } = useStore();
@@ -98,7 +98,7 @@ export default function DayPlanPage() {
 
   useEffect(() => {
     if (!id || !trip || dayIdx < 0) return;
-    fetch(`${API_BASE}/api/v1/trips/${id}/timelines?dayNumber=${dayNum}`, { credentials: "include" })
+    apiFetch(`${API_BASE}/api/v1/trips/${id}/timelines?dayNumber=${dayNum}`)
       .then(r => r.json())
       .then(body => {
         const items: { timeLineId?: number; timelineId?: number; dayNumber: number; startTime: string; endTime: string }[] = body.data ?? [];
@@ -188,10 +188,9 @@ export default function DayPlanPage() {
       endTime: toDateTime(block.endMinute),
     }));
     try {
-      await fetch(`${API_BASE}/api/v1/trips/${id}/timelines/batch`, {
+      await apiFetch(`${API_BASE}/api/v1/trips/${id}/timelines/batch`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ dayNumber: dayNum, timeLines }),
       });
     } catch (e) {

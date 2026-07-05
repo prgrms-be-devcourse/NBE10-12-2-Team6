@@ -23,13 +23,12 @@ public class VoteUserService {
     private final Integer DEFAULT_UPDATE_COUNT = 0;
 
     @Transactional
-    public VoteUserSaveResponseDto saveVoteUser(VoteItem voteItem) {
-        // 테스트 용도 추후 삭제 예정
-        Random rand = new Random();
-        long testId = rand.nextLong(1,1000);
-        // 여행참여자를 찾고
-        TripMember tripMember = tripMemberRepository.findById(testId).orElseThrow(RuntimeException::new);
-        VoteUser voteUser = voteUserRepository.findByVoteIdAndTripMemberId(voteItem.getVote().getId(), testId)
+    public VoteUserSaveResponseDto saveVoteUser(VoteItem voteItem, Long tripId, Long memberId) {
+
+        TripMember tripMember = tripMemberRepository.findByMemberIdAndTripGroupId(memberId, tripId)
+                .orElseThrow(RuntimeException::new);
+        VoteUser voteUser = voteUserRepository.findByVoteIdAndTripMemberId(
+                voteItem.getVote().getId(), tripMember.getId())
                 .orElse(null);
         if(voteUser == null) {
             voteUser = VoteUser.builder()
@@ -42,7 +41,7 @@ public class VoteUserService {
             return VoteUserSaveResponseDto.from(saved);
         }
         if(voteUser.getUpdateCount() == 2) throw new RuntimeException();
-        voteUser.increaseUpdateCount();
+        voteUser.updateVoteItemAndincreaseUpdateCount(voteItem);
         return VoteUserSaveResponseDto.from(voteUser);
     }
 }

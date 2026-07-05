@@ -44,8 +44,7 @@ public class TripGroupV1ControllerTest {
 
 	private String BASE_URL = "/api/v1";
 
-	@Test
-	@DisplayName("모임방 조회(loginUser 기준)")
+	회
 //	@WithMockLoginUser // jwt 인증 없이 테스트 진행하고 싶으면
 	void t1() throws Exception {
 		ResultActions resultActions = mvc
@@ -80,5 +79,11 @@ public class TripGroupV1ControllerTest {
 		resultActions
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.message").value("존재하지 않는 유저"));
+	}
+
+	@Test
+	@DisplayName("모임방 생성")
+	void t3() throws Exception {
+		
 	}
 }
