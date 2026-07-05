@@ -1,5 +1,6 @@
 package csh.back.global.exception;
 
+import csh.back.domain.trip.group.exception.NonMemberException;
 import csh.back.domain.trip.group.exception.NotFoundException;
 import csh.back.global.dto.ErrorResponse;
 import org.springframework.http.HttpStatus;
@@ -35,5 +36,13 @@ public class GlobalExeptionHandler {
 
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
 				.body(new ErrorResponse(400, message));
+	}
+
+	@ExceptionHandler(NonMemberException.class)
+	public ResponseEntity<ErrorResponse> handleGroupNotFound(
+			NonMemberException e
+	) {
+		return ResponseEntity.status(HttpStatus.FORBIDDEN)
+				.body(new ErrorResponse(403, e.getMessage()));  // 따옴표 제거 + new 추가
 	}
 }
