@@ -432,7 +432,7 @@ class PostV1ControllerTest {
                 .isNotEqualTo("/uploadedimages/old.jpg");
     }
     @Test
-    @DisplayName("게시글 삭제 시 백엔드에 저장된 이미지도 함께 삭제")
+    @DisplayName("게시글 삭제")
     void t5() throws Exception {
 
         // given
