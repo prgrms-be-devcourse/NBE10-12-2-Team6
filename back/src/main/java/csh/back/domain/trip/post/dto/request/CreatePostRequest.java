@@ -1,6 +1,7 @@
 package csh.back.domain.trip.post.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import org.springframework.web.multipart.MultipartFile;
 
 public record CreatePostRequest(
 
@@ -8,9 +9,6 @@ public record CreatePostRequest(
         String content,
 
         @Schema(description = "위치", example = "부산 광안리")
-        String location,
-
-        @Schema(description = "이미지 여부", example = "true")
-        Boolean isImg
+        String location
 ) {
 }

@@ -6,10 +6,12 @@ import csh.back.domain.trip.post.dto.response.PostResponse;
 import csh.back.domain.trip.post.service.PostService;
 import csh.back.global.annotation.ApiV1;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import csh.back.domain.trip.post.dto.response.TimelinePostsResponse;
 
 import java.util.List;
 
@@ -22,27 +24,20 @@ public class PostV1Controller {
 
     private final PostService postService;
 
-    @PostMapping("/{tripMemberId}/{timelineId}")
-    @Operation(summary = "게시글 생성", description = "새로운 게시글을 생성합니다.")
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "게시글 생성", description = "사진이 포함된 게시글을 생성합니다.")
     public PostResponse create(
 
-            @Parameter(description = "여행 ID", example = "1")
             @PathVariable Long tripId,
 
-            @Parameter(description = "여행 멤버 ID", example = "1")
-            @PathVariable Long tripMemberId,
+            @RequestParam Long timelineId,
 
-            @Parameter(description = "타임라인 ID", example = "1")
-            @PathVariable Long timelineId,
+            @ModelAttribute CreatePostRequest request,
 
-            @RequestBody CreatePostRequest request
+            @RequestParam(value = "image", required = false)
+            MultipartFile image
     ) {
-        return postService.create(
-                tripId,
-                tripMemberId,
-                timelineId,
-                request
-        );
+        return postService.create(tripId, timelineId, request, image);
     }
 
     @GetMapping("/{postId}")
@@ -55,8 +50,8 @@ public class PostV1Controller {
     }
 
     @GetMapping
-    @Operation(summary = "게시글 전체 조회", description = "모든 게시글을 조회합니다.")
-    public List<PostResponse> getPosts(
+    @Operation(summary = "게시글 전체 조회", description = "타임라인별 전체 게시글을 조회합니다.")
+    public List<TimelinePostsResponse> getPosts(
             @PathVariable Long tripId
     ) {
         return postService.getPosts(tripId);
