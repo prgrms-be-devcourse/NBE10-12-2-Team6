@@ -50,14 +50,24 @@ export default function HomePage() {
   const [tripRegion, setTripRegion] = useState("");
   const [tripDate, setTripDate] = useState("");
   const [tripNights, setTripNights] = useState(2);
+  const [keyWord, setKeyWord] = useState("");
+  const [searchDate, setSearchDate] = useState("");
 
-  useEffect(() => {
-    localStorage.removeItem("pendingInviteCode");
-    apiFetch(`${API_BASE}/api/v1/trips`)
+  const getInit = async () => {
+    const p = new URLSearchParams();
+    if (keyWord.trim()) p.set("keyword", keyWord.trim());
+    if (searchDate) p.set("startDate", searchDate);
+    const query = p.toString() ? `?${p.toString()}` : "";
+    apiFetch(`${API_BASE}/api/v1/trips${query}`)
       .then(res => res.json())
       .then(body => { if (body.data) { setTrips(body.data); loadTrips(body.data); } })
       .catch(() => {})
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    localStorage.removeItem("pendingInviteCode");
+    getInit()
   }, []);
 
   const handleCreateTrip = async () => {
@@ -102,6 +112,38 @@ export default function HomePage() {
         <div className="mb-5">
           <p className="text-2xl font-bold">안녕하세요, {currentUser.name}님</p>
           <p className="text-sm text-gray-500 mt-1">여행 모임을 만들고 초대 링크로 멤버를 초대해보세요.</p>
+        </div>
+
+        <div className="flex flex-col gap-2 mb-4">
+          <input
+            className="w-full p-3 bg-gray-100 rounded-xl text-sm outline-none"
+            placeholder="여행 이름, 지역, 멤버명으로 검색"
+            value={keyWord}
+            onChange={e => setKeyWord(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { getInit(); (e.target as HTMLInputElement).blur(); } }}
+          />
+          <div className="flex gap-2">
+            <input
+              type="date"
+              className="flex-1 p-3 bg-gray-100 rounded-xl text-sm outline-none"
+              value={searchDate}
+              onChange={e => setSearchDate(e.target.value)}
+            />
+            {searchDate && (
+              <button
+                onClick={() => setSearchDate("")}
+                className="px-3 bg-gray-100 rounded-xl text-gray-400 hover:text-gray-600 text-sm"
+              >
+                ✕
+              </button>
+            )}
+            <button
+              onClick={getInit}
+              className="px-4 py-2 bg-blue-500 text-white text-sm font-semibold rounded-xl"
+            >
+              검색
+            </button>
+          </div>
         </div>
 
         {loading ? (
