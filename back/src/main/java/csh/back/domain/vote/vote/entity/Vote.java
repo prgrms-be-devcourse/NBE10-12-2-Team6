@@ -40,6 +40,9 @@ public class Vote extends BaseEntity {
     //만료시간
     private LocalDateTime expireTime;
 
+    @Column(nullable = false)
+    private boolean isConfirmed;
+
 
     //생성자
     //빌드 사용
@@ -51,5 +54,10 @@ public class Vote extends BaseEntity {
         this.timeLine = timeLine;
         this.tripMember = tripMember;
         this.expireTime = LocalDateTime.now().plusDays(penddingDays);
+        this.isConfirmed = false;
+    }
+
+    public void updateIsConfirmed(boolean isConfirmed) {
+        this.isConfirmed = isConfirmed;
     }
 }

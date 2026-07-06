@@ -49,7 +49,9 @@ function TieRandomSheet({
 
 interface VoteDetail {
   placeId: number;
+  place: string;
   count: number;
+  isVoted: boolean;
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -64,6 +66,7 @@ export default function BlockDetailPage() {
 
 
   const fromVote = searchParams.get("from") === "vote";
+  const timelineId = searchParams.get("timelineId");
   const [showTie, setShowTie] = useState(false);
   const [tieCandidates, setTieCandidates] = useState<PlanCandidate[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -73,6 +76,7 @@ export default function BlockDetailPage() {
   const [wishPlaces, setWishPlaces] = useState<PlanCandidate[] | null>(null);
   const [blockOrder, setBlockOrder] = useState<number | null>(null);
   const [myVotedPlaceId, setMyVotedPlaceId] = useState<string | null>(null);
+  const [updateCount, setUpdateCount] = useState<number>(0);
   const [voteLoading, setVoteLoading] = useState(false);
 
   const trip = trips.find(t => t.id === id);
@@ -87,9 +91,15 @@ export default function BlockDetailPage() {
 
   useEffect(() => {
     if (!fromVote || !id || !blockId) return;
-    apiFetch(`${API_BASE}/api/v1/trip/${id}/votes/${blockId}`)
+    apiFetch(`${API_BASE}/api/v1/trips/${id}/votes/${blockId}/count`)
       .then(r => r.json())
-      .then(body => setVoteDetails(body.data ?? []));
+      .then(body => {
+        const results: VoteDetail[] = body.data?.voteResults ?? [];
+        setVoteDetails(results);
+        setUpdateCount(body.data?.updateCount ?? 0);
+        const voted = results.find(v => v.isVoted);
+        if (voted) setMyVotedPlaceId(String(voted.placeId));
+      });
 
     if (trip && trip.candidates.length > 0) {
       setWishPlaces(trip.candidates);
@@ -131,21 +141,29 @@ export default function BlockDetailPage() {
   };
 
   const isVoted = (candidateId: string): boolean => {
-    if (fromVote) return myVotedPlaceId === candidateId;
+    if (fromVote) {
+      return (voteDetails?.find(v => String(v.placeId) === candidateId)?.isVoted ?? false) || myVotedPlaceId === candidateId;
+    }
     return day?.votedUserIDsByBlockAndCandidate[blockId]?.[candidateId]?.includes(currentUser.id) ?? false;
   };
 
   const refetchVoteDetails = () => {
-    apiFetch(`${API_BASE}/api/v1/trip/${id}/votes/${blockId}`)
+    apiFetch(`${API_BASE}/api/v1/trips/${id}/votes/${blockId}/count`)
       .then(r => r.json())
-      .then(body => setVoteDetails(body.data ?? []));
+      .then(body => {
+        const results: VoteDetail[] = body.data?.voteResults ?? [];
+        setVoteDetails(results);
+        setUpdateCount(body.data?.updateCount ?? 0);
+        const voted = results.find(v => v.isVoted);
+        if (voted) setMyVotedPlaceId(String(voted.placeId));
+      });
   };
 
   const vote = async (candidateId: string) => {
     if (fromVote) {
       setVoteLoading(true);
       try {
-        await apiFetch(`${API_BASE}/api/v1/trips/${id}/votes/${blockId}/vote`, {
+        await apiFetch(`${API_BASE}/api/v1/trips/${id}/votes/${blockId}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ placeId: Number(candidateId) }),
@@ -169,6 +187,7 @@ export default function BlockDetailPage() {
   const randomVote = () => {
     if (candidates.length === 0) return;
     const picked = candidates[Math.floor(Math.random() * candidates.length)];
+    setPendingVote(null);
     vote(picked.id);
   };
 
@@ -181,7 +200,28 @@ export default function BlockDetailPage() {
 
   const isHost = currentUser.id === (trip?.members[0]?.id);
 
-  const decideByVote = () => {
+  const decideByVote = async () => {
+    if (fromVote) {
+      setShowHostMenu(false);
+      try {
+        const res = await apiFetch(`${API_BASE}/api/v1/trips/${id}/votes/${blockId}/confirm`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+        });
+        const body = await res.json();
+        const { status, tiedPlaceIds } = body.data ?? {};
+        if (status === "TIED") {
+          const tied = candidates.filter(c => (tiedPlaceIds as number[]).includes(Number(c.id)));
+          setTieCandidates(tied);
+          setShowTie(true);
+        } else {
+          refetchVoteDetails();
+        }
+      } catch (e) {
+        console.error(e);
+      }
+      return;
+    }
     if (candidates.length === 0 || !day) return;
     const maxVote = Math.max(...candidates.map(c => voteCount(c.id)));
     const winners = candidates.filter(c => voteCount(c.id) === maxVote);
@@ -194,7 +234,20 @@ export default function BlockDetailPage() {
     setShowHostMenu(false);
   };
 
-  const pickFromTie = (candidate: PlanCandidate) => {
+  const pickFromTie = async (candidate: PlanCandidate) => {
+    if (fromVote) {
+      try {
+        await apiFetch(`${API_BASE}/api/v1/trips/${id}/votes/${blockId}/confirm-tie`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirmedPlaceId: Number(candidate.id) }),
+        });
+        refetchVoteDetails();
+      } catch (e) {
+        console.error(e);
+      }
+      return;
+    }
     setDay({ ...day, selectedCandidateByBlock: { ...day.selectedCandidateByBlock, [blockId]: candidate.id } });
   };
 
@@ -367,7 +420,7 @@ export default function BlockDetailPage() {
       <div className="px-4 py-4 border-t border-gray-100 flex gap-2 bg-white">
         <button
           onClick={randomVote}
-          disabled={candidates.length === 0}
+          disabled={candidates.length === 0 || updateCount >= 2}
           className="flex-1 py-4 rounded-2xl font-semibold disabled:opacity-40"
           style={{ background: "#f3e8ff", color: "#9333ea" }}
         >
@@ -375,7 +428,7 @@ export default function BlockDetailPage() {
         </button>
         <button
           onClick={() => { if (pendingVote && !voteLoading) { vote(pendingVote); setPendingVote(null); } }}
-          disabled={!pendingVote || voteLoading}
+          disabled={!pendingVote || voteLoading || updateCount >= 2}
           className="flex-1 py-4 rounded-2xl font-semibold disabled:opacity-40"
           style={{ background: "#dbeafe", color: "#2563eb" }}
         >

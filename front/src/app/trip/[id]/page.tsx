@@ -218,7 +218,7 @@ function TripCandidatePoolCard({ trip, onUpdate }: { trip: Trip; onUpdate: (t: T
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {trip.candidates.slice(0, 5).map(c => (
+          {trip.candidates.map(c => (
             <div key={c.id} className="flex items-center gap-3 p-3 bg-white rounded-xl">
               <span className="text-base shrink-0" style={{ color: "#16a34a" }}>📍</span>
               <div className="flex-1 min-w-0">
@@ -228,9 +228,6 @@ function TripCandidatePoolCard({ trip, onUpdate }: { trip: Trip; onUpdate: (t: T
               </div>
             </div>
           ))}
-          {trip.candidates.length > 5 && (
-            <p className="text-xs text-gray-400 text-center">외 {trip.candidates.length - 5}개 후보</p>
-          )}
         </div>
       )}
 
@@ -393,7 +390,7 @@ export default function TripDetailPage() {
   useEffect(() => {
     if (tab !== "vote" || !id) return;
     setVoteData(null);
-    apiFetch(`${API_BASE}/api/v1/trip/${id}/votes`)
+    apiFetch(`${API_BASE}/api/v1/trips/${id}/votes`)
       .then(r => r.json())
       .then(body => setVoteData(body.data ?? []))
       .catch(() => setVoteData([]));
@@ -512,12 +509,12 @@ export default function TripDetailPage() {
           const toTimeStr = (iso: string) => (iso.split("T")[1] ?? "").slice(0, 5);
 
           const createVote = async (timeLineId: number) => {
-            await apiFetch(`${API_BASE}/api/v1/trip/${id}/votes`, {
+            await apiFetch(`${API_BASE}/api/v1/trips/${id}/votes`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ timeLineId }),
             });
-            const r = await apiFetch(`${API_BASE}/api/v1/trip/${id}/votes`);
+            const r = await apiFetch(`${API_BASE}/api/v1/trips/${id}/votes`);
             const body = await r.json();
             setVoteData(body.data ?? []);
           };
@@ -557,7 +554,7 @@ export default function TripDetailPage() {
                         );
                       }
                       return (
-                        <Link key={tl.voteId} href={`/trip/${trip.id}/day/${dayNumber}/block/${tl.voteId}?from=vote`} onClick={() => { localStorage.setItem(`block-order-${tl.voteId}`, String(tlIdx + 1)); sessionStorage.setItem(`return-tab-${id}`, "vote"); }}>
+                        <Link key={tl.voteId} href={`/trip/${trip.id}/day/${dayNumber}/block/${tl.voteId}?from=vote&timelineId=${tl.timeLineId}`} onClick={() => { localStorage.setItem(`block-order-${tl.voteId}`, String(tlIdx + 1)); sessionStorage.setItem(`return-tab-${id}`, "vote"); }}>
                           <div className="p-4 bg-gray-50 rounded-2xl flex items-center justify-between">
                             <div className="flex-1 min-w-0">
                               <p className="text-xs text-gray-400">{toTimeStr(tl.startTime)} 시작</p>

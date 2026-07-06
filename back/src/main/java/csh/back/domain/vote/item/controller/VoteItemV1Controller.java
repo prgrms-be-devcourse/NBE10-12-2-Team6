@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 public class VoteItemV1Controller {
     private final VoteItemService voteItemService;
 
-    @PostMapping("/vote")
+    @PostMapping
     public ResponseData<VoteUserSaveResponseDto> saveVote(
             @PathVariable Long tripId,
             @PathVariable Long voteId,
