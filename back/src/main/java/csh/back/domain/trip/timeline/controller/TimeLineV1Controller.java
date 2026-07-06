@@ -6,6 +6,7 @@ import csh.back.domain.trip.timeline.dto.request.TimeLineUpdateRequest;
 import csh.back.domain.trip.timeline.dto.response.TimeLineCountResponse;
 import csh.back.domain.trip.timeline.dto.response.TimeLineResponse;
 import csh.back.domain.trip.timeline.dto.response.TimeLineWithVoteIdResponse;
+import csh.back.domain.trip.timeline.service.TimeLineEventService;
 import csh.back.domain.trip.timeline.service.TimeLineService;
 import csh.back.global.annotation.ApiV1;
 import csh.back.global.dto.ResponseData;
@@ -16,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
@@ -32,6 +35,7 @@ public class TimeLineV1Controller {
 
     //타임라인 관련 비즈니스 로직을 처리하는 Service
     private final TimeLineService timeLineService;
+    private final TimeLineEventService timeLineEventService;
 
     //Swagger 문서에 타임라인 생성 API 설명 표시
     @Operation(summary = "타임라인 시간 구간 단건 생성")
@@ -75,6 +79,19 @@ public class TimeLineV1Controller {
         Long memberId = getLoginMemberId(authentication);
         //ResponseData로 감싸서 200 OK 반환
         return new ResponseData<>(200, timeLineService.getTimeLines(tripId, memberId, dayNumber));
+    }
+
+    //타임라인 변경 알림 SSE 구독
+    @Operation(summary = "타임라인 변경 알림 SSE 구독")
+    @GetMapping("/subscribe")
+    public SseEmitter subscribeTimeLine(
+            @PathVariable Long tripId,
+            Authentication authentication) {
+        //로그인 정보에서 가져옴
+        Long memberId = getLoginMemberId(authentication);
+        //여행 모임 멤버 검증 후 SSE 연결 생성
+        return timeLineEventService.subscribe(tripId, memberId);
+
     }
 
     //Swagger 문서에 방 내 전체 타임라인 개수 목록 API 설명 표시

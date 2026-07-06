@@ -41,6 +41,7 @@ public class TimeLineService {
     private final TripMemberRepository tripMemberRepository;
     private final TripPlaceRepository tripPlaceRepository;
     private final VoteService voteService;
+    private final TimeLineEventService timeLineEventService;
     private final TripMemberValidator tripMemberValidator;
 
     //최소 일차
@@ -73,6 +74,8 @@ public class TimeLineService {
 
         TimeLine savedTimeLine = timeLineRepository.save(timeLine);
         voteService.createVote(tripId, memberId, savedTimeLine);
+        //서버에 이벤트 발송
+        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId);
         return TimeLineResponse.from(savedTimeLine);
     }
 
@@ -119,8 +122,8 @@ public class TimeLineService {
         //타임라인 목록을 한 번에 저장
         List<TimeLine> savedTimeLines = timeLineRepository.saveAll(timeLines);
         voteService.createVoteBatch(tripId, memberId, savedTimeLines);
-
-
+        //서버에 이벤트 발송
+        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId);
         //저장된 타임라인 목록을 응답 DTO 목록으로 변환
         return savedTimeLines.stream()
                 .map(TimeLineResponse::from)
@@ -160,17 +163,17 @@ public class TimeLineService {
                 entry -> TimeLineCountResponse.of(entry.getKey(), entry.getValue()
                 )
         ).toList();
-
-
-        //tripId + dayNumber로 목록 조회
-        //TimeLineResponse 리스트로 변환
+        //일차별 타임라인 개수 응답 반환
         return responses;
 
     }
 
     public TimeLineResponse updateTimeLine(Long tripId, Long timelineId, Long memberId, TimeLineUpdateRequest request) {
         //여행 모임 멤버 여부 검증 추가
-        validateTripMember(tripId, memberId);
+        //후에 상황보고 추가 -> 방장만 교체할 수 있도록 교체
+        //validateTripMember(tripId, memberId);
+        //여행 모임 방장 여부 검증
+        validateTripAdmin(tripId, memberId);
         //같은 여행 모임의 타임라인 시간 수정 요청을 순차적으로 처리하기 위함
         lockTripGroup(tripId);
         //시작 시간과 종료 시간의 순서 검증
@@ -189,7 +192,8 @@ public class TimeLineService {
 
         // 시간 범위 수정
         timeLine.updateTimeRange(request.startTime(), request.endTime());
-
+        //서버에 이벤트 발송
+        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId);
         // 수정된 타임라인 응답 반환
         return TimeLineResponse.from(timeLine);
     }
@@ -201,14 +205,17 @@ public class TimeLineService {
 
         //tripId와 timeLineId가 모두 일치하는 타임라인 조회
         TimeLine timeLine = findTimeLine(tripId, timelineId);
-
         //타임라인 제거
         timeLineRepository.delete(timeLine);
+        //서버에 이벤트 발송
+        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId);
+
     }
 
     public VoteConfirmResponse confirmVote(Long tripId, Long memberId, Long voteId) {
-        System.out.println(tripId);
-        System.out.println(memberId);
+        //보안 문제로 인한 주석 처리
+        //System.out.println(tripId);
+        //System.out.println(memberId);
 
         tripMemberValidator.validMember(tripId, memberId);
 
@@ -227,6 +234,8 @@ public class TimeLineService {
         VoteTimeLineResponse voteTimeLineResponse = voteService.voteConfirm(maxVoteItemId, voteId);
         Long confirmPlaceId = voteTimeLineResponse.confirmPlaceId();
         confirmPlaceByHost(voteTimeLineResponse.timeLine() ,tripId, confirmPlaceId);
+        //서버에 이벤트 발송
+        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId);
         return VoteConfirmResponse.of(VoteConfirmStatus.CONFIRMED, confirmPlaceId, null);
     }
 
@@ -242,7 +251,8 @@ public class TimeLineService {
         //tripId + timelineId로 타임라인 조회
         TimeLine timeLine = voteRepository.findTimeLineByVoteId(voteId).orElseThrow(RuntimeException::new);
         confirmPlaceByHost(timeLine, tripId, confirmPlaceId);
-
+        //서버에 이벤트 발송
+        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId);
         //응답 반환
         return VoteConfirmResponse.of(VoteConfirmStatus.CONFIRMED, confirmPlaceId, null);
     }
