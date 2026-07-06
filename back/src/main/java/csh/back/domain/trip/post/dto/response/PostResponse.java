@@ -9,6 +9,9 @@ public record PostResponse(
         @Schema(description = "게시글 ID", example = "1")
         Long id,
 
+        @Schema(description = "타임라인 ID", example = "1")
+        Long timelineId,
+
         @Schema(description = "게시글 내용", example = "부산 여행 시작!")
         String content,
 
@@ -30,6 +33,7 @@ public record PostResponse(
     public static PostResponse from(Post post) {
         return new PostResponse(
                 post.getId(),
+                post.getTimeLine().getId(),
                 post.getContent(),
                 post.getLocation(),
                 post.getIsImg(),
