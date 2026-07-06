@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useStore } from "../store";
 import { formatDate, apiFetch, useAuthGuard, API_BASE } from "../lib";
+import { useTripOwnerStore } from "../stores/tripOwnerStore";
 
 type ApiTrip = {
   id: number;
@@ -39,6 +40,7 @@ export default function HomePage() {
   useAuthGuard();
   const router = useRouter();
   const { currentUser, loadTrips } = useStore();
+  const clearOwnerId = useTripOwnerStore((state) => state.clearOwnerId);
 
   const [trips, setTrips] = useState<ApiTrip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,6 +69,7 @@ export default function HomePage() {
 
   useEffect(() => {
     localStorage.removeItem("pendingInviteCode");
+    clearOwnerId();
     getInit()
   }, []);
 
