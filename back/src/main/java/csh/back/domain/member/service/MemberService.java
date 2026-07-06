@@ -2,6 +2,7 @@ package csh.back.domain.member.service;
 
 import csh.back.domain.member.dto.response.LoginResponseDto;
 import csh.back.domain.member.dto.response.MemberResponseDto;
+import csh.back.domain.member.dto.web.LoginResult;
 import csh.back.domain.member.entity.Member;
 import csh.back.domain.member.repository.MemberRepository;
 import csh.back.global.jwt.JwtUtil;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -22,7 +24,7 @@ public class MemberService {
     @Transactional
     public MemberResponseDto signUp(String email, String password, String name) {
         if (memberRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException("이미 사용 중인 이메일입니다.");
+            throw new RuntimeException("이미 사용 중인 이메일입니다.");
         }
 
         Member newMember = Member.builder()
@@ -36,9 +38,6 @@ public class MemberService {
         return MemberResponseDto.from(member);
     }
 
-    // 로그인 결과 (사용자 정보 + 토큰을 컨트롤러에 전달하기 위한 내부 타입)
-    public record LoginResult(LoginResponseDto userInfo, String accessToken, String refreshToken) {}
-
     // 로그인
     public LoginResult login(String email, String password) {
         Member member = memberRepository.findByEmail(email)
@@ -51,5 +50,14 @@ public class MemberService {
         String accessToken = jwtUtil.generateAccessToken(member.getId(), member.getEmail());
 
         return new LoginResult(LoginResponseDto.from(member), accessToken, member.getRefreshToken());
+    }
+
+    // 로그아웃 - refreshToken을 무효화하여 재로그인 없이는 accessToken을 재발급받지 못하게 함
+    @Transactional
+    public void logout(Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new RuntimeException("존재하지 않는 회원입니다."));
+
+        member.invalidateRefreshToken();
     }
 }
