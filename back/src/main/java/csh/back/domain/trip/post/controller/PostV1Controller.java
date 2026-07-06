@@ -4,6 +4,7 @@ import csh.back.domain.member.dto.response.AuthFilterDto;
 import csh.back.domain.trip.post.dto.request.CreatePostRequest;
 import csh.back.domain.trip.post.dto.request.UpdatePostRequest;
 import csh.back.domain.trip.post.dto.response.PostResponse;
+import csh.back.domain.trip.post.dto.response.PostsDailyResponse;
 import csh.back.domain.trip.post.service.PostService;
 import csh.back.global.annotation.ApiV1;
 import io.swagger.v3.oas.annotations.Operation;
@@ -50,7 +51,7 @@ public class PostV1Controller {
 
     @GetMapping
     @Operation(summary = "게시글 전체 조회", description = "타임라인별 전체 게시글을 조회합니다.")
-    public List<TimelinePostsResponse> getPosts(
+    public List<PostsDailyResponse> getPosts(
             @PathVariable Long tripId,
             @AuthenticationPrincipal AuthFilterDto member
     ) {

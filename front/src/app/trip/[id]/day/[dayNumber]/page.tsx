@@ -93,7 +93,6 @@ export default function DayPlanPage() {
   const dayNum = parseInt(dayNumber);
   const dayIdx = trip?.days.findIndex(d => d.dayNumber === dayNum) ?? -1;
 
-  const [showSkipConfirm, setShowSkipConfirm] = useState(false);
   const [validationError, setValidationError] = useState("");
 
   useEffect(() => {
@@ -114,7 +113,7 @@ export default function DayPlanPage() {
             const d = new Date(tripData.startDate + "T00:00:00");
             d.setDate(d.getDate() + i);
             const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-            return { id: `day-${i + 1}`, dayNumber: i + 1, date: dateStr, blocks: [], isPlanCompleted: false, isPlanSkipped: false, selectedCandidateByBlock: {}, votedUserIDsByBlockAndCandidate: {}, records: [] };
+            return { id: `day-${i + 1}`, dayNumber: i + 1, date: dateStr, blocks: [{ id: uid(), order: 1, theme: "meal" as const, startMinute: 9 * 60, endMinute: 10 * 60 }], isPlanCompleted: false, isPlanSkipped: false, selectedCandidateByBlock: {}, votedUserIDsByBlockAndCandidate: {}, records: [] };
           }),
           candidates: [],
           inviteCode: tripData.joinCode ?? "",
@@ -250,14 +249,11 @@ export default function DayPlanPage() {
       });
     } catch (e) {
       console.error("[타임라인 저장 실패]", e);
+      setValidationError("저장에 실패했습니다. 다시 시도해주세요.");
+      return;
     }
     setDay({ ...day, blocks: normalizeOrders(day.blocks), isPlanCompleted: true, isPlanSkipped: false, records: [] });
     router.push(`/trip/${id}`);
-  };
-
-  const skipPlan = () => {
-    setDay({ ...day, isPlanSkipped: true, isPlanCompleted: false, selectedCandidateByBlock: {}, votedUserIDsByBlockAndCandidate: {}, records: [] });
-    setShowSkipConfirm(false);
   };
 
   const sortedBlocks = [...day.blocks].sort((a, b) => a.startMinute - b.startMinute);
@@ -381,28 +377,9 @@ export default function DayPlanPage() {
           >
             시간 범위 설정 완료
           </button>
-          <button
-            onClick={() => setShowSkipConfirm(true)}
-            className="w-full py-4 rounded-2xl font-semibold bg-gray-100 text-gray-700"
-          >
-            이 일차 계획 건너뛰기
-          </button>
         </div>
       )}
 
-      {showSkipConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowSkipConfirm(false)} />
-          <div className="relative bg-white rounded-2xl p-6 w-full max-w-sm">
-            <p className="font-bold text-base mb-2">정말 이 일차 계획을 건너뛰겠어요?</p>
-            <p className="text-sm text-gray-500 mb-5">건너뛰면 이 일차는 계획 없이 타임라인에 표시됩니다.</p>
-            <div className="flex gap-3">
-              <button onClick={() => setShowSkipConfirm(false)} className="flex-1 py-3 rounded-xl bg-gray-100 font-semibold text-sm">취소</button>
-              <button onClick={skipPlan} className="flex-1 py-3 rounded-xl bg-red-500 text-white font-semibold text-sm">건너뛰기</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

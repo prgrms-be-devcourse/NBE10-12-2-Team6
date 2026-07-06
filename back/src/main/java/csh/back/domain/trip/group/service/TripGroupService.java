@@ -114,4 +114,8 @@ public class TripGroupService {
 		} while (tripGroupRepository.existsByJoinCode(joinCode)); //혹시라도 다른방과 url이 같은걸 막기위해
 		return joinCode;
 	}
+
+	public TripGroup findTripGroupById(Long tripId) {
+		return tripGroupRepository.findById(tripId).orElseThrow(RuntimeException::new);
+	}
 }
