@@ -48,7 +48,8 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
                                 "/h2-console/**",
-                                "/api/v1/auth/**"
+                                "/api/v1/auth/**",
+                                "/uploadedimages/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // 그 외 모든 요청은 JWT 필터를 거치되 인증 강제하지 않음

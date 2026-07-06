@@ -55,7 +55,7 @@ public class TripGroupV1ControllerTest {
 				.getAuthentication()
 				.getPrincipal();
 
-		List<TripGroupResponse> tripGroups = tripGroupService.getGroups(member.id());
+		List<TripGroupResponse> tripGroups = tripGroupService.getGroups(member.id(), "", "");
 
 		resultActions
 				.andExpect(handler().handlerType(TripGroupV1Controller.class))

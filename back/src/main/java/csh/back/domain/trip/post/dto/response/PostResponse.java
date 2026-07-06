@@ -31,9 +31,10 @@ public record PostResponse(
 ) {
 
     public static PostResponse from(Post post) {
+        Long timeLineId = post.getTimeLine() != null ? post.getTimeLine().getId() : null;
         return new PostResponse(
                 post.getId(),
-                post.getTimeLine().getId(),
+                timeLineId,
                 post.getContent(),
                 post.getLocation(),
                 post.getIsImg(),
