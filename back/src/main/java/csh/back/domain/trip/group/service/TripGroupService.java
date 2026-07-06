@@ -4,10 +4,13 @@ import csh.back.domain.member.entity.Member;
 import csh.back.domain.member.repository.MemberRepository;
 import csh.back.domain.trip.group.dto.request.TripGroupModifyRequest;
 import csh.back.domain.trip.group.dto.request.TripGroupRequest;
+import csh.back.domain.trip.group.dto.response.TripGroupDetailResponse;
 import csh.back.domain.trip.group.dto.response.TripGroupResponse;
 import csh.back.domain.trip.group.entity.TripGroup;
+import csh.back.domain.trip.group.exception.NonMemberException;
 import csh.back.domain.trip.group.exception.NotFoundException;
 import csh.back.domain.trip.group.repository.TripGroupRepository;
+import csh.back.domain.trip.member.dto.response.TripMemeberResponse;
 import csh.back.domain.trip.member.entity.TripMember;
 import csh.back.domain.trip.member.repository.TripMemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -30,7 +32,7 @@ public class TripGroupService {
 	// 모임방 조회
 	@Transactional(readOnly = true)
 	public List<TripGroupResponse> getGroups(Long ownerId) {
-		List<TripGroup> tripGroups = tripGroupRepository.findAllByOwnerIdOrderByStartDateDesc(ownerId);
+		List<TripGroup> tripGroups = tripGroupRepository.findAllByMemberId(ownerId);
 		return tripGroups
 				.stream()
 				.map(TripGroupResponse::from)
@@ -71,26 +73,32 @@ public class TripGroupService {
 
 	//모임 상세 조회
 	@Transactional(readOnly = true)
-	public TripGroupResponse getGroupDetail(Long groupId, Long ownerId) {
-		boolean isMember = tripMemberRepository.existsByTripGroupIdAndMemberId(groupId, ownerId);
-		if (!isMember) {
-			throw new IllegalArgumentException("해당 모임의 멤버가 아닙니다.");
-		}
-		TripGroup group = tripGroupRepository.findById(groupId)
+	public TripGroupDetailResponse getGroupDetail(Long tripId, Long ownerId) {
+		TripGroup group = tripGroupRepository.findById(tripId)
 				.orElseThrow(() -> new NotFoundException("존재하지 않는 모임입니다."));
 
-		return TripGroupResponse.from(group);
+		boolean isMember = tripMemberRepository.existsByTripGroupIdAndMemberId(tripId, ownerId);
+		if (!isMember) {
+			throw new NonMemberException("해당 모임의 멤버가 아닙니다.");
+		}
+
+		List<TripMemeberResponse> members = tripMemberRepository.findByTripGroupId(tripId)
+				.stream()
+				.map(tm -> TripMemeberResponse.from(tm))
+				.toList();
+
+		return TripGroupDetailResponse.from(group, members);
 	}
 
 	//모임 상세 수정
 	//TODO 1차 mvp에서는 name만 수정, 혹시몰라 patch로 진행
 	@Transactional
-	public TripGroupResponse modifyGroupDetail(Long groupId, Long ownerId, TripGroupModifyRequest request) {
-		TripGroup group = tripGroupRepository.findById(groupId)
+	public TripGroupResponse modifyGroupDetail(Long tripId, Long ownerId, TripGroupModifyRequest request) {
+		TripGroup group = tripGroupRepository.findById(tripId)
 				.orElseThrow(() -> new NotFoundException("존재하지 않는 모임입니다."));
 
 		if (!group.getOwner().getId().equals(ownerId)) {
-			throw new IllegalArgumentException("해당 모임의 소유자가 아닙니다.");
+			throw new NonMemberException("해당 모임의 소유자가 아닙니다.");
 		}
 
 		group.modify(request);

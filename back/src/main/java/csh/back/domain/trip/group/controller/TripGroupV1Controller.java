@@ -3,7 +3,9 @@ package csh.back.domain.trip.group.controller;
 import csh.back.domain.member.dto.response.AuthFilterDto;
 import csh.back.domain.trip.group.dto.request.TripGroupModifyRequest;
 import csh.back.domain.trip.group.dto.request.TripGroupRequest;
+import csh.back.domain.trip.group.dto.response.TripGroupDetailResponse;
 import csh.back.domain.trip.group.dto.response.TripGroupResponse;
+import csh.back.domain.trip.group.exception.NotFoundException;
 import csh.back.domain.trip.group.service.TripGroupService;
 import csh.back.global.annotation.ApiV1;
 import csh.back.global.dto.ResponseData;
@@ -27,6 +29,8 @@ public class TripGroupV1Controller {
 
 	private final TripGroupService tripGroupService;
 
+	//FIXME 정렬 및 여러 검색어로 조회가 가능하게 동시적
+
 	//Swagger 문서 표시
 	@Operation(summary = "모임방 목록 조회(로그인한 사용자 기준)")
 	//모임방 조회
@@ -34,6 +38,7 @@ public class TripGroupV1Controller {
 	public ResponseData<List<TripGroupResponse>> getAllGroups(
 			@AuthenticationPrincipal AuthFilterDto owner
 	) {
+		log.info("owner = {}", owner);
 		return new ResponseData<>(200, tripGroupService.getGroups(owner.id()));
 	}
 
@@ -51,23 +56,23 @@ public class TripGroupV1Controller {
 	//Swagger 문서 표시
 	@Operation(summary = "상세 모임방 조회")
 	//모임방 상세페이지 조회
-	@GetMapping("/{groupId}")
-	public ResponseData<TripGroupResponse> getGroupDetail(
-			@PathVariable Long groupId,
+	@GetMapping("/{tripGroupId}")
+	public ResponseData<TripGroupDetailResponse> getGroupDetail(
+			@PathVariable Long tripGroupId,
 			@AuthenticationPrincipal AuthFilterDto owner
 	) {
-		return new ResponseData<>(200, tripGroupService.getGroupDetail(groupId, owner.id()));
+		return new ResponseData<>(200, tripGroupService.getGroupDetail(tripGroupId, owner.id()));
 	}
 
 	//Swagger 문서 표시
-	@Operation(summary = "상세 모임방 수")
+	@Operation(summary = "상세 모임방 수정")
 	//모임방 상세 수정 - name
-	@PatchMapping("/{groupId}")
+	@PatchMapping("/{tripGroupId}")
 	public ResponseData<TripGroupResponse> modifyGroupName(
-			@PathVariable Long groupId,
+			@PathVariable Long tripGroupId,
 			@AuthenticationPrincipal AuthFilterDto owner,
 			@RequestBody TripGroupModifyRequest request
 			) {
-		return new ResponseData<>(200, tripGroupService.modifyGroupDetail(groupId, owner.id(), request));
+		return new ResponseData<>(200, tripGroupService.modifyGroupDetail(tripGroupId, owner.id(), request));
 	}
 }

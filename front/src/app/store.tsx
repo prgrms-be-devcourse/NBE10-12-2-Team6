@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -18,6 +18,7 @@ export interface ActivityBlock {
   theme: PlanTheme;
   startMinute: number;
   endMinute: number;
+  voteId?: string | null;
 }
 
 export interface PlanCandidate {
@@ -85,6 +86,7 @@ interface StoreCtx {
   signup: (nickname: string) => void;
   createTrip: (data: CreateTripData) => string;
   updateTrip: (trip: Trip) => void;
+  upsertTrip: (trip: Trip) => void;
   loadTrips: (items: ApiTripItem[]) => void;
 }
 
@@ -137,11 +139,26 @@ const Ctx = createContext<StoreCtx | null>(null);
 
 export function TripLogProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User>({ id: 0, name: "조모군", color: "blue" });
+  const [currentUser, setCurrentUser] = useState<User>({ id: 0, name: "", color: "blue" });
   const [trips, setTrips] = useState<Trip[]>([]);
 
+  useEffect(() => {
+    setIsLoggedIn(!!localStorage.getItem("accessToken"));
+    setCurrentUser({
+      id: Number(localStorage.getItem("userId") ?? 0),
+      name: localStorage.getItem("userName") ?? "",
+      color: "blue",
+    });
+  }, []);
+
   const login = (name?: string, id?: number) => {
-    setCurrentUser(u => ({ ...u, id: id ?? 101, name: name ?? u.name }));
+    const newName = name ?? "";
+    const newId = id ?? 0;
+    if (typeof window !== "undefined") {
+      localStorage.setItem("userName", newName);
+      localStorage.setItem("userId", String(newId));
+    }
+    setCurrentUser(u => ({ ...u, id: newId, name: newName }));
     setIsLoggedIn(true);
   };
 
@@ -177,6 +194,10 @@ export function TripLogProvider({ children }: { children: ReactNode }) {
     setTrips(t => t.map(x => (x.id === trip.id ? trip : x)));
   };
 
+  const upsertTrip = (trip: Trip) => {
+    setTrips(t => t.some(x => x.id === trip.id) ? t.map(x => x.id === trip.id ? trip : x) : [...t, trip]);
+  };
+
   const loadTrips = (items: ApiTripItem[]) => {
     setTrips(items.map(item => ({
       id: String(item.id),
@@ -193,7 +214,7 @@ export function TripLogProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <Ctx.Provider value={{ isLoggedIn, currentUser, trips, login, signup, createTrip, updateTrip, loadTrips }}>
+    <Ctx.Provider value={{ isLoggedIn, currentUser, trips, login, signup, createTrip, updateTrip, upsertTrip, loadTrips }}>
       {children}
     </Ctx.Provider>
   );

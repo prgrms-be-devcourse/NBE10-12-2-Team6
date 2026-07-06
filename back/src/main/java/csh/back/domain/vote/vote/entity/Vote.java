@@ -1,9 +1,7 @@
 package csh.back.domain.vote.vote.entity;
 
-import csh.back.domain.member.entity.Member;
 import csh.back.domain.trip.group.entity.TripGroup;
 import csh.back.domain.trip.member.entity.TripMember;
-import csh.back.domain.trip.place.entity.TripPlace;
 import csh.back.domain.trip.timeline.entity.TimeLine;
 import csh.back.global.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -42,14 +40,24 @@ public class Vote extends BaseEntity {
     //만료시간
     private LocalDateTime expireTime;
 
+    @Column(nullable = false)
+    private boolean isConfirmed;
+
 
     //생성자
     //빌드 사용
     @Builder
-    private Vote(TripGroup tripGroup, TimeLine timeLine, TripMember tripMember, LocalDateTime expireTime) {
+    private Vote(TripGroup tripGroup, TimeLine timeLine, TripMember tripMember, int penddingDays) {
+        if(penddingDays < 1) penddingDays = 3;
+
         this.tripGroup = tripGroup;
         this.timeLine = timeLine;
         this.tripMember = tripMember;
-        this.expireTime = expireTime;
+        this.expireTime = LocalDateTime.now().plusDays(penddingDays);
+        this.isConfirmed = false;
+    }
+
+    public void updateIsConfirmed(boolean isConfirmed) {
+        this.isConfirmed = isConfirmed;
     }
 }

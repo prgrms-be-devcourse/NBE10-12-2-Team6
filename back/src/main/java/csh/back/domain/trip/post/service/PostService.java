@@ -5,6 +5,7 @@ import csh.back.domain.trip.member.repository.TripMemberRepository;
 import csh.back.domain.trip.post.dto.request.CreatePostRequest;
 import csh.back.domain.trip.post.dto.request.UpdatePostRequest;
 import csh.back.domain.trip.post.dto.response.PostResponse;
+import csh.back.domain.trip.post.dto.response.TimelinePostsResponse;
 import csh.back.domain.trip.post.entity.Post;
 import csh.back.domain.trip.post.repository.PostRepository;
 import csh.back.domain.trip.timeline.entity.TimeLine;
@@ -12,6 +13,12 @@ import csh.back.domain.trip.timeline.repository.TimeLineRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.multipart.MultipartFile;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import java.util.List;
 
@@ -23,6 +30,7 @@ public class PostService {
     private final PostRepository postRepository;
     private final TripMemberRepository tripMemberRepository;
     private final TimeLineRepository timeLineRepository;
+    private final PostImageService postImageService;
 
     @Transactional(readOnly = true)
     public PostResponse getPost(Long tripId, Long postId) {
@@ -38,68 +46,138 @@ public class PostService {
     }
     //게시글 전체조회
     @Transactional(readOnly = true)
-    public List<PostResponse> getPosts(Long tripId) {
+    public List<TimelinePostsResponse> getPosts(Long tripId) {
 
-        return postRepository.findByTimeLineTripGroupId(tripId)
+        List<Post> posts = postRepository.findByTimeLineTripGroupId(tripId);
+
+        return posts.stream()
+
+                .collect(Collectors.groupingBy(
+                        post -> post.getTimeLine().getId()
+                ))
+
+                .entrySet()
+
                 .stream()
-                .map(PostResponse::from)
+
+                .map(entry -> {
+
+                    List<Post> timelinePosts = entry.getValue();
+
+                    TimeLine timeline = timelinePosts.get(0).getTimeLine();
+
+                    return new TimelinePostsResponse(
+
+                            timeline.getId(),
+
+                            timeline.getDayNumber(),
+
+                            timelinePosts.stream()
+                                    .map(PostResponse::from)
+                                    .toList()
+                    );
+
+                })
+
+                .sorted(Comparator.comparing(TimelinePostsResponse::dayNumber))
+
                 .toList();
     }
-    //게시글 수정
+    // 게시글 수정
     @Transactional
     public void update(Long tripId, Long postId, UpdatePostRequest request) {
 
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("게시글이 존재하지 않습니다."));
-        if (!post.getTimeLine().getTripGroup().getId().equals(tripId)) {
-            throw new IllegalArgumentException("해당 여행의 게시글이 아닙니다.");
-        }
+        Post post = findAuthorizedPost(tripId, postId);
+
         post.update(
                 request.content(),
                 request.location()
         );
     }
-    //게시글 삭제
+    // 게시글 삭제
     @Transactional
     public void delete(Long tripId, Long postId) {
 
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("게시글이 존재하지 않습니다."));
+        Post post = findAuthorizedPost(tripId, postId);
 
-        if (!post.getTimeLine().getTripGroup().getId().equals(tripId)) {
-            throw new IllegalArgumentException("해당 여행의 게시글이 아닙니다.");
-        }
         postRepository.delete(post);
     }
     // 게시글 생성
     @Transactional
     public PostResponse create(
             Long tripId,
-            Long tripMemberId,
             Long timelineId,
-            CreatePostRequest request
+            CreatePostRequest request,
+            MultipartFile image
     ) {
-        //타임라인 체크
-        TripMember author = tripMemberRepository.findById(tripMemberId)
+
+        // JWT에서 로그인한 사용자 정보 가져오기
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        Long memberId = (Long) authentication.getDetails();
+
+        // 여행 멤버 조회
+        TripMember author = tripMemberRepository
+                .findByMemberIdAndTripGroupId(memberId, tripId)
                 .orElseThrow(() -> new IllegalArgumentException("여행 멤버가 존재하지 않습니다."));
 
+        // 타임라인 조회
         TimeLine timeline = timeLineRepository.findById(timelineId)
                 .orElseThrow(() -> new IllegalArgumentException("타임라인이 존재하지 않습니다."));
-        //타임라인 인덱스 체크
+
+        // 해당 여행의 타임라인인지 확인
         if (!timeline.getTripGroup().getId().equals(tripId)) {
             throw new IllegalArgumentException("해당 여행의 타임라인이 아닙니다.");
         }
-        //작성조건 체크
+
+        // 이미지 저장
+        String imageUrl = null;
+
+        if (image != null && !image.isEmpty()) {
+            imageUrl = postImageService.saveImage(image);
+        }
+
+        // 게시글 생성
         Post post = Post.builder()
                 .author(author)
                 .timeLine(timeline)
                 .content(request.content())
                 .location(request.location())
-                .isImg(request.isImg())
-                .contentUrl(null)
+                .isImg(image != null && !image.isEmpty())
+                .contentUrl(imageUrl)
                 .build();
 
         Post savedPost = postRepository.save(post);
+
         return PostResponse.from(savedPost);
+    }
+    private Long getCurrentMemberId() {
+
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        return (Long) authentication.getDetails();
+    }
+    private void validateAuthor(Post post) {
+
+        Long memberId = getCurrentMemberId();
+
+        if (!post.getAuthor().getMember().getId().equals(memberId)) {
+            throw new IllegalArgumentException("작성자만 수정 및 삭제할 수 있습니다.");
+        }
+    }
+    private Post findAuthorizedPost(Long tripId, Long postId) {
+
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글이 존재하지 않습니다."));
+
+        if (!post.getTimeLine().getTripGroup().getId().equals(tripId)) {
+            throw new IllegalArgumentException("해당 여행의 게시글이 아닙니다.");
+        }
+
+        validateAuthor(post);
+
+        return post;
     }
 }

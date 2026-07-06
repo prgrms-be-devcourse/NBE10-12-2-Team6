@@ -22,7 +22,7 @@ export default function RootLayout({
     <html lang="ko" className="h-full">
       <body className="min-h-full bg-gray-50 flex justify-center">
         <TripLogProvider>
-          <div className="w-full max-w-md min-h-screen bg-white relative overflow-hidden">
+          <div className="w-full max-w-md bg-white relative overflow-x-hidden" style={{ minHeight: "100dvh" }}>
             {children}
           </div>
         </TripLogProvider>

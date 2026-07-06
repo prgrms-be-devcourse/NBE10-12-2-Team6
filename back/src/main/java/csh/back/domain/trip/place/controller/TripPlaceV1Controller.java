@@ -1,5 +1,6 @@
 package csh.back.domain.trip.place.controller;
 
+import csh.back.domain.member.dto.response.AuthFilterDto;
 import csh.back.domain.trip.place.dto.request.TripPlaceSaveRequest;
 import csh.back.domain.trip.place.dto.response.TripPlaceFindResponse;
 import csh.back.domain.trip.place.dto.response.TripPlaceSaveResponse;
@@ -9,6 +10,7 @@ import csh.back.global.annotation.ApiV1;
 import csh.back.global.dto.ResponseData;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,16 +27,21 @@ public class TripPlaceV1Controller {
     private final TripPlaceService tripPlaceService;
 
     @GetMapping("/{tripId}/wish-places")
-    public ResponseData<List<TripPlaceFindResponse>> findWishPlaces(@PathVariable Long tripId) {
+    public ResponseData<List<TripPlaceFindResponse>> findWishPlaces(
+            @PathVariable Long tripId,
+            @AuthenticationPrincipal AuthFilterDto member) {
         return new ResponseData<>(
                 200,
-                tripPlaceService.findWishPlaces(tripId)
+                tripPlaceService.findWishPlaces(tripId, member.id())
         );
     }
 
 
     @PostMapping("/{tripId}/wish-places")
-    public ResponseData<TripPlaceSaveResponse> saveWishPlace(@RequestBody TripPlaceSaveRequest request, @PathVariable Long tripId) {
+    public ResponseData<TripPlaceSaveResponse> saveWishPlace(
+            @RequestBody TripPlaceSaveRequest request,
+            @PathVariable Long tripId,
+            @AuthenticationPrincipal AuthFilterDto member) {
         return new ResponseData(
                 200,
                 tripPlaceService.savePlace(
@@ -43,7 +50,8 @@ public class TripPlaceV1Controller {
                         request.category(),
                         request.address(),
                         request.kakaoPlaceId(),
-                        request.kakaoMapUrl()
+                        request.kakaoMapUrl(),
+                        member.id()
                 )
         );
     }

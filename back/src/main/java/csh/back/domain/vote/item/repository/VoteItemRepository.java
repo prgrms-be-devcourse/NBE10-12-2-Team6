@@ -8,10 +8,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface VoteItemRepository extends JpaRepository<VoteItem, Long> {
-    Optional<VoteItem> findByTripPlaceId(Long placeId);
 
     @Query("SELECT vi FROM VoteItem vi JOIN FETCH vi.tripPlace WHERE vi.vote.id = :voteId")
-    List<VoteItem> findByVoteIdWithTripPlace(Long voteId);
+    List<VoteItem> findAllByVoteIdWithTripPlace(Long voteId);
 
     Optional<VoteItem> findByVoteIdAndTripPlaceId(Long voteId, Long placeId);
 }

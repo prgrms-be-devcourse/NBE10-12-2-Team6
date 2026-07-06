@@ -4,10 +4,9 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useStore, Trip, TripDay, ActivityBlock, PlanTheme, uid } from "../../../../store";
-import { THEME, ThemeBadge, timeText, durationText } from "../../../../lib";
+import { THEME, ThemeBadge, timeText, durationText, apiFetch, useAuthGuard, API_BASE } from "../../../../lib";
 
 const THEMES: PlanTheme[] = ["meal", "cafe", "activity", "etc"];
-const API_BASE = "http://localhost:8080";
 
 const isoToMinutes = (iso: string) => {
   const [h, m] = iso.split("T")[1].split(":").map(Number);
@@ -85,9 +84,10 @@ function BlockCard({
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function DayPlanPage() {
+  useAuthGuard();
   const router = useRouter();
   const { id, dayNumber } = useParams<{ id: string; dayNumber: string }>();
-  const { trips, updateTrip } = useStore();
+  const { trips, updateTrip, upsertTrip } = useStore();
 
   const trip = trips.find(t => t.id === id);
   const dayNum = parseInt(dayNumber);
@@ -97,11 +97,39 @@ export default function DayPlanPage() {
   const [validationError, setValidationError] = useState("");
 
   useEffect(() => {
-    if (!id || !trip || dayIdx < 0) return;
-    fetch(`${API_BASE}/api/v1/trips/${id}/timelines?dayNumber=${dayNum}`, { credentials: "include" })
+    if (trip || !id) return;
+    apiFetch(`${API_BASE}/api/v1/trips/${id}`)
       .then(r => r.json())
       .then(body => {
-        const items: { timeLineId?: number; timelineId?: number; dayNumber: number; startTime: string; endTime: string }[] = body.data ?? [];
+        const tripData = body.data;
+        if (!tripData) return;
+        upsertTrip({
+          id: String(tripData.id),
+          name: tripData.name,
+          region: tripData.region,
+          startDate: tripData.startDate,
+          nights: tripData.nights,
+          members: [],
+          days: Array.from({ length: (tripData.nights ?? 0) + 1 }, (_, i) => {
+            const d = new Date(tripData.startDate + "T00:00:00");
+            d.setDate(d.getDate() + i);
+            const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            return { id: `day-${i + 1}`, dayNumber: i + 1, date: dateStr, blocks: [], isPlanCompleted: false, isPlanSkipped: false, selectedCandidateByBlock: {}, votedUserIDsByBlockAndCandidate: {}, records: [] };
+          }),
+          candidates: [],
+          inviteCode: tripData.joinCode ?? "",
+          inviteJoinIndex: 0,
+        });
+      })
+      .catch(() => {});
+  }, [id, trip]);
+
+  useEffect(() => {
+    if (!id || !trip || dayIdx < 0) return;
+    apiFetch(`${API_BASE}/api/v1/trips/${id}/timelines?dayNumber=${dayNum}`)
+      .then(r => r.json())
+      .then(body => {
+        const items: { timeLineId?: number; timelineId?: number; voteId?: number | null; dayNumber: number; startTime: string; endTime: string }[] = body.data ?? [];
         if (items.length === 0) return;
         const blocks: ActivityBlock[] = items.map((item, i) => ({
           id: String(item.timeLineId ?? item.timelineId ?? i),
@@ -109,14 +137,19 @@ export default function DayPlanPage() {
           theme: THEMES[i % THEMES.length],
           startMinute: isoToMinutes(item.startTime),
           endMinute: isoToMinutes(item.endTime),
+          voteId: item.voteId != null ? String(item.voteId) : null,
         }));
         const currentDay = trip.days[dayIdx];
         updateTrip({ ...trip, days: trip.days.map((d, i) => i === dayIdx ? { ...currentDay, blocks, isPlanCompleted: true } : d) });
       })
       .catch(() => {});
-  }, [id, dayNum]);
+  }, [id, dayNum, trip?.id]);
 
-  if (!trip || dayIdx < 0) return null;
+  if (!trip || dayIdx < 0) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <p className="text-gray-400 text-sm">불러오는 중...</p>
+    </div>
+  );
 
   const day = trip.days[dayIdx];
 
@@ -159,6 +192,28 @@ export default function DayPlanPage() {
     setDay({ ...day, blocks: normalizeOrders(day.blocks.map(b => b.id === blockId ? { ...b, startMinute: start, endMinute: end } : b)) });
   };
 
+  const createVote = async (timeLineId: number) => {
+    await apiFetch(`${API_BASE}/api/v1/trips/${id}/votes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ timeLineId }),
+    });
+    const r = await apiFetch(`${API_BASE}/api/v1/trips/${id}/timelines?dayNumber=${dayNum}`);
+    const body = await r.json();
+    const items: { timeLineId?: number; timelineId?: number; voteId?: number | null; dayNumber: number; startTime: string; endTime: string }[] = body.data ?? [];
+    if (items.length === 0) return;
+    const blocks: ActivityBlock[] = items.map((item, i) => ({
+      id: String(item.timeLineId ?? item.timelineId ?? i),
+      order: i + 1,
+      theme: THEMES[i % THEMES.length],
+      startMinute: isoToMinutes(item.startTime),
+      endMinute: isoToMinutes(item.endTime),
+      voteId: item.voteId != null ? String(item.voteId) : null,
+    }));
+    const currentDay = trip.days[dayIdx];
+    updateTrip({ ...trip, days: trip.days.map((d, i) => i === dayIdx ? { ...currentDay, blocks } : d) });
+  };
+
   const completePlan = async () => {
     const hasInvalid = day.blocks.some(b => b.endMinute <= b.startMinute);
     if (hasInvalid) {
@@ -188,10 +243,9 @@ export default function DayPlanPage() {
       endTime: toDateTime(block.endMinute),
     }));
     try {
-      await fetch(`${API_BASE}/api/v1/trips/${id}/timelines/batch`, {
+      await apiFetch(`${API_BASE}/api/v1/trips/${id}/timelines/batch`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ dayNumber: dayNum, timeLines }),
       });
     } catch (e) {
@@ -243,30 +297,48 @@ export default function DayPlanPage() {
             </div>
             {sortedBlocks.map(block => {
               const sel = trip.candidates.find(c => c.id === day.selectedCandidateByBlock[block.id]);
-              return (
-                <Link key={block.id} href={`/trip/${id}/day/${dayNum}/block/${block.id}`}>
-                  <div className="flex gap-3 p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
-                    <div className="flex flex-col items-center text-xs text-gray-400 shrink-0 pt-0.5">
-                      <span className="font-bold">{timeText(block.startMinute)}</span>
-                      <div className="w-0.5 h-7 bg-gray-200 my-1" />
-                      <span className="font-bold">{timeText(block.endMinute)}</span>
-                    </div>
-                    {sel ? (
-                      <div className="flex-1 min-w-0">
-                        <ThemeBadge theme={block.theme} />
-                        <p className="font-semibold mt-1.5">{sel.placeName}</p>
-                        <p className="text-xs text-gray-400">{sel.address}</p>
-                      </div>
-                    ) : (
-                      <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <p className="text-sm font-semibold text-gray-400">아직 계획을 안 세웠어요</p>
-                        <p className="text-xs text-blue-400 mt-0.5">탭해서 후보 투표하러 가기 →</p>
-                      </div>
-                    )}
-                    {sel && <span className="text-green-500 shrink-0">✓</span>}
+              const inner = (
+                <div className="flex gap-3 p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
+                  <div className="flex flex-col items-center text-xs text-gray-400 shrink-0 pt-0.5">
+                    <span className="font-bold">{timeText(block.startMinute)}</span>
+                    <div className="w-0.5 h-7 bg-gray-200 my-1" />
+                    <span className="font-bold">{timeText(block.endMinute)}</span>
                   </div>
-                </Link>
+                  {sel ? (
+                    <div className="flex-1 min-w-0">
+                      <ThemeBadge theme={block.theme} />
+                      <p className="font-semibold mt-1.5">{sel.placeName}</p>
+                      <p className="text-xs text-gray-400">{sel.address}</p>
+                    </div>
+                  ) : (
+                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                      <p className="text-sm font-semibold text-gray-400">아직 계획을 안 세웠어요</p>
+                      <p className="text-xs text-blue-400 mt-0.5">{block.voteId ? "탭해서 후보 투표하러 가기 →" : ""}</p>
+                    </div>
+                  )}
+                  {sel
+                    ? <span className="text-green-500 shrink-0">✓</span>
+                    : !block.voteId && (
+                      <button
+                        onClick={e => { e.preventDefault(); e.stopPropagation(); createVote(Number(block.id)); }}
+                        className="text-xs font-bold px-3 py-1.5 rounded-full shrink-0 self-center"
+                        style={{ background: "#eff6ff", color: "#2563eb" }}
+                      >
+                        투표 생성하기
+                      </button>
+                    )
+                  }
+                </div>
               );
+              if (block.voteId) {
+                return (
+                  <Link key={block.id} href={`/trip/${id}/day/${dayNum}/block/${block.voteId}?from=vote&timelineId=${block.id}`}
+                    onClick={() => localStorage.setItem(`block-order-${block.voteId}`, String(block.order))}>
+                    {inner}
+                  </Link>
+                );
+              }
+              return <div key={block.id}>{inner}</div>;
             })}
           </div>
         ) : (
