@@ -43,7 +43,6 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                                 // 회원가입, 로그인은 인증 없이 접근 허용
-
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
