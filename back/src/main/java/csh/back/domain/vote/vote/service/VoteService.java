@@ -146,7 +146,7 @@ public class VoteService {
     public void createVoteBatch(Long tripId, Long memberId, List<TimeLine> timeLines) {
         tripMemberValidator.validMember(tripId, memberId);
         TripGroup tripGroup = tripGroupRepository.findById(tripId).orElseThrow(RuntimeException::new);
-        TripMember tripMember = tripMemberRepository.findByMemberId(memberId).orElseThrow(RuntimeException::new);
+        TripMember tripMember = tripMemberRepository.findByMemberIdAndTripGroupId(memberId, tripId).orElseThrow(RuntimeException::new);
         List<Vote> votes = timeLines.stream()
                 .map(timeLine -> Vote
                         .builder()

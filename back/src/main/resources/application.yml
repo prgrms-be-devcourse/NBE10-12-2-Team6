@@ -12,6 +12,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
 springdoc:
   default-produces-media-type: application/json;charset=UTF-8
 logging:
@@ -23,3 +27,8 @@ logging:
 jwt:
   secret: "this-is-a-very-long-secret-key-for-jwt-signing-minimum-256-bits" # 256비트 이상이어야 HS256 서명 가능
   access-expiration: 1800000   # 30분 (ms)
+
+file:
+  upload:
+    dir: ${user.home}/triplog/uploadedimages
+    base-url: http://localhost:8080
