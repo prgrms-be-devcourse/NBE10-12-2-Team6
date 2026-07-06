@@ -57,14 +57,19 @@ public class PostV1Controller {
         return postService.getPosts(tripId);
     }
 
-    @PutMapping("/{postId}")
+    @PutMapping(value = "/{postId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "게시글 수정", description = "게시글 내용을 수정합니다.")
     public void update(
+
             @PathVariable Long tripId,
             @PathVariable Long postId,
-            @RequestBody UpdatePostRequest request
+
+            @ModelAttribute UpdatePostRequest request,
+
+            @RequestParam(value = "image", required = false)
+            MultipartFile image
     ) {
-        postService.update(tripId, postId, request);
+        postService.update(tripId, postId, request, image);
     }
 
     @DeleteMapping("/{postId}")

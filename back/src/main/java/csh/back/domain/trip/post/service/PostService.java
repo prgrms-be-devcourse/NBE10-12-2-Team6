@@ -1,5 +1,6 @@
 package csh.back.domain.trip.post.service;
 
+import csh.back.domain.member.dto.response.AuthFilterDto;
 import csh.back.domain.trip.member.entity.TripMember;
 import csh.back.domain.trip.member.repository.TripMemberRepository;
 import csh.back.domain.trip.post.dto.request.CreatePostRequest;
@@ -16,10 +17,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.multipart.MultipartFile;
+import csh.back.domain.trip.group.exception.NonMemberException;
+
+
 import java.util.Comparator;
 import java.util.Map;
 import java.util.stream.Collectors;
-
 import java.util.List;
 
 @Service
@@ -85,13 +88,45 @@ public class PostService {
     }
     // 게시글 수정
     @Transactional
-    public void update(Long tripId, Long postId, UpdatePostRequest request) {
+    public void update(
+            Long tripId,
+            Long postId,
+            UpdatePostRequest request,
+            MultipartFile image
+    ) {
 
         Post post = findAuthorizedPost(tripId, postId);
 
+        // 기존 상태
+        Boolean isImg = post.getIsImg();
+        String imageUrl = post.getContentUrl();
+
+        // 이미지가 새로 들어온 경우
+        if (image != null && !image.isEmpty()) {
+
+            // 기존 이미지 삭제 (있을 때만)
+            if (Boolean.TRUE.equals(post.getIsImg())
+                    && post.getContentUrl() != null) {
+
+                postImageService.deleteImage(post.getContentUrl());
+            }
+
+            // 새 이미지 저장
+            imageUrl = postImageService.saveImage(image);
+            isImg = true;
+
+        } else {
+            // 이미지 변경 없으면 그대로 유지
+            isImg = post.getIsImg();
+            imageUrl = post.getContentUrl();
+        }
+
+        // 최종 반영
         post.update(
                 request.content(),
-                request.location()
+                request.location(),
+                isImg,
+                imageUrl
         );
     }
     // 게시글 삭제
@@ -100,6 +135,14 @@ public class PostService {
 
         Post post = findAuthorizedPost(tripId, postId);
 
+        // 삭제된 포스트에 이미지가 있으면 포스트 삭제할때 서버에 저장된 이미지 파일도 같이 삭제
+        if (Boolean.TRUE.equals(post.getIsImg())
+                && post.getContentUrl() != null) {
+
+            postImageService.deleteImage(post.getContentUrl());
+        }
+
+        // DB 삭제
         postRepository.delete(post);
     }
     // 게시글 생성
@@ -115,7 +158,7 @@ public class PostService {
         Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
 
-        Long memberId = (Long) authentication.getDetails();
+        Long memberId = getCurrentMemberId();
 
         // 여행 멤버 조회
         TripMember author = tripMemberRepository
@@ -157,14 +200,17 @@ public class PostService {
         Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
 
-        return (Long) authentication.getDetails();
+        AuthFilterDto loginUser =
+                (AuthFilterDto) authentication.getPrincipal();
+
+        return loginUser.id();
     }
     private void validateAuthor(Post post) {
 
         Long memberId = getCurrentMemberId();
 
         if (!post.getAuthor().getMember().getId().equals(memberId)) {
-            throw new IllegalArgumentException("작성자만 수정 및 삭제할 수 있습니다.");
+            throw new NonMemberException("작성자만 수정 및 삭제할 수 있습니다.");
         }
     }
     private Post findAuthorizedPost(Long tripId, Long postId) {
@@ -180,4 +226,5 @@ public class PostService {
 
         return post;
     }
+
 }

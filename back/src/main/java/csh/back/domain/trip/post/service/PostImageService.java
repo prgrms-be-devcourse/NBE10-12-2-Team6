@@ -12,6 +12,7 @@ import java.util.UUID;
 @Service
 public class PostImageService {
 
+    // 반드시 클래스 필드로 선언
     private static final String IMAGE_DIR = "uploadedimages";
 
     public String saveImage(MultipartFile image) {
@@ -33,15 +34,12 @@ public class PostImageService {
             String extension = "";
 
             if (originalName != null && originalName.contains(".")) {
-                extension =
-                        originalName.substring(originalName.lastIndexOf("."));
+                extension = originalName.substring(originalName.lastIndexOf("."));
             }
 
-            String savedName =
-                    UUID.randomUUID() + extension;
+            String savedName = UUID.randomUUID() + extension;
 
-            Path savePath =
-                    uploadDir.resolve(savedName);
+            Path savePath = uploadDir.resolve(savedName);
 
             image.transferTo(savePath);
 
@@ -49,6 +47,25 @@ public class PostImageService {
 
         } catch (IOException e) {
             throw new RuntimeException("이미지 저장 실패", e);
+        }
+    }
+
+    public void deleteImage(String imageUrl) {
+
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return;
+        }
+
+        try {
+            String fileName = Paths.get(imageUrl).getFileName().toString();
+
+            Path imagePath =
+                    Paths.get(IMAGE_DIR).resolve(fileName);
+
+            Files.deleteIfExists(imagePath);
+
+        } catch (IOException e) {
+            throw new RuntimeException("이미지 삭제 실패", e);
         }
     }
 }

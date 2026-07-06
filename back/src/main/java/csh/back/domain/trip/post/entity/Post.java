@@ -55,8 +55,15 @@ public class Post extends BaseEntity {
         this.location = location;
         this.contentUrl = contentUrl;
     }
-    public void update(String content, String location) {
+    public void update(
+            String content,
+            String location,
+            Boolean isImg,
+            String contentUrl
+    ) {
         this.content = content;
         this.location = location;
+        this.isImg = isImg;
+        this.contentUrl = contentUrl;
     }
 }
