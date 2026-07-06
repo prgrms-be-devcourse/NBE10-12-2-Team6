@@ -38,10 +38,11 @@ public class TripGroupV1Controller {
 	@GetMapping()
 	public ResponseData<List<TripGroupResponse>> getAllGroups(
 			@RequestParam(name = "keyword", required = false) String keyword,
+			@RequestParam(name = "startDate", required = false) String startDate,
 			@AuthenticationPrincipal AuthFilterDto owner
 	) {
 		log.info("owner = {}", owner);
-		return new ResponseData<>(200, tripGroupService.getGroups(owner.id(), keyword));
+		return new ResponseData<>(200, tripGroupService.getGroups(owner.id(), keyword, startDate));
 	}
 
 	//Swagger 문서 표시

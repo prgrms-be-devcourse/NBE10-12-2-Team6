@@ -23,7 +23,7 @@ public class TripGroupRepositoryImpl implements TripGroupRepositoryCustom {
 	private final JPAQueryFactory jpaQueryFactory;
 
 	@Override
-	public List<TripGroup> findAllByMemberIdWithSearch(Long memberId, String keyword) {
+	public List<TripGroup> findAllByMemberIdWithSearch(Long memberId, String keyword, String startDate) {
 
 		QTripMember me = new QTripMember("me"); //로그인 한 사용자가 속한 그룹 필터용
 		QTripMember groupMember = new QTripMember("groupMember"); //그룹 내 맴버 필터용
@@ -34,7 +34,8 @@ public class TripGroupRepositoryImpl implements TripGroupRepositoryCustom {
 				.leftJoin(groupMember).on(groupMember.tripGroup.eq(tripGroup))
 				.where(
 						me.member.id.eq(memberId),
-						keywordSearch(keyword, groupMember)
+						keywordSearch(keyword, groupMember),
+						dateSearch(startDate)
 				)
 				.orderBy(tripGroup.startDate.desc())
 				.distinct()
@@ -46,7 +47,10 @@ public class TripGroupRepositoryImpl implements TripGroupRepositoryCustom {
 
 		return tripGroup.name.containsIgnoreCase(keyword)
 				.or(tripGroup.region.containsIgnoreCase(keyword))
-				.or(groupMember.member.name.containsIgnoreCase(keyword))
-				.or(tripGroup.startDate.stringValue().containsIgnoreCase(keyword));
+				.or(groupMember.member.name.containsIgnoreCase(keyword));
+	}
+
+	private BooleanExpression dateSearch(String startDate) {
+		return hasText(startDate) ? tripGroup.startDate.stringValue().containsIgnoreCase(startDate) : null;
 	}
 }
