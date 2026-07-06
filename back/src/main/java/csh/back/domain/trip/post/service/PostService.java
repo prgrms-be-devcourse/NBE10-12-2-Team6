@@ -46,32 +46,22 @@ public class PostService {
     }
     //게시글 전체조회
     @Transactional(readOnly = true)
-    public List<TimelinePostsResponse> getPosts(Long tripId) {
+    public List<TimelinePostsResponse> getPosts(Long tripId, Long memberId) {
 
         List<Post> posts = postRepository.findByTimeLineTripGroupId(tripId);
 
         return posts.stream()
-
                 .collect(Collectors.groupingBy(
                         post -> post.getTimeLine().getId()
                 ))
-
                 .entrySet()
-
                 .stream()
-
                 .map(entry -> {
-
                     List<Post> timelinePosts = entry.getValue();
-
                     TimeLine timeline = timelinePosts.get(0).getTimeLine();
-
                     return new TimelinePostsResponse(
-
                             timeline.getId(),
-
                             timeline.getDayNumber(),
-
                             timelinePosts.stream()
                                     .map(PostResponse::from)
                                     .toList()
@@ -106,24 +96,17 @@ public class PostService {
     @Transactional
     public PostResponse create(
             Long tripId,
-            Long timelineId,
-            CreatePostRequest request,
+            Long memberId,
+            Long timeLineId,
             MultipartFile image
     ) {
-
-        // JWT에서 로그인한 사용자 정보 가져오기
-        Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
-
-        Long memberId = (Long) authentication.getDetails();
 
         // 여행 멤버 조회
         TripMember author = tripMemberRepository
                 .findByMemberIdAndTripGroupId(memberId, tripId)
                 .orElseThrow(() -> new IllegalArgumentException("여행 멤버가 존재하지 않습니다."));
-
         // 타임라인 조회
-        TimeLine timeline = timeLineRepository.findById(timelineId)
+        TimeLine timeline = timeLineRepository.findById(timeLineId)
                 .orElseThrow(() -> new IllegalArgumentException("타임라인이 존재하지 않습니다."));
 
         // 해당 여행의 타임라인인지 확인
@@ -142,8 +125,6 @@ public class PostService {
         Post post = Post.builder()
                 .author(author)
                 .timeLine(timeline)
-                .content(request.content())
-                .location(request.location())
                 .isImg(image != null && !image.isEmpty())
                 .contentUrl(imageUrl)
                 .build();
