@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useStore, Trip, TripDay, PlanCandidate, uid } from "../../store";
 import { Avatar, formatDate, apiFetch, useAuthGuard, API_BASE } from "../../lib";
+import { useTripOwnerStore } from "../../stores/tripOwnerStore";
 
 // ── InviteModal ───────────────────────────────────────────────────────────────
 
@@ -278,6 +279,7 @@ export default function TripDetailPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const { trips, updateTrip, upsertTrip } = useStore();
+  const setOwnerId = useTripOwnerStore((state) => state.setOwnerId);
   const [showInvite, setShowInvite] = useState(false);
   const [tab, setTab] = useState<Tab>("trip");
 
@@ -314,6 +316,7 @@ export default function TripDetailPage() {
       apiFetch(`${API_BASE}/api/v1/trips/${id}/timelines/count`).then(r => r.json()),
     ]).then(([tripBody, countBody]) => {
       const tripData = tripBody.data;
+
       if (!tripData) return;
       const inviteCode = tripData.joinCode ?? "";
       const counts: { day: number; count: number }[] = countBody.data ?? [];
@@ -348,7 +351,9 @@ export default function TripDetailPage() {
         }));
         return { ...day, blocks, isPlanCompleted: true };
       });
+      console.log(tripData.ownerId);
 
+      if (tripData.ownerId) setOwnerId(tripData.ownerId);
       upsertTrip({
         ...(trip ?? {
           id: String(tripData.id),
