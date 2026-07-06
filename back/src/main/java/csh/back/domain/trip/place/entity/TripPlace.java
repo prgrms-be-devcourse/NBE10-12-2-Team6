@@ -12,7 +12,12 @@ import lombok.NoArgsConstructor;
 @Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "trip_wish_places")
+@Table(name = "trip_wish_places",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_wish_place",
+                columnNames = {"kakao_place_id", "trip_id"}
+        )
+)
 public class TripPlace extends BaseEntity {
 
     //FK

@@ -8,12 +8,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface VoteUserRepository extends JpaRepository<VoteUser, Long> {
-    @Query("SELECT vi.id, COUNT(vu) FROM VoteUser vu JOIN vu.voteItem vi WHERE vi.vote.id = :voteId GROUP BY vi.id")
-    List<Object[]> countGroupByVoteId(Long voteId);
+    @Query("SELECT vi.id AS voteItemId, COUNT(vu) AS voteCount FROM VoteUser vu JOIN vu.voteItem vi WHERE vi.vote.id = :voteId GROUP BY vi.id")
+    List<VoteCountProjection> countGroupByVoteId(Long voteId);
 
     List<VoteUser> findByVoteItemId(Long voteItemId);
 
     Optional<VoteUser> findByVoteIdAndTripMemberId(Long voteId, Long tripMemberId);
-
-
 }

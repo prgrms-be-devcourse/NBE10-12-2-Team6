@@ -3,16 +3,21 @@ package csh.back.domain.trip.timeline.service;
 import csh.back.domain.trip.group.entity.TripGroup;
 import csh.back.domain.trip.group.repository.TripGroupRepository;
 import csh.back.domain.trip.member.repository.TripMemberRepository;
+import csh.back.domain.trip.member.validator.TripMemberValidator;
 import csh.back.domain.trip.place.entity.TripPlace;
 import csh.back.domain.trip.place.repository.TripPlaceRepository;
 import csh.back.domain.trip.timeline.dto.request.TimeLineAllCreateRequest;
-import csh.back.domain.trip.timeline.dto.request.TimeLineConfirmPlaceRequest;
 import csh.back.domain.trip.timeline.dto.request.TimeLineCreateRequest;
 import csh.back.domain.trip.timeline.dto.request.TimeLineUpdateRequest;
 import csh.back.domain.trip.timeline.dto.response.TimeLineCountResponse;
 import csh.back.domain.trip.timeline.dto.response.TimeLineResponse;
+import csh.back.domain.trip.timeline.dto.response.TimeLineWithVoteIdResponse;
 import csh.back.domain.trip.timeline.entity.TimeLine;
 import csh.back.domain.trip.timeline.repository.TimeLineRepository;
+import csh.back.domain.vote.vote.dto.response.VoteConfirmResponse;
+import csh.back.domain.vote.vote.dto.web.VoteTimeLineResponse;
+import csh.back.domain.vote.vote.enums.VoteConfirmStatus;
+import csh.back.domain.vote.vote.repository.VoteRepository;
 import csh.back.domain.vote.vote.service.VoteService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -35,9 +41,11 @@ public class TimeLineService {
     private final TripMemberRepository tripMemberRepository;
     private final TripPlaceRepository tripPlaceRepository;
     private final VoteService voteService;
+    private final TripMemberValidator tripMemberValidator;
 
     //최소 일차
     private static final int MINIMUM_DAY = 1;
+    private final VoteRepository voteRepository;
 
     //단건 타임라인 생성
     public TimeLineResponse createTimeLine(Long tripId, Long memberId, TimeLineCreateRequest request) {
@@ -120,7 +128,7 @@ public class TimeLineService {
     }
 
     @Transactional(readOnly = true)
-    public List<TimeLineResponse> getTimeLines(Long tripId, Long memberId, int dayNumber) {
+    public List<TimeLineWithVoteIdResponse> getTimeLines(Long tripId, Long memberId, int dayNumber) {
         //여행 모임 멤버 검증 여부 추가
         validateTripMember(tripId, memberId);
         //dayNumber 검증
@@ -128,12 +136,13 @@ public class TimeLineService {
             throw new IllegalArgumentException("일차는 " + MINIMUM_DAY + " 이상이어야 합니다.");
         }
         //tripId + dayNumber로 목록 조회
-        //TimeLineResponse 리스트로 변환
-        return timeLineRepository.findByTripGroupIdAndDayNumberOrderByStartTimeAsc(tripId, dayNumber)
+        List<TimeLine> timeLines = timeLineRepository.findByTripGroupIdAndDayNumberOrderByStartTimeAsc(tripId, dayNumber);
+        //TimeLineId,VoteId 으로 매핑된 맵을 반환
+        Map<Long, Long> timeLineVoteMap = voteService.findAllVoteIds(timeLines.stream().map(TimeLine::getId).toList());
+        return timeLines
                 .stream()
-                .map(TimeLineResponse::from)
+                .map(timeLine -> TimeLineWithVoteIdResponse.of(timeLine, timeLineVoteMap.get(timeLine.getId())))
                 .toList();
-
     }
 
     @Transactional(readOnly = true)
@@ -185,25 +194,6 @@ public class TimeLineService {
         return TimeLineResponse.from(timeLine);
     }
 
-    //확정된 장소 삽입하는 메서드
-    public TimeLineResponse confirmTimeLinePlace(
-            Long tripId,
-            Long timelineId,
-            Long memberId,
-            TimeLineConfirmPlaceRequest request) {
-
-        //여행 모임 멤버 여부 검증 추가
-        validateTripMember(tripId, memberId);
-        //tripId + timelineId로 타임라인 조회
-        TimeLine timeLine = findTimeLine(tripId, timelineId);
-        //tripId + confirmedPlaceId로 후보 장소 조회
-        TripPlace tripPlace = tripPlaceRepository.findByIdAndTripGroupId(request.confirmedPlaceId(), tripId)
-                .orElseThrow(()-> new IllegalArgumentException("확정된 장소가 없습니다."));
-        //타임라인에 확정 장소 반영
-        timeLine.updateConfirmedPlace(tripPlace);
-        //응답 반환
-        return TimeLineResponse.from(timeLine);
-    }
     //타임라인 삭제 메서드
     public void deleteTimeLine(Long tripId, Long timelineId, Long memberId) {
         //여행 모임 방장 여부 검증
@@ -214,6 +204,56 @@ public class TimeLineService {
 
         //타임라인 제거
         timeLineRepository.delete(timeLine);
+    }
+
+    public VoteConfirmResponse confirmVote(Long tripId, Long memberId, Long voteId) {
+        System.out.println(tripId);
+        System.out.println(memberId);
+
+        tripMemberValidator.validMember(tripId, memberId);
+
+        Map<Long, Long> countMap = voteService.voteCount(voteId);
+        long maxCount = Collections.max(countMap.values());
+        List<Long> maxKeys = countMap.entrySet().stream()
+                .filter(entry -> entry.getValue() == maxCount)
+                .map(Map.Entry::getKey)
+                .toList();
+
+        if(maxKeys.size() > 1) {
+            return VoteConfirmResponse.of(VoteConfirmStatus.TIED, null, maxKeys);
+        }
+
+        Long maxVoteItemId = maxKeys.get(0);
+        VoteTimeLineResponse voteTimeLineResponse = voteService.voteConfirm(maxVoteItemId, voteId);
+        Long confirmPlaceId = voteTimeLineResponse.confirmPlaceId();
+        confirmPlaceByHost(voteTimeLineResponse.timeLine() ,tripId, confirmPlaceId);
+        return VoteConfirmResponse.of(VoteConfirmStatus.CONFIRMED, confirmPlaceId, null);
+    }
+
+    //확정된 장소 삽입하는 메서드
+    public VoteConfirmResponse confirmTiedVote(
+            Long tripId,
+            Long memberId,
+            Long voteId,
+            Long confirmPlaceId) {
+
+        //여행 모임 멤버 여부 검증 추가
+        tripMemberValidator.validMember(tripId, memberId);
+        //tripId + timelineId로 타임라인 조회
+        TimeLine timeLine = voteRepository.findTimeLineByVoteId(voteId).orElseThrow(RuntimeException::new);
+        confirmPlaceByHost(timeLine, tripId, confirmPlaceId);
+
+        //응답 반환
+        return VoteConfirmResponse.of(VoteConfirmStatus.CONFIRMED, confirmPlaceId, null);
+    }
+
+    private void confirmPlaceByHost(TimeLine timeLine, Long tripId, Long confirmPlaceId) {
+        //tripId + confirmedPlaceId로 후보 장소 조회
+        TripPlace tripPlace = tripPlaceRepository.findByIdAndTripGroupId(confirmPlaceId, tripId)
+                .orElseThrow(()-> new IllegalArgumentException("확정된 장소가 없습니다."));
+        //타임라인에 확정 장소 반영
+        timeLine.updateConfirmedPlace(tripPlace);
+
     }
 
     //같은 여행 모임의 타임라인 시간 수정 요청을 순차적으로 처리하기 위한 락 메서드

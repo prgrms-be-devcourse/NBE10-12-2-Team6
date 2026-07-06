@@ -1,24 +1,24 @@
-package csh.back.domain.trip.timeline.dto.response;
+package csh.back.domain.vote.vote.dto.response;
 
 import csh.back.domain.trip.place.entity.TripPlace;
 import csh.back.domain.trip.timeline.entity.TimeLine;
 
 import java.time.LocalDateTime;
 
-public record TimeLineWithConfirmedPlaceResponse(
+public record VoteWithTimeLineResponse(
         Long voteId,
         Long timeLineId,
-        String confirmedPlaceName,
-        LocalDateTime startTime
+        LocalDateTime startTime,
+        String confirmedPlaceName
 ) {
-    public static TimeLineWithConfirmedPlaceResponse of(TimeLine timeLine, Long voteId) {
+    public static VoteWithTimeLineResponse of(TimeLine timeLine, Long voteId) {
         TripPlace tripPlace = timeLine.getConfirmedPlace();
         String confirmedPlaceName = tripPlace == null ? "" : tripPlace.getName();
-        return new TimeLineWithConfirmedPlaceResponse(
+        return new VoteWithTimeLineResponse(
                 voteId,
                 timeLine.getId(),
-                confirmedPlaceName,
-                timeLine.getStartTime()
+                timeLine.getStartTime(),
+                confirmedPlaceName
         );
     }
 }
