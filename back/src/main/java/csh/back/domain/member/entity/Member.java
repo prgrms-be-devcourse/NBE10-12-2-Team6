@@ -27,13 +27,16 @@ public class Member extends BaseEntity {
     @Column(unique = true)
     private String refreshToken;
 
-    //생성자
-    //빌드 사용
     @Builder
     private Member(String email, String password, String name) {
         this.email = email;
         this.password = password;
         this.name = name;
+        this.refreshToken = UUID.randomUUID().toString();
+    }
+
+    // 로그아웃 시 refreshToken을 새 값으로 교체하여 기존 값을 무효화
+    public void invalidateRefreshToken() {
         this.refreshToken = UUID.randomUUID().toString();
     }
 }
