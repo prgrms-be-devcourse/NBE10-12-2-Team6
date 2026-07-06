@@ -43,3 +43,6 @@ db_dev.lock.db
 
 ### initData ###
 /src/main/java/csh/back/global/init/InitData.java
+
+### upload ###
+/uploadedimages

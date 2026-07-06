@@ -1,5 +1,6 @@
 package csh.back.domain.trip.post.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -12,7 +13,11 @@ import java.util.UUID;
 @Service
 public class PostImageService {
 
-    private static final String IMAGE_DIR = "uploadedimages";
+    @Value("${file.upload.dir}")
+    private String uploadDir;
+
+    @Value("${file.upload.base-url}")
+    private String baseUrl;
 
     public String saveImage(MultipartFile image) {
 
@@ -21,31 +26,24 @@ public class PostImageService {
         }
 
         try {
+            Path uploadPath = Paths.get(uploadDir).toAbsolutePath();
 
-            Path uploadDir = Paths.get(IMAGE_DIR);
-
-            if (!Files.exists(uploadDir)) {
-                Files.createDirectories(uploadDir);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
             }
 
             String originalName = image.getOriginalFilename();
-
             String extension = "";
-
             if (originalName != null && originalName.contains(".")) {
-                extension =
-                        originalName.substring(originalName.lastIndexOf("."));
+                extension = originalName.substring(originalName.lastIndexOf("."));
             }
 
-            String savedName =
-                    UUID.randomUUID() + extension;
+            String savedName = UUID.randomUUID() + extension;
+            Path savePath = uploadPath.resolve(savedName);
 
-            Path savePath =
-                    uploadDir.resolve(savedName);
+            Files.write(savePath, image.getBytes());
 
-            image.transferTo(savePath);
-
-            return "/uploadedimages/" + savedName;
+            return baseUrl + "/uploadedimages/" + savedName;
 
         } catch (IOException e) {
             throw new RuntimeException("이미지 저장 실패", e);

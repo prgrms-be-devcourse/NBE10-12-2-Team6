@@ -26,7 +26,7 @@ public class Post extends BaseEntity {
     //FK
     //Join TripTimeline Table
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "timeline_id", nullable = false)
+    @JoinColumn(name = "timeline_id")
     private TimeLine timeLine;
 
     //영상인지 이미지인지 논리판단

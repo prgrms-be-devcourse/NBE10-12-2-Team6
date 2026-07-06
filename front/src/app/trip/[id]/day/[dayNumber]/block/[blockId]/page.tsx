@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
-import { useStore, TripDay, PlanCandidate } from "../../../../../../store";
+import { useStore, TripDay, PlanCandidate, uid } from "../../../../../../store";
 import { timeText, useAuthGuard, apiFetch, API_BASE } from "../../../../../../lib";
 
 // ── Tie random pick sheet ─────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ export default function BlockDetailPage() {
   const { id, dayNumber, blockId } = useParams<{ id: string; dayNumber: string; blockId: string }>();
   const searchParams = useSearchParams();
   const goBack = () => router.back();
-  const { trips, updateTrip, currentUser } = useStore();
+  const { trips, updateTrip, upsertTrip, currentUser } = useStore();
 
 
   const fromVote = searchParams.get("from") === "vote";
@@ -82,6 +82,28 @@ export default function BlockDetailPage() {
   const trip = trips.find(t => t.id === id);
   const dayNum = parseInt(dayNumber);
   const dayIdx = trip?.days.findIndex(d => d.dayNumber === dayNum) ?? -1;
+
+  useEffect(() => {
+    if (trip || !id) return;
+    apiFetch(`${API_BASE}/api/v1/trips/${id}`)
+      .then(r => r.json())
+      .then(body => {
+        const tripData = body.data;
+        if (!tripData) return;
+        upsertTrip({
+          id: String(tripData.id), name: tripData.name, region: tripData.region,
+          startDate: tripData.startDate, nights: tripData.nights,
+          members: (tripData.members ?? []).map((m: { memberId: number; name: string }, i: number) => ({ id: m.memberId, name: m.name, color: ["#f87171","#fb923c","#34d399","#60a5fa","#a78bfa"][i % 5] })),
+          days: Array.from({ length: (tripData.nights ?? 0) + 1 }, (_, i) => {
+            const d = new Date(tripData.startDate + "T00:00:00");
+            d.setDate(d.getDate() + i);
+            const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            return { id: `day-${i + 1}`, dayNumber: i + 1, date: dateStr, blocks: [{ id: uid(), order: 1, theme: "meal" as const, startMinute: 9 * 60, endMinute: 10 * 60 }], isPlanCompleted: false, isPlanSkipped: false, selectedCandidateByBlock: {}, votedUserIDsByBlockAndCandidate: {}, records: [] };
+          }),
+          candidates: [], inviteCode: tripData.joinCode ?? "", inviteJoinIndex: 0,
+        });
+      }).catch(() => {});
+  }, [id, trip]);
 
   useEffect(() => {
     if (!fromVote || !blockId) return;
