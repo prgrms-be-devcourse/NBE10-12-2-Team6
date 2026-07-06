@@ -11,6 +11,7 @@ import csh.back.global.annotation.ApiV1;
 import csh.back.global.dto.ResponseData;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,10 +37,12 @@ public class TripGroupV1Controller {
 	//모임방 조회
 	@GetMapping()
 	public ResponseData<List<TripGroupResponse>> getAllGroups(
+			@RequestParam(name = "keyword", required = false) String keyword,
+			@RequestParam(name = "startDate", required = false) String startDate,
 			@AuthenticationPrincipal AuthFilterDto owner
 	) {
 		log.info("owner = {}", owner);
-		return new ResponseData<>(200, tripGroupService.getGroups(owner.id()));
+		return new ResponseData<>(200, tripGroupService.getGroups(owner.id(), keyword, startDate));
 	}
 
 	//Swagger 문서 표시

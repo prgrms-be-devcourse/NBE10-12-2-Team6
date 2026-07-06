@@ -31,8 +31,8 @@ public class TripGroupService {
 
 	// 모임방 조회
 	@Transactional(readOnly = true)
-	public List<TripGroupResponse> getGroups(Long ownerId) {
-		List<TripGroup> tripGroups = tripGroupRepository.findAllByMemberId(ownerId);
+	public List<TripGroupResponse> getGroups(Long ownerId, String keyword, String startDate) {
+		List<TripGroup> tripGroups = tripGroupRepository.findAllByMemberIdWithSearch(ownerId, keyword, startDate);
 		return tripGroups
 				.stream()
 				.map(TripGroupResponse::from)
