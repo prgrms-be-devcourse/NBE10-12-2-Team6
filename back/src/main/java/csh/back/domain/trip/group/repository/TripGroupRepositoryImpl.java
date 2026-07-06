@@ -43,7 +43,7 @@ public class TripGroupRepositoryImpl implements TripGroupRepositoryCustom {
 
 	private BooleanExpression keywordSearch(String keyword, QTripMember groupMember) {
 		if(!hasText(keyword)) return null;
-		log.info("keword!!!!!!" + keyword);
+
 		return tripGroup.name.containsIgnoreCase(keyword)
 				.or(tripGroup.region.containsIgnoreCase(keyword))
 				.or(groupMember.member.name.containsIgnoreCase(keyword))
