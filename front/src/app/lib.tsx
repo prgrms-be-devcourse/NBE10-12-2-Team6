@@ -42,7 +42,10 @@ export function Avatar({ user, size = 36 }: { user: User; size?: number }) {
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
-export const THEME: Record<PlanTheme, { label: string; icon: string; bg: string; text: string }> = {
+export const THEME: Record<
+  PlanTheme,
+  { label: string; icon: string; bg: string; text: string }
+> = {
   meal: { label: "식사", icon: "🍴", bg: "#ffedd5", text: "#ea580c" },
   cafe: { label: "카페", icon: "☕", bg: "#fef3c7", text: "#92400e" },
   activity: { label: "활동", icon: "🚶", bg: "#dbeafe", text: "#2563eb" },
@@ -52,7 +55,10 @@ export const THEME: Record<PlanTheme, { label: string; icon: string; bg: string;
 export function ThemeBadge({ theme }: { theme: PlanTheme }) {
   const t = THEME[theme];
   return (
-    <span className="text-xs font-bold px-3 py-1.5 rounded-full" style={{ background: t.bg, color: t.text }}>
+    <span
+      className="text-xs font-bold px-3 py-1.5 rounded-full"
+      style={{ background: t.bg, color: t.text }}
+    >
       {t.icon} {t.label}
     </span>
   );
@@ -60,9 +66,10 @@ export function ThemeBadge({ theme }: { theme: PlanTheme }) {
 
 // ── API base ──────────────────────────────────────────────────────────────────
 
-export const API_BASE = typeof window !== "undefined"
-  ? `http://${window.location.hostname}:8080`
-  : "http://localhost:8080";
+export const API_BASE =
+  typeof window !== "undefined"
+    ? `http://${window.location.hostname}`
+    : "http://168.107.11.88";
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 
@@ -77,12 +84,19 @@ export function useAuthGuard() {
 
 // ── API fetch helper ──────────────────────────────────────────────────────────
 
-export async function apiFetch(input: string, init: RequestInit = {}): Promise<Response> {
-  const accessToken = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-  const refreshToken = typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null;
+export async function apiFetch(
+  input: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const accessToken =
+    typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+  const refreshToken =
+    typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null;
   const headers: Record<string, string> = {
     ...(init.headers as Record<string, string>),
-    ...(accessToken ? { Authorization: `Bearer ${refreshToken} ${accessToken}` } : {}),
+    ...(accessToken
+      ? { Authorization: `Bearer ${refreshToken} ${accessToken}` }
+      : {}),
   };
   const res = await fetch(input, { ...init, headers, credentials: "include" });
   if (res.status === 401) {
@@ -110,8 +124,10 @@ export function durationText(minutes: number): string {
 }
 
 export function formatDate(dateStr: string): string {
-  return new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric" })
-    .format(new Date(dateStr + "T00:00:00"));
+  return new Intl.DateTimeFormat("ko-KR", {
+    month: "long",
+    day: "numeric",
+  }).format(new Date(dateStr + "T00:00:00"));
 }
 
 // ── Layout helpers ────────────────────────────────────────────────────────────
@@ -129,8 +145,18 @@ export function PageHeader({
     <div className="flex items-center gap-3 pt-12 pb-2 px-4">
       {onBack ? (
         <button onClick={onBack} className="text-blue-500 p-1 -ml-1">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
         </button>
       ) : (
@@ -143,8 +169,16 @@ export function PageHeader({
 }
 
 export function BigActionCard({
-  icon, title, subtitle, colorKey,
-}: { icon: string; title: string; subtitle: string; colorKey: string }) {
+  icon,
+  title,
+  subtitle,
+  colorKey,
+}: {
+  icon: string;
+  title: string;
+  subtitle: string;
+  colorKey: string;
+}) {
   const c = colorStyle(colorKey);
   return (
     <div className="flex items-center gap-4 p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
@@ -156,12 +190,23 @@ export function BigActionCard({
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-semibold">{title}</p>
-        <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{subtitle}</p>
+        <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+          {subtitle}
+        </p>
       </div>
-      <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+      <svg
+        className="w-4 h-4 text-gray-400 shrink-0"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M9 5l7 7-7 7"
+        />
       </svg>
     </div>
   );
 }
-
