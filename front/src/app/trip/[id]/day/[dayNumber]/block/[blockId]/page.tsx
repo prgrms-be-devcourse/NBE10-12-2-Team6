@@ -257,6 +257,7 @@ export default function BlockDetailPage() {
   };
 
   const pickFromTie = async (candidate: PlanCandidate) => {
+    if (!day) return;
     if (fromVote) {
       try {
         await apiFetch(`${API_BASE}/api/v1/trips/${id}/votes/${blockId}/confirm-tie`, {
