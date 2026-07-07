@@ -1,7 +1,7 @@
 package csh.back.domain.trip.timeline.service;
 
-import csh.back.domain.trip.member.repository.TripMemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -16,8 +16,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @RequiredArgsConstructor
 @Service
 public class TimeLineEventService {
-    //DB 접근을 위한 Repository를 가져옴
-    private final TripMemberRepository tripMemberRepository;
+    //SSE 요청은 오래 유지되므로 JPA 영속성 컨텍스트를 열지 않고 짧은 JDBC 조회로 멤버 여부만 검증
+    private final JdbcTemplate jdbcTemplate;
 
     //SSE 연결 유지 시간
     //60초 * 60분 * 1000ms = 3,600,000ms -> 1시간 유지
@@ -102,7 +102,13 @@ public class TimeLineEventService {
 
     //여행 모임 멤버 여부 검증
     private void validateTripMember(Long tripId, Long memberId) {
-        boolean isMember = tripMemberRepository.existsByTripGroupIdAndMemberId(tripId, memberId);
+        Integer count = jdbcTemplate.queryForObject(
+                "select count(*) from trip_members where trip_id = ? and member_id = ?",
+                Integer.class,
+                tripId,
+                memberId
+        );
+        boolean isMember = count != null && count > 0;
 
         if (!isMember) {
             throw new IllegalArgumentException("여행 모임 멤버만 접근할 수 있습니다.");
