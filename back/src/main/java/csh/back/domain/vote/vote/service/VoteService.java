@@ -5,6 +5,8 @@ import csh.back.domain.trip.group.repository.TripGroupRepository;
 import csh.back.domain.trip.member.entity.TripMember;
 import csh.back.domain.trip.member.repository.TripMemberRepository;
 import csh.back.domain.trip.member.validator.TripMemberValidator;
+import csh.back.domain.trip.place.dto.response.TripPlaceFindResponse;
+import csh.back.domain.trip.place.service.TripPlaceService;
 import csh.back.domain.trip.timeline.entity.TimeLine;
 import csh.back.domain.trip.timeline.repository.TimeLineRepository;
 import csh.back.domain.vote.item.entity.VoteItem;
@@ -38,6 +40,7 @@ public class VoteService {
     private final TimeLineRepository timeLineRepository;
     private final TripMemberValidator tripMemberValidator;
     private final TripMemberRepository tripMemberRepository;
+    private final TripPlaceService tripPlaceService;
 
     private final int DEFAULT_UPDATE_COUNT = 0;
     private final boolean CONFIRM_VOTE = true;
@@ -85,6 +88,8 @@ public class VoteService {
         //각 장소에 몇포가 투표 되었는지 카운팅
         Map<Long, Long> countMap = voteCount(voteId);
 
+        Vote vote = voteRepository.findById(voteId).orElseThrow(RuntimeException::new);
+
         VoteItem voteItem = voteUser != null ? voteUser.getVoteItem() : null;
         int updateCount = voteUser != null ? voteUser.getUpdateCount() : DEFAULT_UPDATE_COUNT;
 
@@ -96,9 +101,9 @@ public class VoteService {
                         vi.equals(voteItem)
                 ))
                 .toList();
-
+        List<TripPlaceFindResponse> wishPlaceFindResponses = tripPlaceService.findWishPlaces(tripId, memberId);
         //장소의 아이디를 키로 하여 위의 맵에서 횟수를 매핑하여 반환
-        return VoteFindWithUpdateCountResponse.of(voteFindResponses, updateCount);
+        return VoteFindWithUpdateCountResponse.of(voteFindResponses, wishPlaceFindResponses, updateCount, vote.isConfirmed());
     }
 
     public Map<Long, Long> findAllVoteIds(List<Long> timeLineIds) {
