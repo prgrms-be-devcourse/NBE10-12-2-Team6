@@ -612,6 +612,12 @@ export default function DayPlanPage() {
 
   const day = trip.days[dayIdx];
   const isAdmin = trip.members.some(member => Number(member.id) === Number(currentUser.id) && member.isAdmin);
+
+  const tripStarted = (() => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const startDate = new Date(trip.startDate); startDate.setHours(0, 0, 0, 0);
+    return today >= startDate;
+  })();
   const sortedBlocks = [...day.blocks].sort((a, b) => a.startMinute - b.startMinute);
   const canComplete = isAdmin && day.blocks.length > 0;
 
@@ -893,7 +899,7 @@ export default function DayPlanPage() {
                     다시 눌러 편집화면 나가기
                   </span>
                 )}
-                <button
+                {isAdmin && !tripStarted && <button
                   type="button"
                   aria-label={isEditingTimeRanges ? "시간 구간 수정 닫기" : "시간 구간 수정"}
                   title={isEditingTimeRanges ? "시간 구간 수정 닫기" : "시간 구간 수정"}
@@ -907,7 +913,7 @@ export default function DayPlanPage() {
                   }`}
                 >
                   <PencilSimple size={20} weight="bold" />
-                </button>
+                </button>}
               </div>
             </div>
 
@@ -950,7 +956,7 @@ export default function DayPlanPage() {
                   trip={trip}
                   day={day}
                   block={block}
-                  voteHref={block.voteId ? `/trip/${id}/day/${dayNum}/block/${block.voteId}?from=vote&timelineId=${block.id}` : undefined}
+                  voteHref={!tripStarted && block.voteId ? `/trip/${id}/day/${dayNum}/block/${block.voteId}?from=vote&timelineId=${block.id}` : undefined}
                   onVoteClick={() => block.voteId && localStorage.setItem(`block-order-${block.voteId}`, String(block.order))}
                 />
               ))

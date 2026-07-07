@@ -196,8 +196,9 @@ function AddCandidateSheet({
 
 // ── TripCandidatePoolCard ─────────────────────────────────────────────────────
 
-function TripCandidatePoolCard({ trip, onUpdate }: { trip: Trip; onUpdate: (t: Trip) => void }) {
+function TripCandidatePoolCard({ trip, onUpdate, tripStatus }: { trip: Trip; onUpdate: (t: Trip) => void; tripStatus: "before" | "during" | "after" }) {
   const [showAdd, setShowAdd] = useState(false);
+  const canRegister = tripStatus === "before";
 
   return (
     <div className="p-4 flex flex-col gap-3 rounded-2xl" style={{ background: "#f0fdf4" }}>
@@ -232,13 +233,19 @@ function TripCandidatePoolCard({ trip, onUpdate }: { trip: Trip; onUpdate: (t: T
         </div>
       )}
 
-      <button
-        onClick={() => setShowAdd(true)}
-        className="w-full py-3 rounded-xl font-semibold text-sm"
-        style={{ background: "#dcfce7", color: "#16a34a" }}
-      >
-        + 후보 올리기
-      </button>
+      {canRegister ? (
+        <button
+          onClick={() => setShowAdd(true)}
+          className="w-full py-3 rounded-xl font-semibold text-sm"
+          style={{ background: "#dcfce7", color: "#16a34a" }}
+        >
+          + 후보 올리기
+        </button>
+      ) : (
+        <div className="w-full py-3 rounded-xl text-center text-sm font-semibold text-gray-400 bg-gray-100">
+          여행이 시작되어 후보 등록이 마감되었습니다
+        </div>
+      )}
 
       {showAdd && (
         <AddCandidateSheet
@@ -274,6 +281,14 @@ interface VoteDay {
   timeLines: VoteTimeline[];
 }
 
+interface DayTimelineItem {
+  timeLineId: number;
+  startTime: string;
+  endTime: string;
+  confirmedPlaceName?: string | null;
+  category?: string | null;
+}
+
 export default function TripDetailPage() {
   useAuthGuard();
   const router = useRouter();
@@ -288,17 +303,19 @@ export default function TripDetailPage() {
     if (returnTab) {
       setTab(returnTab);
       sessionStorage.removeItem(`return-tab-${id}`);
+      return;
     }
+    const savedTab = sessionStorage.getItem(`active-tab-${id}`) as Tab | null;
+    if (savedTab) setTab(savedTab);
   }, []);
 
   const changeTab = (t: Tab) => {
     setTab(t);
+    if (t !== "timeline") sessionStorage.setItem(`active-tab-${id}`, t);
   };
-  const [candidateBlink, setCandidateBlink] = useState(false);
   const [voteData, setVoteData] = useState<VoteDay[] | null>(null);
+  const [allDayTimelines, setAllDayTimelines] = useState<Record<number, DayTimelineItem[]>>({});
   const trip = trips.find(t => t.id === id);
-
-  const allDaysComplete = trip ? trip.days.length > 0 && trip.days.every(d => d.isPlanCompleted || d.isPlanSkipped) : false;
 
   const tripStatus = (() => {
     if (!trip) return "before";
@@ -372,14 +389,22 @@ export default function TripDetailPage() {
     }).catch(() => {});
   }, [id]);
 
+
   useEffect(() => {
-    if (!allDaysComplete || tab === "candidates") return;
-    const interval = setInterval(() => {
-      setCandidateBlink(true);
-      setTimeout(() => setCandidateBlink(false), 800);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [allDaysComplete, tab]);
+    if (!trip || tripStatus === "before" || trip.days.length === 0) return;
+    Promise.all(
+      trip.days.map(day =>
+        apiFetch(`${API_BASE}/api/v1/trips/${id}/timelines?dayNumber=${day.dayNumber}`)
+          .then(r => r.json())
+          .then(body => ({ dayNumber: day.dayNumber, items: (body.data ?? []) as DayTimelineItem[] }))
+          .catch(() => ({ dayNumber: day.dayNumber, items: [] }))
+      )
+    ).then(results => {
+      const map: Record<number, DayTimelineItem[]> = {};
+      results.forEach(({ dayNumber, items }) => { map[dayNumber] = items; });
+      setAllDayTimelines(map);
+    });
+  }, [trip?.id, tripStatus]);
 
   useEffect(() => {
     if (tab !== "timeline" || !trip) return;
@@ -419,7 +444,7 @@ export default function TripDetailPage() {
         updateTrip({ ...trip, candidates });
       })
       .catch(() => {});
-  }, [tab, id]);
+  }, [tab, id, trip?.id]);
 
   if (!trip) {
     return (
@@ -433,10 +458,8 @@ export default function TripDetailPage() {
     <div className="min-h-screen pb-24">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-12 pb-2">
-        <button onClick={() => router.push("/home")} className="text-blue-500 p-1 -ml-1">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
+        <button onClick={() => { sessionStorage.removeItem(`active-tab-${id}`); sessionStorage.removeItem(`return-tab-${id}`); router.push("/home"); }} className="text-blue-500 text-sm font-semibold p-1">
+          여행방 목록
         </button>
         <div className="flex-1 text-center">
           <p className="font-semibold text-base">{trip.name}</p>
@@ -480,30 +503,64 @@ export default function TripDetailPage() {
             {/* Day list */}
             <div className="flex flex-col gap-3">
               <p className="font-semibold">일차별 계획</p>
-              {trip.days.map(day => (
-                <Link key={day.id} href={`/trip/${trip.id}/day/${day.dayNumber}`}>
-                  <div className="p-4 bg-gray-50 rounded-2xl">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <p className="font-semibold">{day.dayNumber}일차</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{formatDate(day.date)}</p>
+              {trip.days.map(day => {
+                if (tripStatus !== "before") {
+                  const items = allDayTimelines[day.dayNumber] ?? [];
+                  return (
+                    <div key={day.id} className="p-4 bg-gray-50 rounded-2xl flex flex-col gap-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-semibold">{day.dayNumber}일차</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{formatDate(day.date)}</p>
+                        </div>
                       </div>
-                      {statusBadge(day)}
+                      {items.length === 0 ? (
+                        <p className="text-xs text-gray-400">확정된 계획이 없습니다.</p>
+                      ) : (
+                        <div className="flex flex-col gap-2">
+                          {items.map((item, idx) => {
+                            const toMin = (iso: string) => { const [h, m] = iso.split("T")[1].split(":").map(Number); return h * 60 + m; };
+                            const t = (min: number) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+                            return (
+                              <div key={item.timeLineId ?? idx} className="flex items-center gap-3 bg-white rounded-xl px-3 py-2.5">
+                                <span className="text-xs text-gray-400 font-bold shrink-0">{t(toMin(item.startTime))}~{t(toMin(item.endTime))}</span>
+                                {item.category && (
+                                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 shrink-0">{item.category}</span>
+                                )}
+                                <p className="text-sm font-semibold truncate">{item.confirmedPlaceName || "미확정"}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                    {!day.isPlanSkipped && day.blocks.length > 0 && (
-                      <div className="flex items-center gap-3 mt-1 text-xs font-bold">
-                        <span className="text-blue-500">{day.blocks.length}개 시간 구간</span>
+                  );
+                }
+                return (
+                  <Link key={day.id} href={`/trip/${trip.id}/day/${day.dayNumber}`}>
+                    <div className="p-4 bg-gray-50 rounded-2xl">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <p className="font-semibold">{day.dayNumber}일차</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{formatDate(day.date)}</p>
+                        </div>
+                        {statusBadge(day)}
                       </div>
-                    )}
-                  </div>
-                </Link>
-              ))}
+                      {!day.isPlanSkipped && day.blocks.length > 0 && (
+                        <div className="flex items-center gap-3 mt-1 text-xs font-bold">
+                          <span className="text-blue-500">{day.blocks.length}개 시간 구간</span>
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </>
         )}
 
         {tab === "candidates" && (
-          <TripCandidatePoolCard trip={trip} onUpdate={updateTrip} />
+          <TripCandidatePoolCard trip={trip} onUpdate={updateTrip} tripStatus={tripStatus} />
         )}
 
         {tab === "vote" && (() => {
@@ -571,6 +628,8 @@ export default function TripDetailPage() {
                             <div className="flex items-center gap-2 shrink-0">
                               {tl.confirmedPlaceName
                                 ? <span className="text-xs font-bold px-2 py-1 rounded-full" style={{ background: "#dcfce7", color: "#16a34a" }}>확정됨</span>
+                                : tripStatus !== "before"
+                                ? <span className="text-xs font-bold px-2 py-1 rounded-full" style={{ background: "#f3f4f6", color: "#9ca3af" }}>투표 마감</span>
                                 : <span className="text-xs font-bold px-2 py-1 rounded-full" style={{ background: "#dbeafe", color: "#2563eb" }}>투표하기</span>
                               }
                               <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -649,22 +708,16 @@ export default function TripDetailPage() {
             )},
           ] as const).map(({ key, label, icon }) => {
             const active = tab === key;
-            const isBlinking = key === "candidates" && candidateBlink;
             return (
               <button
                 key={key}
                 onClick={() => changeTab(key)}
                 className="flex-1 flex flex-col items-center gap-0.5 py-2 transition-all"
-                style={{ color: active ? "#3b82f6" : isBlinking ? "#f97316" : "#9ca3af" }}
+                style={{ color: active ? "#3b82f6" : "#9ca3af" }}
               >
                 {icon}
                 <span className="text-[10px] font-medium">{label}</span>
-                {active
-                  ? <span className="w-1 h-1 rounded-full bg-blue-500 mt-0.5" />
-                  : isBlinking
-                  ? <span className="w-1 h-1 rounded-full bg-orange-400 mt-0.5" />
-                  : null
-                }
+                {active && <span className="w-1 h-1 rounded-full bg-blue-500 mt-0.5" />}
               </button>
             );
           })}

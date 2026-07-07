@@ -79,6 +79,7 @@ export default function BlockDetailPage() {
   const [updateCount, setUpdateCount] = useState<number>(0);
   const [voteConfirmed, setVoteConfirmed] = useState(false);
   const [voteLoading, setVoteLoading] = useState(false);
+  const [showConfirmedModal, setShowConfirmedModal] = useState(false);
 
   const trip = trips.find(t => t.id === id);
   const dayNum = parseInt(dayNumber);
@@ -109,7 +110,7 @@ export default function BlockDetailPage() {
   useEffect(() => {
     if (!fromVote || !blockId) return;
     const saved = localStorage.getItem(`block-order-${blockId}`);
-    if (saved) setBlockOrder(Number(saved));
+    if (saved) { setBlockOrder(Number(saved)); localStorage.removeItem(`block-order-${blockId}`); }
   }, [blockId]);
 
   useEffect(() => {
@@ -143,7 +144,8 @@ export default function BlockDetailPage() {
   const block = day?.blocks.find(b => b.id === blockId);
   if (!fromVote && !block) return null;
 
-  const candidates = fromVote ? (wishPlaces ?? (trip?.candidates ?? [])) : (trip?.candidates ?? []);
+  const candidatesLoading = fromVote && wishPlaces === null;
+  const candidates = fromVote ? (wishPlaces ?? []) : (trip?.candidates ?? []);
 
   const selectedId = day?.selectedCandidateByBlock[blockId];
   const selected = candidates.find(c => c.id === selectedId);
@@ -172,7 +174,11 @@ export default function BlockDetailPage() {
         const results: VoteDetail[] = body.data?.voteResults ?? [];
         setVoteDetails(results);
         setUpdateCount(body.data?.updateCount ?? 0);
-        setVoteConfirmed(body.data?.isConfirmed ?? false);
+        const confirmed = body.data?.isConfirmed ?? false;
+        setVoteConfirmed(prev => {
+          if (!prev && confirmed) setShowConfirmedModal(true);
+          return confirmed;
+        });
         const voted = results.find(v => v.isVoted);
         if (voted) setMyVotedPlaceId(String(voted.placeId));
       });
@@ -216,6 +222,24 @@ export default function BlockDetailPage() {
     setDay({ ...day, selectedCandidateByBlock: { ...day.selectedCandidateByBlock, [blockId]: picked.id } });
     setShowHostMenu(false);
   };
+
+  const tripStarted = (() => {
+    if (!trip) return false;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const startDate = new Date(trip.startDate); startDate.setHours(0, 0, 0, 0);
+    return today >= startDate;
+  })();
+
+  const tripEnded = (() => {
+    if (!trip) return false;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const endDate = new Date(trip.startDate + "T00:00:00");
+    endDate.setDate(endDate.getDate() + trip.nights);
+    endDate.setHours(0, 0, 0, 0);
+    return today > endDate;
+  })();
+
+  const voteClosed = voteConfirmed || tripStarted;
 
   const isHost = currentUser.id === (trip?.members[0]?.id);
 
@@ -284,7 +308,7 @@ export default function BlockDetailPage() {
         {isHost ? (
           <div className="relative">
             <button
-              onClick={() => setShowHostMenu(v => !v)}
+              onClick={() => !tripStarted && setShowHostMenu(v => !v)}
               className="text-xs font-bold px-2.5 py-1.5 rounded-full"
               style={{ background: showHostMenu ? "#fef08a" : "#fef9c3", color: "#92400e" }}
             >
@@ -295,16 +319,8 @@ export default function BlockDetailPage() {
                 <div className="fixed inset-0 z-40" onClick={() => setShowHostMenu(false)} />
                 <div className="absolute right-0 top-9 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 flex flex-col gap-1 w-36">
                   <button
-                    onClick={randomConfirm}
-                    disabled={candidates.length === 0}
-                    className="w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-left disabled:opacity-40"
-                    style={{ background: "#f3e8ff", color: "#9333ea" }}
-                  >
-                    🔀 랜덤 확정
-                  </button>
-                  <button
                     onClick={decideByVote}
-                    disabled={candidates.length === 0}
+                    disabled={candidates.length === 0 || tripStarted}
                     className="w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-left disabled:opacity-40"
                     style={{ background: "#dcfce7", color: "#16a34a" }}
                   >
@@ -327,27 +343,38 @@ export default function BlockDetailPage() {
         </div>
 
         {/* Selected */}
-        {selected ? (
-          <div className="p-4 rounded-2xl" style={{ background: "#dcfce7" }}>
-            <p className="text-sm font-semibold text-green-700 mb-2">이 구간에 확정된 후보</p>
-            <div className="flex items-start gap-3">
-              <span className="text-green-500 text-xl mt-0.5">✓</span>
+        {voteDetails === null ? null : (() => {
+          const confirmedByVote = voteConfirmed && voteDetails && voteDetails.length > 0
+            ? candidates.find(c => c.id === String(voteDetails.reduce((a, b) => a.count >= b.count ? a : b).placeId))
+            : null;
+          const displaySelected = selected ?? confirmedByVote ?? null;
+
+          return displaySelected ? (
+            <div className="p-4 rounded-2xl" style={{ background: "#dcfce7" }}>
+              <p className="text-sm font-semibold mb-2" style={{ color: tripEnded ? "#374151" : "#15803d" }}>{tripEnded ? `${displaySelected.placeName} 어떠셨어요? 🥹` : "이 구간에 확정된 후보"}</p>
+              {!tripEnded && (
+                <div className="flex items-start gap-3">
+                  <span className="text-xl mt-0.5 text-green-500">✓</span>
+                  <div>
+                    <p className="font-bold">{displaySelected.placeName}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{displaySelected.address}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">등록자 {displaySelected.authorName}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="p-3 rounded-xl flex items-start gap-2" style={{ background: tripEnded ? "#faf5ff" : tripStarted ? "#f0fdf4" : "#fff7ed" }}>
+              <span className="shrink-0">{tripEnded ? "🥹" : tripStarted ? "🌿" : "💡"}</span>
               <div>
-                <p className="font-bold">{selected.placeName}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{selected.address}</p>
-                <p className="text-xs text-gray-400 mt-0.5">등록자 {selected.authorName}</p>
+                <p className="text-sm font-semibold">
+                  {tripEnded ? `${trip?.name} 여행은 어떠셨나요?` : tripStarted ? "자유로운 여행을 즐기세요~!" : "아직 확정된 후보가 없습니다."}
+                </p>
+                {!tripStarted && !tripEnded && <p className="text-xs text-gray-500">전체 후보 중 하나를 투표 또는 랜덤으로 확정하세요.</p>}
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="p-3 rounded-xl flex items-start gap-2" style={{ background: "#fff7ed" }}>
-            <span className="shrink-0">💡</span>
-            <div>
-              <p className="text-sm font-semibold">아직 확정된 후보가 없습니다.</p>
-              <p className="text-xs text-gray-500">전체 후보 중 하나를 투표 또는 랜덤으로 확정하세요.</p>
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* All candidates */}
         <div>
@@ -385,7 +412,7 @@ export default function BlockDetailPage() {
             );
           })()}
 
-          {candidates.length === 0 ? (
+          {candidatesLoading ? null : candidates.length === 0 ? (
             <div className="p-4 bg-gray-50 rounded-2xl">
               <p className="text-sm text-gray-400">아직 후보가 없습니다. 여행 모임 상세 화면에서 후보를 먼저 올려주세요.</p>
             </div>
@@ -401,8 +428,8 @@ export default function BlockDetailPage() {
                 return (
                   <div
                     key={c.id}
-                    onClick={() => { if (!voteConfirmed) setPendingVote(c.id); }}
-                    className={`p-4 rounded-2xl border transition-transform ${voteConfirmed ? "cursor-default" : "cursor-pointer active:scale-[0.98]"}`}
+                    onClick={() => { if (!voteClosed) setPendingVote(c.id); }}
+                    className={`p-4 rounded-2xl border transition-transform ${voteClosed ? "cursor-default" : "cursor-pointer active:scale-[0.98]"}`}
                     style={{
                       background: isSelected ? "#dcfce7" : pendingVote === c.id ? "#fefce8" : voted ? "#eff6ff" : "white",
                       borderColor: isSelected ? "#4ade80" : pendingVote === c.id ? "#facc15" : voted ? "#93c5fd" : "#e5e7eb",
@@ -438,10 +465,10 @@ export default function BlockDetailPage() {
       </div>
 
       {/* 하단 고정 버튼 */}
-      {voteConfirmed ? (
+      {voteClosed ? (
         <div className="px-4 py-4 border-t border-gray-100 bg-white">
           <div className="w-full py-4 rounded-2xl text-center font-semibold text-gray-400 bg-gray-100">
-            투표가 종료되었습니다
+            {voteConfirmed ? "투표가 종료되었습니다" : "여행이 시작되어 투표가 마감되었습니다"}
           </div>
         </div>
       ) : (
@@ -471,6 +498,24 @@ export default function BlockDetailPage() {
           onPick={pickFromTie}
           onClose={() => setShowTie(false)}
         />
+      )}
+
+      {showConfirmedModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowConfirmedModal(false)} />
+          <div className="relative w-72 bg-white rounded-3xl p-6 flex flex-col items-center gap-4 shadow-xl">
+            <span className="text-5xl">🎉</span>
+            <p className="text-lg font-bold text-center">투표가 확정되었습니다!</p>
+            <p className="text-sm text-gray-500 text-center">장소가 확정되었어요. 일정 화면에서 확인해보세요.</p>
+            <button
+              onClick={() => setShowConfirmedModal(false)}
+              className="w-full py-3.5 rounded-2xl font-semibold text-white"
+              style={{ background: "#3b82f6" }}
+            >
+              확인
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
