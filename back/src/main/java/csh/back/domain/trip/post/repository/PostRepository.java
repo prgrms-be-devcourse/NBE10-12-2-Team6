@@ -5,6 +5,8 @@ import csh.back.domain.trip.post.entity.Post;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface PostRepository extends JpaRepository<Post, Long> {
@@ -13,6 +15,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     List<Post> findByAuthorId(Long authorId);
 
     List<Post> findByAuthorIdInOrderByCreatedAtAsc(List<Long> authorIds);
+
+    List<Post> findAllByAuthorId(Long authorId);
 
     @Query("""
         SELECT p FROM Post p
@@ -23,4 +27,5 @@ public interface PostRepository extends JpaRepository<Post, Long> {
         """)
     List<Post> findWithTimeLineAndPlaceByAuthorIdIn(List<TripMember> members);
 
+    List<Post> findByAuthorIdAndCreatedAtBetween(Long memberId, LocalDateTime startTime, LocalDateTime endTime);
 }

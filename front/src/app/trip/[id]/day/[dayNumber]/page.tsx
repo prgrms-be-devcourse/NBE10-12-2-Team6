@@ -17,6 +17,8 @@ type TimeLineApiItem = {
   dayNumber: number;
   startTime: string;
   endTime: string;
+  confirmedPlaceName?: string | null;
+  category?: string | null;
 };
 
 type TimelineEventPayload = {
@@ -47,6 +49,8 @@ const toActivityBlocks = (items: TimeLineApiItem[]): ActivityBlock[] =>
     startMinute: isoToMinutes(item.startTime),
     endMinute: isoToMinutes(item.endTime),
     voteId: item.voteId != null ? String(item.voteId) : null,
+    confirmedPlaceName: item.confirmedPlaceName ?? null,
+    category: item.category ?? null,
   }));
 
 const parseSseEvent = (rawEvent: string) => {
@@ -384,18 +388,24 @@ function PlanSummaryCard({
   onVoteClick?: () => void;
 }) {
   const selected = trip.candidates.find(c => c.id === day.selectedCandidateByBlock[block.id]);
+  const confirmedName = block.confirmedPlaceName || selected?.placeName || null;
   const content = (
-    <div className="flex gap-4 p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
-      <div className="flex flex-col items-center text-sm text-gray-400 shrink-0 pt-0.5">
+    <div className="flex gap-4 p-4 bg-white rounded-2xl shadow-sm border border-gray-100 items-center">
+      <div className="flex flex-col items-center text-sm text-gray-400 shrink-0">
         <span className="font-bold">{timeText(block.startMinute)}</span>
         <div className="w-0.5 h-8 bg-gray-200 my-1" />
         <span className="font-bold">{timeText(block.endMinute)}</span>
       </div>
       <div className="flex-1 min-w-0 flex flex-col justify-center">
-        {selected ? (
+        {confirmedName ? (
           <>
-            <p className="font-semibold text-sm truncate">{selected.placeName}</p>
-            <p className="text-xs text-gray-400 truncate">{selected.address}</p>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 shrink-0">
+                {block.category || "기타"}
+              </span>
+              <p className="font-semibold text-sm truncate">{confirmedName}</p>
+            </div>
+            {selected?.address && <p className="text-xs text-gray-400 mt-0.5 truncate">{selected.address}</p>}
           </>
         ) : (
           <>
@@ -406,7 +416,7 @@ function PlanSummaryCard({
           </>
         )}
       </div>
-      {selected && <span className="text-green-500 shrink-0 self-center">✓</span>}
+      {confirmedName && <span className="text-green-500 shrink-0 self-center">✓</span>}
     </div>
   );
 

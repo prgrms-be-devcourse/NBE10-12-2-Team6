@@ -41,7 +41,7 @@ public class Vote extends BaseEntity {
     private LocalDateTime expireTime;
 
     @Column(nullable = false)
-    private boolean isConfirmed;
+    private boolean isConfirmed = false;
 
 
     //생성자

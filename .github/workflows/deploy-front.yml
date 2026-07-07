@@ -103,7 +103,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.HOST }}
-          username: ubuntu
+          username: ${{ secrets.USER }}
           key: ${{ secrets.KEY }}
           script: |
             cd ${{ env.TARGET_DIR }}

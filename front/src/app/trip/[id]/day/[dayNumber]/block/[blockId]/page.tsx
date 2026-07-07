@@ -77,6 +77,7 @@ export default function BlockDetailPage() {
   const [blockOrder, setBlockOrder] = useState<number | null>(null);
   const [myVotedPlaceId, setMyVotedPlaceId] = useState<string | null>(null);
   const [updateCount, setUpdateCount] = useState<number>(0);
+  const [voteConfirmed, setVoteConfirmed] = useState(false);
   const [voteLoading, setVoteLoading] = useState(false);
 
   const trip = trips.find(t => t.id === id);
@@ -119,24 +120,19 @@ export default function BlockDetailPage() {
         const results: VoteDetail[] = body.data?.voteResults ?? [];
         setVoteDetails(results);
         setUpdateCount(body.data?.updateCount ?? 0);
+        setVoteConfirmed(body.data?.isConfirmed ?? false);
         const voted = results.find(v => v.isVoted);
         if (voted) setMyVotedPlaceId(String(voted.placeId));
-      });
-
-    if (trip && trip.candidates.length > 0) {
-      setWishPlaces(trip.candidates);
-    } else {
-      apiFetch(`${API_BASE}/api/v1/trips/${id}/wish-places`)
-        .then(r => r.json())
-        .then(body => setWishPlaces((body.data ?? []).map((w: { placeId: number; name: string; address: string; theme: string; createdBy: string }) => ({
+        const wishList = (body.data?.wishPlaceFindResponses ?? []).map((w: { placeId: number; name: string; address: string; theme: string; createdBy: string }) => ({
           id: String(w.placeId),
           authorId: 0,
           authorName: w.createdBy,
           placeName: w.name,
           address: w.address,
           category: w.theme,
-        }))));
-    }
+        }));
+        setWishPlaces(wishList);
+      });
   }, [fromVote, id, blockId]);
 
   if (!trip && !fromVote) return null;
@@ -176,6 +172,7 @@ export default function BlockDetailPage() {
         const results: VoteDetail[] = body.data?.voteResults ?? [];
         setVoteDetails(results);
         setUpdateCount(body.data?.updateCount ?? 0);
+        setVoteConfirmed(body.data?.isConfirmed ?? false);
         const voted = results.find(v => v.isVoted);
         if (voted) setMyVotedPlaceId(String(voted.placeId));
       });
@@ -404,8 +401,8 @@ export default function BlockDetailPage() {
                 return (
                   <div
                     key={c.id}
-                    onClick={() => setPendingVote(c.id)}
-                    className="p-4 rounded-2xl border cursor-pointer active:scale-[0.98] transition-transform"
+                    onClick={() => { if (!voteConfirmed) setPendingVote(c.id); }}
+                    className={`p-4 rounded-2xl border transition-transform ${voteConfirmed ? "cursor-default" : "cursor-pointer active:scale-[0.98]"}`}
                     style={{
                       background: isSelected ? "#dcfce7" : pendingVote === c.id ? "#fefce8" : voted ? "#eff6ff" : "white",
                       borderColor: isSelected ? "#4ade80" : pendingVote === c.id ? "#facc15" : voted ? "#93c5fd" : "#e5e7eb",
@@ -441,24 +438,32 @@ export default function BlockDetailPage() {
       </div>
 
       {/* 하단 고정 버튼 */}
-      <div className="px-4 py-4 border-t border-gray-100 flex gap-2 bg-white">
-        <button
-          onClick={randomVote}
-          disabled={candidates.length === 0 || updateCount >= 2}
-          className="flex-1 py-4 rounded-2xl font-semibold disabled:opacity-40"
-          style={{ background: "#f3e8ff", color: "#9333ea" }}
-        >
-          🔀 랜덤 투표
-        </button>
-        <button
-          onClick={() => { if (pendingVote && !voteLoading) { vote(pendingVote); setPendingVote(null); } }}
-          disabled={!pendingVote || voteLoading || updateCount >= 2}
-          className="flex-1 py-4 rounded-2xl font-semibold disabled:opacity-40"
-          style={{ background: "#dbeafe", color: "#2563eb" }}
-        >
-          {voteLoading ? "투표 중..." : "투표하기"}
-        </button>
-      </div>
+      {voteConfirmed ? (
+        <div className="px-4 py-4 border-t border-gray-100 bg-white">
+          <div className="w-full py-4 rounded-2xl text-center font-semibold text-gray-400 bg-gray-100">
+            투표가 종료되었습니다
+          </div>
+        </div>
+      ) : (
+        <div className="px-4 py-4 border-t border-gray-100 flex gap-2 bg-white">
+          <button
+            onClick={randomVote}
+            disabled={candidates.length === 0 || updateCount >= 2}
+            className="flex-1 py-4 rounded-2xl font-semibold disabled:opacity-40"
+            style={{ background: "#f3e8ff", color: "#9333ea" }}
+          >
+            🔀 랜덤 투표
+          </button>
+          <button
+            onClick={() => { if (pendingVote && !voteLoading) { vote(pendingVote); setPendingVote(null); } }}
+            disabled={!pendingVote || voteLoading || updateCount >= 2}
+            className="flex-1 py-4 rounded-2xl font-semibold disabled:opacity-40"
+            style={{ background: "#dbeafe", color: "#2563eb" }}
+          >
+            {voteLoading ? "투표 중..." : "투표하기"}
+          </button>
+        </div>
+      )}
 
       {showTie && (
         <TieRandomSheet
