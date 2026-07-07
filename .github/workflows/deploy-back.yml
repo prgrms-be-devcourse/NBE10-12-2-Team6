@@ -25,7 +25,7 @@ env:
   CONTAINER_NAME: spring-backend    # 서버에서 실행될 컨테이너 이름
   ARTIFACT_NAME: my-app.tar.gz      # 서버로 전송할 이미지 압축 파일명
   TARGET_DIR: /home/ubuntu/triplog/back   # 서버에서 파일을 저장할 디렉토리
-  HOST_PORT: 80                     # 외부에서 접근할 포트
+  HOST_PORT: 8080                   # 외부에서 접근할 포트 (Nginx가 localhost:8080으로 프록시)
   CONTAINER_PORT: 8080              # Spring Boot 앱이 내부에서 사용하는 포트
 
 jobs:
@@ -56,8 +56,9 @@ jobs:
 
       # [5] back/Dockerfile을 기준으로 Docker 이미지 빌드
       #     이미지명: triplog-backend:{VERSION}
+      #     --platform linux/arm64: Oracle Cloud 서버(ARM64)에 맞게 빌드
       - name: 🍏 Build Docker Image
-        run: docker build -t $IMAGE_NAME:${{ env.VERSION }} ./back
+        run: docker build --platform linux/arm64 -t $IMAGE_NAME:${{ env.VERSION }} ./back
 
       # [6] 빌드된 이미지를 .tar.gz 압축 파일로 저장
       #     (서버에 Docker Hub 없이 직접 전송하기 위한 방식)
