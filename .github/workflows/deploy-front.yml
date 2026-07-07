@@ -1,5 +1,10 @@
 name: Deploy Dockerized Next.js to Oracle Cloud
 
+# ────────────────────────────────────────────────────────────
+# 트리거 조건
+#   - main 브랜치에 deploy-version-front.yml 파일이 변경되어 push될 때 자동 실행
+#   - 또는 GitHub Actions UI에서 수동으로 실행 가능 (workflow_dispatch)
+# ────────────────────────────────────────────────────────────
 on:
   push:
     branches:
@@ -12,46 +17,64 @@ permissions:
   id-token: write
   contents: read
 
+# ────────────────────────────────────────────────────────────
+# 워크플로우 전체에서 공통으로 사용하는 환경변수
+# ────────────────────────────────────────────────────────────
 env:
-  IMAGE_NAME: triplog-frontend               # 원하는 도커 이미지 이름
-  CONTAINER_NAME: next-frontend           # 실행될 컨테이너 이름
-  ARTIFACT_NAME: my-app.tar.gz     # 전송할 tar 파일 이름
-  TARGET_DIR: /triplog/front  # 서버에서 사용할 디렉토리
-  HOST_PORT: 3000                  # 외부에서 접근할 포트
-  CONTAINER_PORT: 3000             # 앱이 내부에서 열 포트
+  IMAGE_NAME: triplog-frontend      # Docker 이미지 이름
+  CONTAINER_NAME: next-frontend     # 서버에서 실행될 컨테이너 이름
+  ARTIFACT_NAME: my-app.tar.gz      # 서버로 전송할 이미지 압축 파일명
+  TARGET_DIR: /home/ubuntu/triplog/front  # 서버에서 파일을 저장할 디렉토리
+  HOST_PORT: 80                     # 외부에서 접근할 포트
+  CONTAINER_PORT: 3000              # Next.js 앱이 내부에서 사용하는 포트
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # [1] GitHub 레포지토리 코드를 Actions Runner(빌드 서버)에 내려받기
       - name: 🍏 Checkout Repository
         uses: actions/checkout@v4
 
+      # [2] deploy-version-front.yml에서 version 값을 읽어 이미지 태그로 사용
+      #     예: "1.0.0" → 이미지명 triplog-frontend:1.0.0
       - name: 🍏 Extract version from deploy-version-front.yml
         run: |
           VERSION=$(jq -r .version < deploy-version-front.yml)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
+      # [3] GitHub Secrets에 등록된 값으로 .env 파일 생성
+      #     이 파일은 Docker 컨테이너 실행 시 환경변수로 주입됨
       - name: 🍏 Create .env file from Secrets
         run: |
           echo "KAKAO_REST_API_KEY=${{ secrets.KAKAO_REST_API_KEY }}" > .env
 
+      # [4] 멀티 플랫폼 Docker 이미지 빌드를 위한 Buildx 설정
       - name: 🍏 Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # [5] front/Dockerfile을 기준으로 Docker 이미지 빌드
+      #     이미지명: triplog-frontend:{VERSION}
       - name: 🍏 Build Docker Image
         run: docker build -t $IMAGE_NAME:${{ env.VERSION }} ./front
 
+      # [6] 빌드된 이미지를 .tar.gz 압축 파일로 저장
+      #     (서버에 Docker Hub 없이 직접 전송하기 위한 방식)
       - name: 🍏 Save Docker Image as Tarball
         run: docker save $IMAGE_NAME:${{ env.VERSION }} | gzip > $ARTIFACT_NAME
 
+      # [7] SCP로 전송할 파일들을 upload/ 폴더에 모으기
+      #     - 이미지 tarball
+      #     - .env 파일
       - name: 🍏 Prepare upload directory
         run: |
           mkdir upload
           cp $ARTIFACT_NAME upload/
           cp .env upload/
 
+      # [8] SCP를 이용해 upload/ 폴더 내 파일들을 Oracle Cloud 서버로 전송
+      #     target 경로: /triplog/front/
       - name: 🍏 Copy to Oracle Cloud
         uses: appleboy/scp-action@v0.1.4
         with:
@@ -62,6 +85,10 @@ jobs:
           target: ${{ env.TARGET_DIR }}
           strip_components: 1
 
+      # [9] SSH로 Oracle Cloud 서버에 접속하여 Docker 컨테이너 교체 배포
+      #     - docker load: 전송받은 이미지 tarball을 Docker에 등록
+      #     - docker stop/rm: 기존 컨테이너 종료 및 삭제 (없어도 에러 무시)
+      #     - docker run: 새 이미지로 컨테이너 실행 (백그라운드 -d)
       - name: 🐳 Deploy on Oracle Cloud VM via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -78,5 +105,6 @@ jobs:
               -p ${{ env.HOST_PORT }}:${{ env.CONTAINER_PORT }} \
               ${{ env.IMAGE_NAME }}:${{ env.VERSION }}
 
+      # [10] Actions Runner에 남아있는 임시 파일 삭제 (보안 및 용량 정리)
       - name: 🍏 Clean up local temp files
         run: rm -rf upload .env $ARTIFACT_NAME
