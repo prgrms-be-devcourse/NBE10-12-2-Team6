@@ -25,7 +25,7 @@ env:
   CONTAINER_NAME: next-frontend     # 서버에서 실행될 컨테이너 이름
   ARTIFACT_NAME: my-app.tar.gz      # 서버로 전송할 이미지 압축 파일명
   TARGET_DIR: /home/ubuntu/triplog/front  # 서버에서 파일을 저장할 디렉토리
-  HOST_PORT: 3000                   # 외부에서 접근할 포트 (Nginx가 localhost:3000으로 프록시)
+  HOST_PORT: 3000                   # 서버 포트 (Nginx가 localhost:3000으로 프록시)
   CONTAINER_PORT: 3000              # Next.js 앱이 내부에서 사용하는 포트
 
 jobs:
@@ -51,6 +51,7 @@ jobs:
           echo "KAKAO_REST_API_KEY=${{ secrets.KAKAO_REST_API_KEY }}" > .env
 
       # [4] arm64 크로스 플랫폼 빌드를 위한 QEMU 에뮬레이터 설치
+      #     GitHub Actions 서버(amd64)에서 Oracle Cloud 서버(arm64)용 이미지를 빌드하기 위해 필요
       - name: 🍏 Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
@@ -60,18 +61,18 @@ jobs:
       - name: 🍏 Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # [5] front/Dockerfile을 기준으로 Docker 이미지 빌드
-      #     이미지명: triplog-frontend:{VERSION}
-      #     --platform linux/arm64: Oracle Cloud 서버(ARM64)에 맞게 빌드
+      # [6] front/Dockerfile을 기준으로 Docker 이미지 빌드
+      #     --platform linux/arm64: Oracle Cloud 서버(arm64)에 맞게 빌드
+      #     --load: 빌드한 이미지를 로컬 Docker daemon에 저장 (docker save 사용을 위해 필요)
       - name: 🍏 Build Docker Image
-        run: docker build --platform linux/arm64 -t $IMAGE_NAME:${{ env.VERSION }} ./front
+        run: docker buildx build --platform linux/arm64 --load -t $IMAGE_NAME:${{ env.VERSION }} ./front
 
-      # [6] 빌드된 이미지를 .tar.gz 압축 파일로 저장
+      # [7] 빌드된 이미지를 .tar.gz 압축 파일로 저장
       #     (서버에 Docker Hub 없이 직접 전송하기 위한 방식)
       - name: 🍏 Save Docker Image as Tarball
         run: docker save $IMAGE_NAME:${{ env.VERSION }} | gzip > $ARTIFACT_NAME
 
-      # [7] SCP로 전송할 파일들을 upload/ 폴더에 모으기
+      # [8] SCP로 전송할 파일들을 upload/ 폴더에 모으기
       #     - 이미지 tarball
       #     - .env 파일
       - name: 🍏 Prepare upload directory
@@ -80,8 +81,8 @@ jobs:
           cp $ARTIFACT_NAME upload/
           cp .env upload/
 
-      # [8] SCP를 이용해 upload/ 폴더 내 파일들을 Oracle Cloud 서버로 전송
-      #     target 경로: /triplog/front/
+      # [9] SCP를 이용해 upload/ 폴더 내 파일들을 Oracle Cloud 서버로 전송
+      #     target 경로: /home/ubuntu/triplog/front/
       - name: 🍏 Copy to Oracle Cloud
         uses: appleboy/scp-action@v0.1.4
         with:
@@ -92,10 +93,12 @@ jobs:
           target: ${{ env.TARGET_DIR }}
           strip_components: 1
 
-      # [9] SSH로 Oracle Cloud 서버에 접속하여 Docker 컨테이너 교체 배포
-      #     - docker load: 전송받은 이미지 tarball을 Docker에 등록
-      #     - docker stop/rm: 기존 컨테이너 종료 및 삭제 (없어도 에러 무시)
-      #     - docker run: 새 이미지로 컨테이너 실행 (백그라운드 -d)
+      # [10] SSH로 Oracle Cloud 서버에 접속하여 Docker 컨테이너 교체 배포
+      #      - docker load: 전송받은 이미지 tarball을 Docker에 등록
+      #      - docker stop/rm: 기존 컨테이너 종료 및 삭제 (없어도 에러 무시)
+      #      - docker run: 새 이미지로 컨테이너 실행
+      #        --restart unless-stopped: 서버 재부팅 시 컨테이너 자동 재시작
+      #      - docker image prune: 사용하지 않는 구버전 이미지 삭제 (디스크 절약)
       - name: 🐳 Deploy on Oracle Cloud VM via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -107,11 +110,14 @@ jobs:
             docker load < ${{ env.ARTIFACT_NAME }}
             docker stop ${{ env.CONTAINER_NAME }} || true
             docker rm ${{ env.CONTAINER_NAME }} || true
-            docker run -d --name ${{ env.CONTAINER_NAME }} \
+            docker run -d \
+              --name ${{ env.CONTAINER_NAME }} \
+              --restart unless-stopped \
               --env-file .env \
               -p ${{ env.HOST_PORT }}:${{ env.CONTAINER_PORT }} \
               ${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+            docker image prune -f
 
-      # [10] Actions Runner에 남아있는 임시 파일 삭제 (보안 및 용량 정리)
+      # [11] Actions Runner에 남아있는 임시 파일 삭제 (보안 및 용량 정리)
       - name: 🍏 Clean up local temp files
         run: rm -rf upload .env $ARTIFACT_NAME
