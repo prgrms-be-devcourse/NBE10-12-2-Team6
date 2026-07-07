@@ -4,6 +4,7 @@ import csh.back.domain.member.repository.MemberRepository;
 import csh.back.global.jwt.JwtAuthenticationFilter;
 import csh.back.global.jwt.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -28,6 +29,9 @@ public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
     private final MemberRepository memberRepository;
+
+    @Value("${cors.allowed-origins}")
+    private List<String> allowedOrigins;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -64,7 +68,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000","http://192.168.0.5:3000","http://172.28.103.51:3000","http://168.107.11.88:3000"));
+        configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Authorization"));
