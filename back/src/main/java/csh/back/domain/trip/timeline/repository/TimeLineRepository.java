@@ -13,6 +13,7 @@ public interface TimeLineRepository extends JpaRepository<TimeLine, Long> {
     List<TimeLine> findAllByTripGroupId(Long tripId);
 
     //특정 여행 모임의 특정 일차 타임라인 목록을 시작 시간 기준으로 조회
+    @Query("select t from TimeLine t left join fetch t.confirmedPlace where t.tripGroup.id = :tripId and t.dayNumber = :dayNumber order by t.startTime asc")
     List<TimeLine> findByTripGroupIdAndDayNumberOrderByStartTimeAsc(Long tripId, int dayNumber);
 
     //수정, 삭제하려는 타임라인이 해당 여행 모임에 속하는지 확인하면서 조회
