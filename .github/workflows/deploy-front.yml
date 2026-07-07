@@ -1,11 +1,11 @@
-name: Deploy Dockerized Spring Boot to Oracle Cloud
+name: Deploy Dockerized Next.js to Oracle Cloud
 
 on:
   push:
     branches:
       - main
     paths:
-      - deploy-version-back.yml
+      - deploy-version-front.yml
   workflow_dispatch:
 
 permissions:
@@ -13,12 +13,12 @@ permissions:
   contents: read
 
 env:
-  IMAGE_NAME: triplog-backend              # 원하는 도커 이미지 이름
-  CONTAINER_NAME: spring-backend  # 실행될 컨테이너 이름
+  IMAGE_NAME: triplog-frontend               # 원하는 도커 이미지 이름
+  CONTAINER_NAME: next-frontend           # 실행될 컨테이너 이름
   ARTIFACT_NAME: my-app.tar.gz     # 전송할 tar 파일 이름
-  TARGET_DIR: /triplog/back  # 서버에서 사용할 디렉토리
-  HOST_PORT: 8080                  # 외부에서 접근할 포트
-  CONTAINER_PORT: 8080             # 앱이 내부에서 열 포트
+  TARGET_DIR: /triplog/front  # 서버에서 사용할 디렉토리
+  HOST_PORT: 3000                  # 외부에서 접근할 포트
+  CONTAINER_PORT: 3000             # 앱이 내부에서 열 포트
 
 jobs:
   build-and-deploy:
@@ -28,20 +28,20 @@ jobs:
       - name: 🍏 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: 🍏 Extract version from deploy-version-back.yml
+      - name: 🍏 Extract version from deploy-version-front.yml
         run: |
-          VERSION=$(jq -r .version < deploy-version-back.yml)
+          VERSION=$(jq -r .version < deploy-version-front.yml)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: 🍏 Create .env file from Secrets
         run: |
-          echo "FILE_UPLOAD_BASE_URL=${{ secrets.FILE_UPLOAD_BASE_URL }}" > .env
+          echo "KAKAO_REST_API_KEY=${{ secrets.KAKAO_REST_API_KEY }}" > .env
 
       - name: 🍏 Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: 🍏 Build Docker Image
-        run: docker build -t $IMAGE_NAME:${{ env.VERSION }} ./back
+        run: docker build -t $IMAGE_NAME:${{ env.VERSION }} ./front
 
       - name: 🍏 Save Docker Image as Tarball
         run: docker save $IMAGE_NAME:${{ env.VERSION }} | gzip > $ARTIFACT_NAME
