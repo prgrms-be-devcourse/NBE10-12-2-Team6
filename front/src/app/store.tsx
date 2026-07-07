@@ -20,6 +20,8 @@ export interface ActivityBlock {
   startMinute: number;
   endMinute: number;
   voteId?: string | null;
+  confirmedPlaceName?: string | null;
+  category?: string | null;
 }
 
 export interface PlanCandidate {

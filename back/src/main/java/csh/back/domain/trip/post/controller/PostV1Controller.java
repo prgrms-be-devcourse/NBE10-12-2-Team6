@@ -4,9 +4,12 @@ import csh.back.domain.member.dto.response.AuthFilterDto;
 import csh.back.domain.trip.post.dto.request.CreatePostRequest;
 import csh.back.domain.trip.post.dto.request.UpdatePostRequest;
 import csh.back.domain.trip.post.dto.response.PostResponse;
+import csh.back.domain.trip.post.dto.response.PostTimeLineResponse;
 import csh.back.domain.trip.post.dto.response.PostsDailyResponse;
 import csh.back.domain.trip.post.service.PostService;
+import csh.back.domain.trip.timeline.service.TimeLineService;
 import csh.back.global.annotation.ApiV1;
+import csh.back.global.dto.ResponseData;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +17,6 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import csh.back.domain.trip.post.dto.response.TimelinePostsResponse;
 
 import java.util.List;
 
@@ -26,6 +28,7 @@ import java.util.List;
 public class PostV1Controller {
 
     private final PostService postService;
+    private final TimeLineService timeLineService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "게시글 생성", description = "사진이 포함된 게시글을 생성합니다.")
@@ -75,5 +78,19 @@ public class PostV1Controller {
             @PathVariable Long postId
     ) {
         postService.delete(tripId, postId);
+    }
+
+    //Swagger 문서에 일차별 타임라인 목록 조회 API 설명 표시
+    @Operation(summary = "일차별 타임라인 시간 구간 목록 조회")
+    //특정 여행 모임의 특정 일차 타임라인 목록 조회
+    @GetMapping("/is-taken")
+    public ResponseData<PostTimeLineResponse> getPostsWithIsTaken(
+            @PathVariable Long tripId,
+            @RequestParam int dayNumber,
+            @AuthenticationPrincipal AuthFilterDto member) {
+        return new ResponseData<>(
+                200,
+                postService.getCurrentSlot(tripId, member.id(), dayNumber)
+        );
     }
 }
