@@ -68,8 +68,8 @@ export function ThemeBadge({ theme }: { theme: PlanTheme }) {
 
 export const API_BASE =
   typeof window !== "undefined"
-    ? `http://${window.location.hostname}`
-    : "http://168.107.11.88";
+    ? (process.env.NEXT_PUBLIC_API_BASE ?? window.location.origin)
+    : (process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080");
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 
