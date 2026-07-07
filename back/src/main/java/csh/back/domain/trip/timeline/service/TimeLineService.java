@@ -19,6 +19,7 @@ import csh.back.domain.vote.vote.dto.web.VoteTimeLineResponse;
 import csh.back.domain.vote.vote.enums.VoteConfirmStatus;
 import csh.back.domain.vote.vote.repository.VoteRepository;
 import csh.back.domain.vote.vote.service.VoteService;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +44,7 @@ public class TimeLineService {
     private final VoteService voteService;
     private final TimeLineEventService timeLineEventService;
     private final TripMemberValidator tripMemberValidator;
+    private final EntityManager entityManager;
 
     //최소 일차
     private static final int MINIMUM_DAY = 1;
@@ -75,7 +77,7 @@ public class TimeLineService {
         TimeLine savedTimeLine = timeLineRepository.save(timeLine);
         voteService.createVote(tripId, memberId, savedTimeLine);
         //서버에 이벤트 발송
-        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId);
+        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId, memberId);
         return TimeLineResponse.from(savedTimeLine);
     }
 
@@ -123,7 +125,7 @@ public class TimeLineService {
         List<TimeLine> savedTimeLines = timeLineRepository.saveAll(timeLines);
         voteService.createVoteBatch(tripId, memberId, savedTimeLines);
         //서버에 이벤트 발송
-        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId);
+        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId, memberId);
         //저장된 타임라인 목록을 응답 DTO 목록으로 변환
         return savedTimeLines.stream()
                 .map(TimeLineResponse::from)
@@ -170,10 +172,7 @@ public class TimeLineService {
 
     public TimeLineResponse updateTimeLine(Long tripId, Long timelineId, Long memberId, TimeLineUpdateRequest request) {
         //여행 모임 멤버 여부 검증 추가
-        //후에 상황보고 추가 -> 방장만 교체할 수 있도록 교체
-        //validateTripMember(tripId, memberId);
-        //여행 모임 방장 여부 검증
-        validateTripAdmin(tripId, memberId);
+        validateTripMember(tripId, memberId);
         //같은 여행 모임의 타임라인 시간 수정 요청을 순차적으로 처리하기 위함
         lockTripGroup(tripId);
         //시작 시간과 종료 시간의 순서 검증
@@ -193,7 +192,7 @@ public class TimeLineService {
         // 시간 범위 수정
         timeLine.updateTimeRange(request.startTime(), request.endTime());
         //서버에 이벤트 발송
-        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId);
+        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId, memberId);
         // 수정된 타임라인 응답 반환
         return TimeLineResponse.from(timeLine);
     }
@@ -205,10 +204,11 @@ public class TimeLineService {
 
         //tripId와 timeLineId가 모두 일치하는 타임라인 조회
         TimeLine timeLine = findTimeLine(tripId, timelineId);
+        deleteVotesByTimeLine(timelineId);
         //타임라인 제거
         timeLineRepository.delete(timeLine);
         //서버에 이벤트 발송
-        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId);
+        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId, memberId);
 
     }
 
@@ -235,7 +235,7 @@ public class TimeLineService {
         Long confirmPlaceId = voteTimeLineResponse.confirmPlaceId();
         confirmPlaceByHost(voteTimeLineResponse.timeLine() ,tripId, confirmPlaceId);
         //서버에 이벤트 발송
-        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId);
+        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId, memberId);
         return VoteConfirmResponse.of(VoteConfirmStatus.CONFIRMED, confirmPlaceId, null);
     }
 
@@ -252,7 +252,7 @@ public class TimeLineService {
         TimeLine timeLine = voteRepository.findTimeLineByVoteId(voteId).orElseThrow(RuntimeException::new);
         confirmPlaceByHost(timeLine, tripId, confirmPlaceId);
         //서버에 이벤트 발송
-        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId);
+        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId, memberId);
         //응답 반환
         return VoteConfirmResponse.of(VoteConfirmStatus.CONFIRMED, confirmPlaceId, null);
     }
@@ -263,7 +263,35 @@ public class TimeLineService {
                 .orElseThrow(()-> new IllegalArgumentException("확정된 장소가 없습니다."));
         //타임라인에 확정 장소 반영
         timeLine.updateConfirmedPlace(tripPlace);
+    }
 
+    private void deleteVotesByTimeLine(Long timelineId) {
+        entityManager.createQuery("""
+                        delete from VoteUser vu
+                        where vu.vote.id in (
+                            select v.id from Vote v
+                            where v.timeLine.id = :timelineId
+                        )
+                        """)
+                .setParameter("timelineId", timelineId)
+                .executeUpdate();
+
+        entityManager.createQuery("""
+                        delete from VoteItem vi
+                        where vi.vote.id in (
+                            select v.id from Vote v
+                            where v.timeLine.id = :timelineId
+                        )
+                        """)
+                .setParameter("timelineId", timelineId)
+                .executeUpdate();
+
+        entityManager.createQuery("""
+                        delete from Vote v
+                        where v.timeLine.id = :timelineId
+                        """)
+                .setParameter("timelineId", timelineId)
+                .executeUpdate();
     }
 
     //같은 여행 모임의 타임라인 시간 수정 요청을 순차적으로 처리하기 위한 락 메서드

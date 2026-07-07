@@ -322,11 +322,12 @@ export default function TripDetailPage() {
       const counts: { day: number; count: number }[] = countBody.data ?? [];
 
       const COLORS = ["blue", "orange", "green", "purple", "pink", "teal", "indigo", "cyan"];
-      const members: { id: number; name: string; color: string }[] =
+      const members: { id: number; name: string; color: string; isAdmin?: boolean }[] =
         (tripData.members ?? []).map((m: { memberId: number; name: string; admin: boolean }, i: number) => ({
           id: m.memberId,
           name: m.name,
           color: COLORS[i % COLORS.length],
+          isAdmin: m.admin,
         }));
 
       const baseDays = trip?.days ?? Array.from(
