@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -55,4 +56,10 @@ public interface TimeLineRepository extends JpaRepository<TimeLine, Long> {
 
     @Query("SELECT vu.dayNumber, COUNT(vu) FROM TimeLine vu WHERE vu.tripGroup.id = :tripId GROUP BY vu.dayNumber")
     List<Object[]> countGroupByDayNumberId(Long tripId);
+
+    @Query("select t from TimeLine t " +
+            "left join fetch t.confirmedPlace " +
+            "where t.tripGroup.id = :tripId and t.dayNumber = :dayNumber " +
+            "order by t.startTime asc")
+    List<TimeLine> findByTripAndDateSorted(Long tripId, int dayNumber);
 }

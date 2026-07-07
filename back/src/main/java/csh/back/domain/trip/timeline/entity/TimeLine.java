@@ -35,9 +35,6 @@ public class TimeLine extends BaseEntity {
     @JoinColumn(name = "confirmed_place_id", nullable = true)
     private TripPlace confirmedPlace;
 
-    @Column(nullable = false)
-    private boolean isTakedPicture = false;
-
     //이 타임라인이 몇 일차에 속하는 지
     private int dayNumber;
 

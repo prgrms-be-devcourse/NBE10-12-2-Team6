@@ -5,8 +5,10 @@ import csh.back.domain.trip.group.service.TripGroupService;
 import csh.back.domain.trip.member.entity.TripMember;
 import csh.back.domain.trip.member.repository.TripMemberRepository;
 import csh.back.domain.trip.member.validator.TripMemberValidator;
+import csh.back.domain.trip.place.entity.TripPlace;
 import csh.back.domain.trip.post.dto.request.UpdatePostRequest;
 import csh.back.domain.trip.post.dto.response.PostResponse;
+import csh.back.domain.trip.post.dto.response.PostTimeLineResponse;
 import csh.back.domain.trip.post.dto.response.PostsDailyResponse;
 import csh.back.domain.trip.post.entity.Post;
 import csh.back.domain.trip.post.repository.PostRepository;
@@ -20,9 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -114,6 +116,8 @@ public class PostService {
         if(timeLineId != null) timeLine = timeLineRepository.findById(timeLineId).orElse(null);
 
 
+
+
         // 이미지 저장
         String imageUrl = null;
 
@@ -160,5 +164,96 @@ public class PostService {
         validateAuthor(post);
 
         return post;
+    }
+
+    /**
+     * 현재 시각이 속한 슬롯 하나의 상태를 반환.
+     * - 일정(timeline) 안이면 그 일정의 실제 start~end
+     * - 빈 시간이면 정시 격자 규칙으로 계산한 조각 (직전 일정 끝 or 정시 기준)
+     * - isTaken: 그 유저가 이 슬롯 시간대에 이미 사진을 올렸는지
+     */
+    public PostTimeLineResponse getCurrentSlot(Long tripId, Long memberId, int dayNumber) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDate today = now.toLocalDate();
+        LocalDateTime dayStart = now.toLocalDate().atStartOfDay();   // 오늘 00:00:00
+        LocalDateTime dayEnd = dayStart.plusDays(1);                 // 내일 00:00:00
+        TripMember tripMember = tripMemberRepository.findByMemberIdAndTripGroupId(memberId, tripId).orElseThrow(RuntimeException::new);
+        // 1. 오늘 그 유저 사진 (하루치 + 유저 한정이라 30장 미만, 메모리 처리 OK)
+        //    TODO: 실제 메서드/파라미터 경로 확인 (p.member.id, p.tripGroup.id, createdAt 오늘 범위 등)
+        List<Post> todayPosts = postRepository.findByAuthorIdAndCreatedAtBetween(tripMember.getId(), dayStart, dayEnd);
+
+        // 2. 오늘 일정 목록 (startTime asc 정렬)
+        //    TODO: dayNumber로 조회하는 구조면 today → dayNumber 변환해서 넘길 것
+        List<TimeLine> schedules = timeLineRepository.findByTripAndDateSorted(tripId, dayNumber);
+
+        // 3. 현재 시각이 속한 슬롯 범위 계산 + placeName 계산
+        LocalDateTime slotStart;
+        LocalDateTime slotEnd;
+        String placeName = null;
+
+        Optional<TimeLine> current = schedules.stream()
+                .filter(s -> !now.isBefore(s.getStartTime()) && now.isBefore(s.getEndTime()))
+                .findFirst();
+
+        if (current.isPresent()) {
+            // 일정 슬롯 → 일정 실제 범위 그대로
+            slotStart = current.get().getStartTime();
+            slotEnd = current.get().getEndTime();
+
+            // 장소 확정된 경우만 이름, 미확정이면 null
+            TripPlace place = current.get().getConfirmedPlace();
+            placeName = (place != null) ? place.getName() : null;
+        } else {
+            // 빈 칸 슬롯 → 정시 격자 규칙, placeName은 null 유지
+            slotStart = calcEmptySlotStart(now, schedules);
+            slotEnd = calcEmptySlotEnd(slotStart, schedules);
+        }
+
+        // 4. isTaken: 이 유저 사진 중 created_at이 [slotStart, slotEnd) 안에 있나
+        boolean isTaken = todayPosts.stream()
+                .anyMatch(p -> !p.getCreatedAt().isBefore(slotStart)
+                        && p.getCreatedAt().isBefore(slotEnd));
+
+        return new PostTimeLineResponse(slotStart, slotEnd, placeName, isTaken);
+    }
+
+    /**
+     * 빈 칸 슬롯의 시작 시각.
+     * 현재 시각 이전에 끝난 일정의 끝점 vs 현재 시각 정시 내림 → 더 늦은 쪽.
+     * (15:30에 일정 끝, 지금 15:45 → 15:30 / 지금 16:20 → 16:00)
+     */
+    private LocalDateTime calcEmptySlotStart(LocalDateTime now, List<TimeLine> schedules) {
+        LocalDateTime hourFloor = now.truncatedTo(ChronoUnit.HOURS);
+
+        LocalDateTime lastScheduleEnd = schedules.stream()
+                .map(TimeLine::getEndTime)
+                .filter(end -> !end.isAfter(now))        // now 이전에 끝난 것
+                .max(Comparator.naturalOrder())
+                .orElse(hourFloor);
+
+        return hourFloor.isAfter(lastScheduleEnd) ? hourFloor : lastScheduleEnd;
+    }
+
+    /**
+     * 빈 칸 슬롯의 종료 시각.
+     * slotStart 기준 다음 정시. 단 그 사이에 시작하는 다음 일정이 있으면 거기서 컷.
+     * (15:30 → 16:00, 16:00 → 17:00, 중간에 일정 있으면 그 시작 시각)
+     */
+    private LocalDateTime calcEmptySlotEnd(LocalDateTime slotStart, List<TimeLine> schedules) {
+        LocalDateTime end = isOnTheHour(slotStart)
+                ? slotStart.plusHours(1)
+                : slotStart.truncatedTo(ChronoUnit.HOURS).plusHours(1);
+
+        LocalDateTime nextScheduleStart = schedules.stream()
+                .map(TimeLine::getStartTime)
+                .filter(start -> start.isAfter(slotStart))
+                .min(Comparator.naturalOrder())
+                .orElse(end);
+
+        return end.isBefore(nextScheduleStart) ? end : nextScheduleStart;
+    }
+
+    private boolean isOnTheHour(LocalDateTime t) {
+        return t.getMinute() == 0 && t.getSecond() == 0 && t.getNano() == 0;
     }
 }
