@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -83,7 +84,7 @@ public class TimeLineV1Controller {
 
     //타임라인 변경 알림 SSE 구독
     @Operation(summary = "타임라인 변경 알림 SSE 구독")
-    @GetMapping("/subscribe")
+    @GetMapping(value = "/subscribe", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter subscribeTimeLine(
             @PathVariable Long tripId,
             Authentication authentication) {

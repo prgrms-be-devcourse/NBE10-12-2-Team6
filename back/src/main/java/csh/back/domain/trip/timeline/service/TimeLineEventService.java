@@ -58,7 +58,7 @@ public class TimeLineEventService {
     }
 
     //특정 여행 모임의 타임라인이 변경되었음을 구독 중인 사용자들에게 전송
-    private void sendTimeLineUpdatedEvent(Long tripId) {
+    private void sendTimeLineUpdatedEvent(Long tripId, Long changedMemberId) {
         //tripId에 해당하는 SSE 연결 목록 조회
         List<SseEmitter> tripEmitters = emitters.get(tripId);
 
@@ -72,7 +72,10 @@ public class TimeLineEventService {
             try {
                 emitter.send(SseEmitter.event()
                         .name("TIMELINE_UPDATED")
-                        .data("수정된 일정이 있습니다."));
+                        .data(Map.of(
+                                "message", "새로운 변경 사항이 있습니다.",
+                                "changedMemberId", changedMemberId
+                        )));
             } catch (IOException e) {
                 //전송 중 에러가 발생하면 끊어진 연결로 보고 목록에서 제거
                 removeEmitter(tripId, emitter);
@@ -107,19 +110,19 @@ public class TimeLineEventService {
     }
 
     //트랜잭션 커밋 성공 후 타임라인 변경 이벤트를 전송
-    public void sendTimeLineUpdatedEventAfterCommit(Long tripId) {
+    public void sendTimeLineUpdatedEventAfterCommit(Long tripId, Long changedMemberId) {
         //현재 트랜잭션 동기화가 활성화되어 있으면 커밋 이후 이벤트 전송 예약
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    sendTimeLineUpdatedEvent(tripId);
+                    sendTimeLineUpdatedEvent(tripId, changedMemberId);
                 }
             });
             return;
         }
         //트랜잭션이 없는 상황이면 즉시 이벤트 전송
-        sendTimeLineUpdatedEvent(tripId);
+        sendTimeLineUpdatedEvent(tripId, changedMemberId);
     }
 
 }

@@ -10,6 +10,7 @@ export interface User {
   id: number;
   name: string;
   color: string;
+  isAdmin?: boolean;
 }
 
 export interface ActivityBlock {
@@ -180,7 +181,7 @@ export function TripLogProvider({ children }: { children: ReactNode }) {
         region: data.region,
         startDate: data.startDate,
         nights: data.nights,
-        members: [currentUser],
+        members: [{ ...currentUser, isAdmin: true }],
         days,
         candidates: [],
         inviteCode: makeInviteCode(),

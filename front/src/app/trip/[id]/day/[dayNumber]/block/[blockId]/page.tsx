@@ -270,6 +270,7 @@ export default function BlockDetailPage() {
       }
       return;
     }
+    if (!day) return;
     setDay({ ...day, selectedCandidateByBlock: { ...day.selectedCandidateByBlock, [blockId]: candidate.id } });
   };
 
