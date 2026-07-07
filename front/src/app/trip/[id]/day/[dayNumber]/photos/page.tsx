@@ -7,10 +7,11 @@ import { useStore, TripDay, PhotoRecord, uid } from "../../../../../store";
 import { timeText, API_BASE, apiFetch } from "../../../../../lib";
 
 interface TimelineBlock {
-  timelineId: number;
+  timelineId?: number | null;
   startTime: string;
   endTime: string;
-  voteId: number | null;
+  confirmedPlaceName?: string | null;
+  isTaken: boolean;
 }
 
 function isoToMinutes(iso: string) {
@@ -70,21 +71,14 @@ export default function PhotoUploadPage() {
       setTimelineLoaded(true);
       return;
     }
-    apiFetch(`${API_BASE}/api/v1/trips/${id}/timelines?dayNumber=${dayNum}`)
+    apiFetch(`${API_BASE}/api/v1/trips/${id}/posts/is-taken?dayNumber=${dayNum}`)
       .then(r => r.json())
       .then(body => {
-        const items: TimelineBlock[] = body.data ?? [];
-        const now = new Date();
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
-        const matched = items.find(item =>
-          currentMinutes >= isoToMinutes(item.startTime) &&
-          currentMinutes <= isoToMinutes(item.endTime)
-        );
-        setCurrentBlock(matched ?? null);
+        setCurrentBlock(body.data ?? null);
       })
       .catch(() => {})
       .finally(() => setTimelineLoaded(true));
-  }, [id, dayNum, isDuringTrip, trip]);
+  }, [id, isDuringTrip, trip]);
 
   if (!trip || dayIdx < 0) return (
     <div className="flex items-center justify-center min-h-screen">
@@ -192,7 +186,11 @@ export default function PhotoUploadPage() {
             <p className="text-xs font-bold text-blue-400">
               {timeText(isoToMinutes(currentBlock.startTime))} ~ {timeText(isoToMinutes(currentBlock.endTime))}
             </p>
-            <p className="font-bold text-base text-blue-800 text-center">지금 이 시간대의 사진을 올려보세요</p>
+            <p className="font-bold text-base text-blue-800 text-center">
+              {currentBlock.confirmedPlaceName
+                ? `${currentBlock.confirmedPlaceName} 에서의 한 컷`
+                : "자유롭게 한 컷"}
+            </p>
           </div>
         ) : (
           <div className="w-full px-5 py-3 rounded-3xl bg-gray-50 flex items-center gap-3">
@@ -214,26 +212,35 @@ export default function PhotoUploadPage() {
         className="hidden"
         onChange={handleFileChange}
       />
-      <button
-        type="button"
-        onClick={() => fileInputRef.current?.click()}
-        className="flex-1 rounded-3xl overflow-hidden flex flex-col items-center justify-center gap-2 bg-gray-100 active:opacity-80 transition-opacity"
-      >
-        {previewUrl ? (
-          <img src={previewUrl} alt="preview" className="w-full h-full object-contain" />
-        ) : (
-          <>
-            <span className="text-5xl text-gray-300">📷</span>
-            <p className="text-sm text-gray-400">탭해서 사진 찍기</p>
-          </>
-        )}
-      </button>
+
+      {currentBlock?.isTaken ? (
+        <div className="flex-1 rounded-3xl bg-blue-50 flex flex-col items-center justify-center gap-3 px-8 text-center">
+          <span className="text-5xl">📸</span>
+          <p className="font-bold text-blue-800 text-base">해당 타임라인에 이미 사진 찍으셨네요!</p>
+          <p className="text-sm text-blue-500">전체 보기를 눌러 모임에서 찍은 사진을 구경하세요</p>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="flex-1 rounded-3xl overflow-hidden flex flex-col items-center justify-center gap-2 bg-gray-100 active:opacity-80 transition-opacity"
+        >
+          {previewUrl ? (
+            <img src={previewUrl} alt="preview" className="w-full h-full object-contain" />
+          ) : (
+            <>
+              <span className="text-5xl text-gray-300">📷</span>
+              <p className="text-sm text-gray-400">탭해서 사진 찍기</p>
+            </>
+          )}
+        </button>
+      )}
 
       {/* 하단 버튼 — 공간은 항상 유지, 사진 선택 후에만 표시 */}
       <div className="py-4 shrink-0">
         <button
           onClick={handleUpload}
-          disabled={uploading || (isDuringTrip && !timelineLoaded)}
+          disabled={uploading || (isDuringTrip && !timelineLoaded) || !!currentBlock?.isTaken}
           className={`w-full py-4 rounded-2xl text-white font-semibold transition-colors disabled:opacity-60 ${
             selectedFile || record?.status === "uploaded" ? "visible" : "invisible"
           }`}
