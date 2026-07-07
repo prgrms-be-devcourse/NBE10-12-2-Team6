@@ -121,6 +121,7 @@ export default function TimelinePage() {
   const searchParams = useSearchParams();
   const { trips, upsertTrip } = useStore();
   const [groups, setGroups] = useState<DateGroup[]>([]);
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   const goBack = () => {
     if (searchParams.get("from") === "timeline") router.push(`/trip/${id}?tab=timeline`);
@@ -168,6 +169,12 @@ export default function TimelinePage() {
   );
 
   return (
+    <>
+      {lightbox && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center" onClick={() => setLightbox(null)}>
+          <img src={lightbox} alt="" className="max-w-full max-h-full object-contain" />
+        </div>
+      )}
     <div className="min-h-screen">
       <div className="flex items-center gap-3 px-4 pt-12 pb-2">
         <button onClick={goBack} className="text-blue-500 p-1 -ml-1">
@@ -193,40 +200,42 @@ export default function TimelinePage() {
                 <p className="text-xs text-gray-400">{formatDate(day.date)}</p>
               </div>
 
-              <div className="p-4 flex flex-col gap-3">
+              <div className="p-4">
                 {dayPosts.length === 0 ? (
                   <p className="text-sm text-gray-500">아직 사진 기록이 없습니다.</p>
                 ) : (
-                  toSegments(dayPosts).map(seg => {
-                    const posts = seg.type === "timeline" ? seg.posts : seg.posts;
-                    const label = seg.type === "timeline"
-                      ? (seg.posts[0]?.startTime && seg.posts[0]?.endTime
-                          ? `${seg.posts[0].startTime.slice(11, 16)} ~ ${seg.posts[0].endTime.slice(11, 16)}${seg.posts[0].placeName ? ` · ${seg.posts[0].placeName}` : ""}`
-                          : `타임라인 #${seg.timeLineId}`)
-                      : `자유 시간 · ${seg.label}`;
-                    const borderColor = seg.type === "timeline" ? "border-blue-100 bg-blue-50" : "border-gray-200 bg-gray-50";
-                    const labelColor = seg.type === "timeline" ? "text-blue-400" : "text-gray-400";
-                    const key = seg.type === "timeline" ? `tl-${seg.timeLineId}` : seg.slotKey;
+                  <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory" style={{ scrollbarWidth: "none" }}>
+                    {toSegments(dayPosts).map(seg => {
+                      const posts = seg.posts;
+                      const label = seg.type === "timeline"
+                        ? (seg.posts[0]?.startTime && seg.posts[0]?.endTime
+                            ? `${seg.posts[0].startTime.slice(11, 16)} ~ ${seg.posts[0].endTime.slice(11, 16)}${seg.posts[0].placeName ? ` · ${seg.posts[0].placeName}` : ""}`
+                            : `타임라인 #${seg.timeLineId}`)
+                        : `자유 시간 · ${seg.label}`;
+                      const borderColor = seg.type === "timeline" ? "border-blue-100 bg-blue-50" : "border-gray-200 bg-gray-50";
+                      const labelColor = seg.type === "timeline" ? "text-blue-400" : "text-gray-400";
+                      const key = seg.type === "timeline" ? `tl-${seg.timeLineId}` : seg.slotKey;
 
-                    return (
-                      <div key={key} className={`rounded-2xl border p-3 flex flex-col gap-2 ${borderColor}`}>
-                        <p className={`text-xs font-semibold ${labelColor}`}>{label}</p>
-                        <div
-                          className="flex overflow-x-auto snap-x snap-mandatory"
-                          style={{ scrollbarWidth: "none" }}
-                        >
-                          {posts.map(post => {
-                            const src = resolveUrl(post.contentUrl);
-                            return (
-                              <div key={post.postId} className="basis-full shrink-0 snap-start rounded-xl overflow-hidden bg-white">
-                                <img src={src} alt="" className="w-full h-auto" />
-                              </div>
-                            );
-                          })}
+                      return (
+                        <div key={key} className={`rounded-2xl border p-3 flex flex-col gap-2 snap-start basis-full shrink-0 ${borderColor}`}>
+                          <p className={`text-xs font-semibold ${labelColor}`}>{label}</p>
+                          <div
+                            className="flex overflow-x-auto snap-x snap-mandatory rounded-xl overflow-hidden"
+                            style={{ scrollbarWidth: "none" }}
+                          >
+                            {posts.map(post => {
+                              const src = resolveUrl(post.contentUrl);
+                              return (
+                                <div key={post.postId} className="basis-full shrink-0 snap-start flex items-center justify-center" style={{ height: "360px" }}>
+                                  <img src={src} alt="" className="max-w-full max-h-full object-contain rounded-2xl cursor-pointer" onClick={() => setLightbox(src)} />
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             </div>
@@ -234,5 +243,6 @@ export default function TimelinePage() {
         })}
       </div>
     </div>
+    </>
   );
 }

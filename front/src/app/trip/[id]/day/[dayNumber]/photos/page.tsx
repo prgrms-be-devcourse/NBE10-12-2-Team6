@@ -31,6 +31,7 @@ export default function PhotoUploadPage() {
   const [uploading, setUploading] = useState(false);
   const [currentBlock, setCurrentBlock] = useState<TimelineBlock | null>(null);
   const [timelineLoaded, setTimelineLoaded] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   const trip = trips.find(t => t.id === id);
   const dayNum = parseInt(dayNumber);
@@ -120,8 +121,7 @@ export default function PhotoUploadPage() {
         body: form,
       });
       if (res.ok) {
-        alert("사진이 업로드되었습니다!");
-        router.push(`/trip/${id}`);
+        setShowUploadModal(true);
         return;
       }
       const title = currentBlock
@@ -234,6 +234,24 @@ export default function PhotoUploadPage() {
             </>
           )}
         </button>
+      )}
+
+      {showUploadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => { setShowUploadModal(false); router.push(`/trip/${id}`); }} />
+          <div className="relative w-72 bg-white rounded-3xl p-6 flex flex-col items-center gap-4 shadow-xl">
+            <span className="text-5xl">📸</span>
+            <p className="text-lg font-bold text-center">업로드 완료!</p>
+            <p className="text-sm text-gray-500 text-center">사진이 모임에 공유되었어요.</p>
+            <button
+              onClick={() => { setShowUploadModal(false); router.push(`/trip/${id}`); }}
+              className="w-full py-3.5 rounded-2xl font-semibold text-white"
+              style={{ background: "#22c55e" }}
+            >
+              확인
+            </button>
+          </div>
+        </div>
       )}
 
       {/* 하단 버튼 — 공간은 항상 유지, 사진 선택 후에만 표시 */}

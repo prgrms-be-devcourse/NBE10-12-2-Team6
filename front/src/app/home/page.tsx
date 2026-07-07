@@ -17,7 +17,24 @@ type ApiTrip = {
   joinCode?: string;
 };
 
+function getTripStatus(startDate: string, nights: number) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const start = new Date(startDate); start.setHours(0, 0, 0, 0);
+  const end = new Date(startDate); end.setDate(end.getDate() + nights); end.setHours(0, 0, 0, 0);
+  if (today < start) return "before";
+  if (today <= end) return "during";
+  return "after";
+}
+
+const STATUS_BADGE: Record<string, { label: string; className: string }> = {
+  before: { label: "여행 전", className: "bg-blue-100 text-blue-600" },
+  during: { label: "여행 중", className: "bg-green-100 text-green-600" },
+  after:  { label: "여행 완료", className: "bg-gray-100 text-gray-500" },
+};
+
 function TripCard({ trip }: { trip: ApiTrip }) {
+  const status = getTripStatus(trip.startDate, trip.nights);
+  const badge = STATUS_BADGE[status];
   return (
     <Link href={`/trip/${trip.id}`} className="block">
       <div className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
@@ -26,8 +43,8 @@ function TripCard({ trip }: { trip: ApiTrip }) {
             <p className="font-bold text-base">{trip.name}</p>
             <p className="text-sm text-gray-500 mt-0.5">{trip.region} · {trip.nights}박 {trip.nights + 1}일</p>
           </div>
-          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-100 text-blue-600 shrink-0 ml-2 text-center leading-tight">
-            전체 후보 등록 후<br />일차별 선택
+          <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ml-2 ${badge.className}`}>
+            {badge.label}
           </span>
         </div>
         <p className="text-xs text-gray-400">{formatDate(trip.startDate)} 시작</p>
@@ -164,7 +181,10 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {trips.map(trip => <TripCard key={trip.id} trip={trip} />)}
+            {[...trips].sort((a, b) => {
+              const order = { during: 0, before: 1, after: 2 };
+              return order[getTripStatus(a.startDate, a.nights)] - order[getTripStatus(b.startDate, b.nights)];
+            }).map(trip => <TripCard key={trip.id} trip={trip} />)}
           </div>
         )}
       </div>
