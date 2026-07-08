@@ -5,46 +5,6 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useStore, TripDay, PlanCandidate, uid } from "../../../../../../store";
 import { timeText, useAuthGuard, apiFetch, API_BASE } from "../../../../../../lib";
 
-// ── Tie random pick sheet ─────────────────────────────────────────────────────
-
-function TieRandomSheet({
-  candidates, onPick, onClose,
-}: { candidates: PlanCandidate[]; onPick: (c: PlanCandidate) => void; onClose: () => void }) {
-  const [picked, setPicked] = useState<PlanCandidate | null>(null);
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-white rounded-t-3xl p-6">
-        <p className="text-lg font-bold mb-1">동점 후보 랜덤 뽑기</p>
-        <p className="text-sm text-gray-500 mb-4">동점으로 나온 후보들끼리 랜덤 뽑기를 진행합니다.</p>
-        <div className="flex flex-col gap-2 mb-4">
-          {candidates.map(c => (
-            <div key={c.id} className="p-3 bg-gray-50 rounded-xl">
-              <p className="font-semibold text-sm">{c.placeName}</p>
-            </div>
-          ))}
-        </div>
-        {picked && <p className="text-center font-semibold mb-3" style={{ color: "#9333ea" }}>뽑힌 후보: {picked.placeName}</p>}
-        <button
-          onClick={() => setPicked(candidates[Math.floor(Math.random() * candidates.length)])}
-          className="w-full py-3.5 rounded-2xl font-semibold text-white mb-2"
-          style={{ background: "#9333ea" }}
-        >
-          랜덤 뽑기
-        </button>
-        {picked && (
-          <button
-            onClick={() => { onPick(picked); onClose(); }}
-            className="w-full py-3.5 rounded-2xl bg-blue-500 text-white font-semibold"
-          >
-            이 후보로 확정
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface VoteDetail {
@@ -67,8 +27,6 @@ export default function BlockDetailPage() {
 
   const fromVote = searchParams.get("from") === "vote";
   const timelineId = searchParams.get("timelineId");
-  const [showTie, setShowTie] = useState(false);
-  const [tieCandidates, setTieCandidates] = useState<PlanCandidate[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [pendingVote, setPendingVote] = useState<string | null>(null);
   const [showHostMenu, setShowHostMenu] = useState(false);
@@ -77,7 +35,9 @@ export default function BlockDetailPage() {
   const [blockOrder, setBlockOrder] = useState<number | null>(null);
   const [myVotedPlaceId, setMyVotedPlaceId] = useState<string | null>(null);
   const [updateCount, setUpdateCount] = useState<number>(0);
+  const [voteStatus, setVoteStatus] = useState<string | null>(null);
   const [voteConfirmed, setVoteConfirmed] = useState(false);
+  const [tieConfirmedName, setTieConfirmedName] = useState<string | null>(null);
   const [voteLoading, setVoteLoading] = useState(false);
   const [showConfirmedModal, setShowConfirmedModal] = useState(false);
 
@@ -121,16 +81,18 @@ export default function BlockDetailPage() {
         const results: VoteDetail[] = body.data?.voteResults ?? [];
         setVoteDetails(results);
         setUpdateCount(body.data?.updateCount ?? 0);
-        setVoteConfirmed(body.data?.isConfirmed ?? false);
+        const status = body.data?.voteStatus ?? null;
+        setVoteStatus(status);
+        setVoteConfirmed(status === "투표 확정");
         const voted = results.find(v => v.isVoted);
         if (voted) setMyVotedPlaceId(String(voted.placeId));
-        const wishList = (body.data?.wishPlaceFindResponses ?? []).map((w: { placeId: number; name: string; address: string; theme: string; createdBy: string }) => ({
+        const wishList = (body.data?.wishPlaceFindResponses ?? []).map((w: { placeId: number; name: string; address: string; category: string; createdBy: string }) => ({
           id: String(w.placeId),
           authorId: 0,
           authorName: w.createdBy,
           placeName: w.name,
           address: w.address,
-          category: w.theme,
+          category: w.category,
         }));
         setWishPlaces(wishList);
       });
@@ -174,7 +136,9 @@ export default function BlockDetailPage() {
         const results: VoteDetail[] = body.data?.voteResults ?? [];
         setVoteDetails(results);
         setUpdateCount(body.data?.updateCount ?? 0);
-        const confirmed = body.data?.isConfirmed ?? false;
+        const status = body.data?.voteStatus ?? null;
+        setVoteStatus(status);
+        const confirmed = status === "투표 확정";
         setVoteConfirmed(prev => {
           if (!prev && confirmed) setShowConfirmedModal(true);
           return confirmed;
@@ -239,7 +203,7 @@ export default function BlockDetailPage() {
     return today > endDate;
   })();
 
-  const voteClosed = voteConfirmed || tripStarted;
+  const voteClosed = voteStatus !== null && voteStatus !== "투표 진행중";
 
   const isHost = currentUser.id === (trip?.members[0]?.id);
   const confirmedByVote = voteConfirmed && voteDetails && voteDetails.length > 0
@@ -257,14 +221,11 @@ export default function BlockDetailPage() {
           headers: { "Content-Type": "application/json" },
         });
         const body = await res.json();
-        const { status, tiedPlaceIds } = body.data ?? {};
-        if (status === "TIED") {
-          const tied = candidates.filter(c => (tiedPlaceIds as number[]).includes(Number(c.id)));
-          setTieCandidates(tied);
-          setShowTie(true);
-        } else {
-          refetchVoteDetails();
+        if (body.data?.isTie) {
+          const picked = candidates.find(c => c.id === String(body.data.confirmedPlaceId));
+          setTieConfirmedName(picked?.placeName ?? null);
         }
+        refetchVoteDetails();
       } catch (e) {
         console.error(e);
       }
@@ -273,32 +234,9 @@ export default function BlockDetailPage() {
     if (candidates.length === 0 || !day) return;
     const maxVote = Math.max(...candidates.map(c => voteCount(c.id)));
     const winners = candidates.filter(c => voteCount(c.id) === maxVote);
-    if (winners.length === 1) {
-      setDay({ ...day, selectedCandidateByBlock: { ...day.selectedCandidateByBlock, [blockId]: winners[0].id } });
-    } else {
-      setTieCandidates(winners);
-      setShowTie(true);
-    }
+    const winner = winners[Math.floor(Math.random() * winners.length)];
+    setDay({ ...day, selectedCandidateByBlock: { ...day.selectedCandidateByBlock, [blockId]: winner.id } });
     setShowHostMenu(false);
-  };
-
-  const pickFromTie = async (candidate: PlanCandidate) => {
-    if (!day) return;
-    if (fromVote) {
-      try {
-        await apiFetch(`${API_BASE}/api/v1/trips/${id}/votes/${blockId}/confirm-tie`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ confirmedPlaceId: Number(candidate.id) }),
-        });
-        refetchVoteDetails();
-      } catch (e) {
-        console.error(e);
-      }
-      return;
-    }
-    if (!day) return;
-    setDay({ ...day, selectedCandidateByBlock: { ...day.selectedCandidateByBlock, [blockId]: candidate.id } });
   };
 
   return (
@@ -464,7 +402,7 @@ export default function BlockDetailPage() {
       {voteClosed ? (
         <div className="px-4 py-4 border-t border-gray-100 bg-white">
           <div className="w-full py-4 rounded-2xl text-center font-semibold text-gray-400 bg-gray-100">
-            {voteConfirmed ? "투표가 종료되었습니다" : "여행이 시작되어 투표가 마감되었습니다"}
+            {voteStatus === "투표 확정" ? "투표가 확정되었습니다" : "투표 기한이 만료되었습니다"}
           </div>
         </div>
       ) : (
@@ -488,20 +426,15 @@ export default function BlockDetailPage() {
         </div>
       )}
 
-      {showTie && (
-        <TieRandomSheet
-          candidates={tieCandidates}
-          onPick={pickFromTie}
-          onClose={() => setShowTie(false)}
-        />
-      )}
-
       {showConfirmedModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowConfirmedModal(false)} />
           <div className="relative w-72 bg-white rounded-3xl p-6 flex flex-col items-center gap-4 shadow-xl">
             <span className="text-5xl">🎉</span>
             <p className="text-lg font-bold text-center">투표가 확정되었습니다!</p>
+            {tieConfirmedName && (
+              <p className="text-sm text-center text-gray-500">동점이어서 랜덤으로 <span className="font-semibold text-gray-800">{tieConfirmedName}</span>이(가) 선택되었습니다.</p>
+            )}
             <p className="text-sm text-gray-500 text-center">장소가 확정되었어요. 일정 화면에서 확인해보세요.</p>
             <button
               onClick={() => setShowConfirmedModal(false)}

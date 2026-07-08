@@ -19,33 +19,34 @@ import static jakarta.persistence.EnumType.STRING;
 
 @Getter
 @Entity
-@Table(name = "trip_place_votes")
+@Table(name = "trip_votes")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Vote extends BaseEntity {
 
     //FK
     //Join TripGroup Table
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "trip_id", nullable = false)
+    @JoinColumn(name = "trip_group_id", nullable = false)
     private TripGroup tripGroup;
 
     //FK
     //Join TripTimeline Table
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "timeline_id",  nullable = false)
+    @JoinColumn(name = "trip_timeline_id",  nullable = false)
     private TimeLine timeLine;
 
     //FK
     //Join TripMember Table
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by",  nullable = false)
+    @JoinColumn(name = "trip_member_id",  nullable = false)
     private TripMember tripMember;
 
     //만료시간
+    @Column(nullable = false)
     private LocalDateTime expireTime;
 
     @Enumerated(STRING)
-    private VoteStatus status;
+    private VoteStatus status = VoteStatus.PENDING;
 
 
     //생성자
@@ -56,10 +57,9 @@ public class Vote extends BaseEntity {
         this.timeLine = timeLine;
         this.tripMember = tripMember;
         this.expireTime = expireTime;
-        this.status = VoteStatus.PENDING;
     }
 
-    public void updateVoteStatus(VoteStatus status) {
+    public void updateStatus(VoteStatus status) {
         this.status = status;
     }
 }

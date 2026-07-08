@@ -17,6 +17,7 @@ import csh.back.domain.trip.timeline.repository.TimeLineRepository;
 import csh.back.domain.vote.vote.dto.response.VoteConfirmResponse;
 import csh.back.domain.vote.vote.dto.web.VoteTimeLineResponse;
 import csh.back.domain.vote.vote.enums.VoteConfirmStatus;
+import csh.back.domain.vote.vote.enums.VoteStatus;
 import csh.back.domain.vote.vote.repository.VoteRepository;
 import csh.back.domain.vote.vote.service.VoteService;
 import jakarta.persistence.EntityManager;
@@ -215,9 +216,6 @@ public class TimeLineService {
 
 
     public VoteConfirmResponse confirmVote(Long tripId, Long memberId, Long voteId) {
-        //보안 문제로 인한 주석 처리
-        //System.out.println(tripId);
-        //System.out.println(memberId);
 
         tripMemberValidator.validMember(tripId, memberId);
 
@@ -227,7 +225,7 @@ public class TimeLineService {
                 .filter(entry -> entry.getValue() == maxCount)
                 .map(Map.Entry::getKey)
                 .toList();
-
+        boolean isTie = maxKeys.size() == 1 ? false : true;
         Long maxVoteItemId = maxKeys.size() == 1
                 ? maxKeys.get(0)
                 : maxKeys.get(ThreadLocalRandom.current().nextInt(maxKeys.size()));
@@ -235,7 +233,7 @@ public class TimeLineService {
         VoteTimeLineResponse voteTimeLineResponse = voteService.voteConfirm(maxVoteItemId, voteId);
         Long confirmPlaceId = voteTimeLineResponse.confirmPlaceId();
         confirmPlaceByHost(voteTimeLineResponse.timeLine() ,tripId, confirmPlaceId);
-        return VoteConfirmResponse.of(VoteConfirmStatus.CONFIRMED, confirmPlaceId, null);
+        return VoteConfirmResponse.of(VoteStatus.CONFIRMED.getNickname(), confirmPlaceId, isTie);
     }
 
 //    //확정된 장소 삽입하는 메서드

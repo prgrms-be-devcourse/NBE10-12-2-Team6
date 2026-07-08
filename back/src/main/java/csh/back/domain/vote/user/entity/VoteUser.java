@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "trip_vote_users",
         uniqueConstraints = @UniqueConstraint(
                 name = "uk_vote_user",
-                columnNames = {"vote_id", "member_id"}  // vote_id 기준
+                columnNames = {"vote_id", "trip_member_id"}  // vote_id 기준
         )
 )
 
@@ -38,7 +38,7 @@ public class VoteUser extends BaseEntity {
     //FK
     //Join TripMember Table
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id",  nullable = false)
+    @JoinColumn(name = "trip_member_id",  nullable = false)
     private TripMember tripMember;
 
     @Column(nullable = false)

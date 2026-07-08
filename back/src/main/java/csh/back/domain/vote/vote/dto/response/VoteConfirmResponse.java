@@ -5,16 +5,16 @@ import csh.back.domain.vote.vote.enums.VoteConfirmStatus;
 import java.util.List;
 
 public record VoteConfirmResponse(
-        VoteConfirmStatus status,
+        String voteStatus,
         Long confirmedPlaceId,
-        List<Long> tiedPlaceIds
+        boolean isTie
         )
 {
-    public static VoteConfirmResponse of(VoteConfirmStatus status, Long confirmedPlaceId, List<Long> tiedPlaceIds) {
+    public static VoteConfirmResponse of(String voteStatus, Long confirmedPlaceId, boolean isTie) {
        return new VoteConfirmResponse(
-               status,
+               voteStatus,
                confirmedPlaceId,
-               tiedPlaceIds
+               isTie
        );
     }
 }

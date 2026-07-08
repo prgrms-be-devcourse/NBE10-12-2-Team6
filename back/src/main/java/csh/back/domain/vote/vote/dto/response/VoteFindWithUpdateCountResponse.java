@@ -9,7 +9,7 @@ public record VoteFindWithUpdateCountResponse(
         List<VoteFindResponse> voteResults,
         List<TripPlaceFindResponse> wishPlaceFindResponses,
         Integer updateCount,
-        VoteStatus voteStatus
+        String voteStatus
 ) {
     public static VoteFindWithUpdateCountResponse of(
             List<VoteFindResponse> voteFindResponses,
@@ -17,6 +17,6 @@ public record VoteFindWithUpdateCountResponse(
             int updateCount,
             VoteStatus voteStatus
     ) {
-        return new VoteFindWithUpdateCountResponse(voteFindResponses, wishPlaceFindResponses, updateCount, voteStatus);
+        return new VoteFindWithUpdateCountResponse(voteFindResponses, wishPlaceFindResponses, updateCount, voteStatus.getNickname());
     }
 }

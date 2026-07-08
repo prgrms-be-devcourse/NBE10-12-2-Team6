@@ -171,7 +171,7 @@ public class VoteService {
         VoteItem voteItem = voteItemRepository.findById(maxVoteItemId).orElseThrow(RuntimeException::new);
         Long confirmPlaceId = voteItem.getTripPlace().getId();
         TimeLine timeLine = voteRepository.findTimeLineByVoteId(voteId).orElseThrow(RuntimeException::new);
-        voteItem.getVote().updateVoteStatus(VoteStatus.CONFIRMED);
+        voteItem.getVote().updateStatus(VoteStatus.CONFIRMED);
         return VoteTimeLineResponse.of(confirmPlaceId, timeLine);
     }
 
@@ -186,7 +186,7 @@ public class VoteService {
 
     public void expireVote(Long voteId) {
         Vote vote = voteRepository.findById(voteId).orElseThrow(RuntimeException::new);
-        vote.updateVoteStatus(VoteStatus.EXPIRED);
+        vote.updateStatus(VoteStatus.EXPIRED);
     }
 
     private VoteWithTimeLineResponse createVoteAndTimeLineResponse(
@@ -199,7 +199,7 @@ public class VoteService {
             log.error("TimeLine {}과 연결된 Vote가 존재 하지 않습니다! 확인 해주세요!", timeLineId);
             return VoteWithTimeLineResponse.of(timeLine, null);
         }
-        return VoteWithTimeLineResponse.of(timeLine, vote.getId());
+        return VoteWithTimeLineResponse.of(timeLine, vote);
     }
 
 
