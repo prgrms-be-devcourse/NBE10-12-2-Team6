@@ -8,7 +8,7 @@ name: Deploy MySQL to Oracle Cloud
 on:
   push:
     branches:
-      - main
+      - dev
     paths:
       - deploy-version-db.yml
   workflow_dispatch:
