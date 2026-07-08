@@ -899,7 +899,7 @@ export default function DayPlanPage() {
                     다시 눌러 편집화면 나가기
                   </span>
                 )}
-                {isAdmin && !tripStarted && <button
+                {!tripStarted && <button
                   type="button"
                   aria-label={isEditingTimeRanges ? "시간 구간 수정 닫기" : "시간 구간 수정"}
                   title={isEditingTimeRanges ? "시간 구간 수정 닫기" : "시간 구간 수정"}
