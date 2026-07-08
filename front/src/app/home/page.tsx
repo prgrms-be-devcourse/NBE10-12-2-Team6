@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useStore } from "../store";
 import { formatDate, apiFetch, useAuthGuard, API_BASE } from "../lib";
 import { useTripOwnerStore } from "../stores/tripOwnerStore";
+import AnimatedBottomSheet from "../components/AnimatedBottomSheet";
 
 type ApiTrip = {
   id: number;
@@ -43,13 +44,13 @@ function fromDateValue(value: string) {
   return value ? new Date(value + "T00:00:00") : new Date();
 }
 
-function dateButtonText(value: string) {
-  if (!value) return "연도. 월. 일.";
+function dateButtonText(value: string, placeholder: string) {
+  if (!value) return placeholder;
   return new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
     month: "long",
     day: "numeric",
-    weekday: "short",
+    weekday: "long",
   }).format(fromDateValue(value));
 }
 
@@ -92,9 +93,13 @@ function MobileDatePicker({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-white rounded-t-3xl px-5 pt-4 pb-6 sheet-slide-up">
+    <AnimatedBottomSheet
+      onClose={onClose}
+      zIndexClassName="z-[60]"
+      className="overflow-y-auto px-5 pt-4 pb-6"
+    >
+      {(close) => (
+        <>
         <div className="flex items-center justify-between mb-4">
           <div>
             <p className="text-lg font-bold">{title}</p>
@@ -102,7 +107,7 @@ function MobileDatePicker({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={close}
             className="w-9 h-9 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"
             aria-label="닫기"
           >
@@ -112,7 +117,7 @@ function MobileDatePicker({
 
         <div className="grid grid-cols-2 gap-3 mb-3">
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-bold text-gray-500">연도</span>
+            <span aria-hidden="true" className="text-xs font-bold text-transparent">&nbsp;</span>
             <div className="relative">
               <select
                 value={year}
@@ -129,7 +134,7 @@ function MobileDatePicker({
             </div>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-bold text-gray-500">월</span>
+            <span aria-hidden="true" className="text-xs font-bold text-transparent">&nbsp;</span>
             <div className="relative">
               <select
                 value={month}
@@ -210,7 +215,7 @@ function MobileDatePicker({
           onClick={() => {
             if (!draftValue) return;
             onSelect(draftValue);
-            onClose();
+            close();
           }}
           disabled={!draftValue}
           className={`w-full mt-5 py-4 rounded-2xl font-bold transition ${
@@ -219,8 +224,9 @@ function MobileDatePicker({
         >
           날짜 선택
         </button>
-      </div>
-    </div>
+        </>
+      )}
+    </AnimatedBottomSheet>
   );
 }
 
@@ -228,11 +234,13 @@ function DateField({
   value,
   onChange,
   label,
+  placeholder = "날짜를 선택",
   className = "",
 }: {
   value: string;
   onChange: (value: string) => void;
   label: string;
+  placeholder?: string;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -245,8 +253,8 @@ function DateField({
         className={`p-3 bg-gray-100 rounded-xl text-sm outline-none flex items-center justify-between gap-3 text-left ${className}`}
         aria-label={label}
       >
-        <span className={value ? "font-semibold text-gray-800" : "font-semibold text-gray-500"}>
-          {dateButtonText(value)}
+        <span className={value ? "font-semibold text-gray-800" : "font-normal text-gray-400"}>
+          {dateButtonText(value, placeholder)}
         </span>
         <svg className="w-5 h-5 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3M4 11h16M5 5h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z" />
@@ -328,11 +336,11 @@ function RegionSheetPicker({
     setShowSuggestions(false);
   };
 
-  const handleSheetSelect = (city: string) => {
+  const handleSheetSelect = (city: string, close: () => void) => {
     setInputValue(city);
     onChange(city);
-    setOpen(false);
     setShowSuggestions(true);
+    close();
   };
 
   return (
@@ -391,14 +399,18 @@ function RegionSheetPicker({
       </div>
 
       {open && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-          <div className="relative w-full max-w-md bg-white rounded-t-3xl max-h-[85vh] flex flex-col sheet-slide-up">
+        <AnimatedBottomSheet
+          onClose={() => setOpen(false)}
+          zIndexClassName="z-[60]"
+          className="max-h-[85vh] flex flex-col"
+        >
+          {(close) => (
+            <>
             <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
               <p className="text-lg font-bold">지역 선택</p>
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={close}
                 className="w-9 h-9 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"
                 aria-label="닫기"
               >
@@ -415,7 +427,7 @@ function RegionSheetPicker({
                       <button
                         key={city}
                         type="button"
-                        onClick={() => handleSheetSelect(city)}
+                        onClick={() => handleSheetSelect(city, close)}
                         className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
                           value === city
                             ? "bg-blue-500 text-white"
@@ -429,18 +441,23 @@ function RegionSheetPicker({
                 </div>
               ))}
             </div>
-          </div>
-        </div>
+            </>
+          )}
+        </AnimatedBottomSheet>
       )}
     </>
   );
 }
 
-function TripCard({ trip }: { trip: ApiTrip }) {
+function TripCard({ trip, animationDelayMs = 0 }: { trip: ApiTrip; animationDelayMs?: number }) {
   const status = getTripStatus(trip.startDate, trip.nights);
   const badge = STATUS_BADGE[status];
   return (
-    <Link href={`/trip/${trip.id}`} className="block">
+    <Link
+      href={`/trip/${trip.id}`}
+      className="home-trip-card block"
+      style={{ animationDelay: `${animationDelayMs}ms` }}
+    >
       <div className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
         <div className="flex items-start justify-between mb-3">
           <div>
@@ -465,6 +482,8 @@ export default function HomePage() {
 
   const [trips, setTrips] = useState<ApiTrip[]>([]);
   const [loading, setLoading] = useState(true);
+  const [resultAnimationKey, setResultAnimationKey] = useState(0);
+  const [hasSearched, setHasSearched] = useState(false);
 
   const tripTitleRef = useRef<HTMLInputElement>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -475,18 +494,55 @@ export default function HomePage() {
   const [tripNights, setTripNights] = useState(2);
   const [keyWord, setKeyWord] = useState("");
   const [searchDate, setSearchDate] = useState("");
+  const canSearchTrips = keyWord.trim().length > 0 || Boolean(searchDate);
 
-  const getInit = async () => {
+  const getInit = async ({
+    animateResults = false,
+    keyword = keyWord,
+    startDate = searchDate,
+  }: {
+    animateResults?: boolean;
+    keyword?: string;
+    startDate?: string;
+  } = {}) => {
     const p = new URLSearchParams();
-    if (keyWord.trim()) p.set("keyword", keyWord.trim());
-    if (searchDate) p.set("startDate", searchDate);
+    if (keyword.trim()) p.set("keyword", keyword.trim());
+    if (startDate) p.set("startDate", startDate);
     const query = p.toString() ? `?${p.toString()}` : "";
-    apiFetch(`${API_BASE}/api/v1/trips${query}`)
-      .then(res => res.json())
-      .then(body => { if (body.data) { setTrips(body.data); loadTrips(body.data); } })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    try {
+      const res = await apiFetch(`${API_BASE}/api/v1/trips${query}`);
+      const body = await res.json();
+      const nextTrips = Array.isArray(body.data) ? body.data : [];
+      setTrips(nextTrips);
+      loadTrips(nextTrips);
+      if (animateResults) setResultAnimationKey(key => key + 1);
+    } catch {
+    } finally {
+      setLoading(false);
+    }
   }
+
+  const resetSearch = () => {
+    setKeyWord("");
+    setSearchDate("");
+    setHasSearched(false);
+    getInit({ animateResults: true, keyword: "", startDate: "" });
+  };
+
+  const runSearch = () => {
+    if (!canSearchTrips) return;
+    setHasSearched(true);
+    getInit({ animateResults: true });
+  };
+
+  const handleKeywordChange = (value: string) => {
+    setKeyWord(value);
+    if (!value.trim() && (keyWord.trim() || searchDate || hasSearched)) {
+      setSearchDate("");
+      setHasSearched(false);
+      getInit({ animateResults: true, keyword: "", startDate: "" });
+    }
+  };
 
   useEffect(() => {
     localStorage.removeItem("pendingInviteCode");
@@ -524,10 +580,10 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
       <div className="flex items-center justify-between px-4 pt-14 pb-2">
-        <p className="text-xl font-bold">내 여행</p>
-        <button onClick={() => setShowCreate(true)} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        <p className="text-3xl font-bold">내 여행</p>
+        <button onClick={() => setShowCreate(true)} aria-label="여행 모임 만들기" className="home-create-button w-10 h-10 flex items-center justify-center rounded-full">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.75} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
         </button>
       </div>
@@ -543,8 +599,8 @@ export default function HomePage() {
             className="w-full p-3 bg-gray-100 rounded-xl text-sm outline-none"
             placeholder="여행 이름, 지역, 멤버명으로 검색"
             value={keyWord}
-            onChange={e => setKeyWord(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { getInit(); (e.target as HTMLInputElement).blur(); } }}
+            onChange={e => handleKeywordChange(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && !e.nativeEvent.isComposing && canSearchTrips) { runSearch(); (e.target as HTMLInputElement).blur(); } }}
           />
           <div className="flex gap-2">
             <DateField
@@ -552,20 +608,25 @@ export default function HomePage() {
               value={searchDate}
               onChange={setSearchDate}
               label="여행 시작일 검색"
+              placeholder="날짜로 검색"
             />
             {searchDate && (
               <button
-                onClick={() => setSearchDate("")}
+                onClick={resetSearch}
                 className="px-3 bg-gray-100 rounded-xl text-gray-400 hover:text-gray-600 text-sm"
               >
                 ✕
               </button>
             )}
             <button
-              onClick={getInit}
-              className="px-4 py-2 bg-blue-500 text-white text-sm font-semibold rounded-xl"
+              onClick={runSearch}
+              disabled={!canSearchTrips}
+              aria-label="검색"
+              className="w-12 shrink-0 bg-blue-500 text-white rounded-xl flex items-center justify-center disabled:bg-blue-500/30 disabled:text-white/70 disabled:opacity-100 disabled:cursor-not-allowed"
             >
-              검색
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" />
+              </svg>
             </button>
           </div>
         </div>
@@ -574,9 +635,18 @@ export default function HomePage() {
           <div className="flex justify-center py-10">
             <p className="text-sm text-gray-400">불러오는 중...</p>
           </div>
+        ) : trips.length === 0 && hasSearched ? (
+          <p key={resultAnimationKey} className="home-search-empty py-12 text-center text-sm text-gray-400">
+            찾는 여행 모임이 없습니다
+          </p>
         ) : trips.length === 0 ? (
-          <div className="flex flex-col items-center gap-4 p-7 bg-gray-50 rounded-2xl text-center">
-            <span className="text-5xl">🔗</span>
+          <div key={resultAnimationKey} className="home-search-empty flex flex-col items-center gap-4 p-7 bg-gray-50 rounded-2xl text-center">
+            <span className="text-blue-400">
+              <svg className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth={2.75} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5a4 4 0 0 0-5.66 0l-2.34 2.34a4 4 0 1 0 5.66 5.66l1.05-1.05" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 13.5a4 4 0 0 0 5.66 0l2.34-2.34A4 4 0 1 0 12.84 5.5L11.8 6.55" />
+              </svg>
+            </span>
             <p className="font-semibold">아직 여행 모임이 없어요</p>
             <p className="text-sm text-gray-500">여행 모임을 만들면 초대 링크가 생성됩니다.</p>
             <button onClick={() => setShowCreate(true)} className="px-6 py-3 rounded-2xl bg-blue-500 text-white font-semibold text-sm">
@@ -584,22 +654,25 @@ export default function HomePage() {
             </button>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div key={resultAnimationKey} className="home-search-results flex flex-col gap-3">
             {[...trips].sort((a, b) => {
               const order = { during: 0, before: 1, after: 2 };
               return order[getTripStatus(a.startDate, a.nights)] - order[getTripStatus(b.startDate, b.nights)];
-            }).map(trip => <TripCard key={trip.id} trip={trip} />)}
+            }).map((trip, index) => <TripCard key={trip.id} trip={trip} animationDelayMs={Math.min(index, 6) * 55} />)}
           </div>
         )}
       </div>
 
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowCreate(false)} />
-          <div className="relative w-full max-w-md bg-white rounded-t-3xl max-h-[90vh] overflow-y-auto">
+        <AnimatedBottomSheet
+          onClose={() => setShowCreate(false)}
+          className="max-h-[90vh] overflow-y-auto"
+        >
+          {(close) => (
+            <>
             <div className="flex items-center justify-between px-4 pt-5 pb-3 border-b border-gray-100">
               <h2 className="text-lg font-bold">여행 모임 만들기</h2>
-              <button onClick={() => setShowCreate(false)} className="text-blue-500 font-medium">닫기</button>
+              <button onClick={close} className="text-blue-500 font-medium">닫기</button>
             </div>
             <div className="p-4 flex flex-col gap-5">
               <div>
@@ -617,6 +690,7 @@ export default function HomePage() {
                   value={tripDate}
                   onChange={setTripDate}
                   label="여행 시작일 선택"
+                  placeholder="날짜를 선택"
                 />
               </div>
               <div>
@@ -635,8 +709,9 @@ export default function HomePage() {
                 여행 모임 만들기
               </button>
             </div>
-          </div>
-        </div>
+            </>
+          )}
+        </AnimatedBottomSheet>
       )}
     </div>
   );
