@@ -24,7 +24,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -104,7 +107,7 @@ public class VoteService {
                 .toList();
         List<TripPlaceFindResponse> wishPlaceFindResponses = tripPlaceService.findWishPlaces(tripId, memberId);
         //장소의 아이디를 키로 하여 위의 맵에서 횟수를 매핑하여 반환
-        return VoteFindWithUpdateCountResponse.of(voteFindResponses, wishPlaceFindResponses, updateCount, vote.getStatus());
+        return VoteFindWithUpdateCountResponse.of(voteFindResponses, wishPlaceFindResponses, updateCount, vote);
     }
 
     public Map<Long, Long> findAllVoteIds(List<Long> timeLineIds) {
@@ -155,6 +158,7 @@ public class VoteService {
         TripGroup tripGroup = tripGroupRepository.findById(tripId).orElseThrow(RuntimeException::new);
         LocalDateTime expireTime = tripGroup.getStartDate().minusDays(1).atStartOfDay();
         TripMember tripMember = tripMemberRepository.findByMemberIdAndTripGroupId(memberId, tripId).orElseThrow(RuntimeException::new);
+
         List<Vote> votes = timeLines.stream()
                 .map(timeLine -> Vote
                         .builder()

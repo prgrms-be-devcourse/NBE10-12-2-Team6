@@ -38,6 +38,7 @@ export default function BlockDetailPage() {
   const [voteStatus, setVoteStatus] = useState<string | null>(null);
   const [voteConfirmed, setVoteConfirmed] = useState(false);
   const [tieConfirmedName, setTieConfirmedName] = useState<string | null>(null);
+  const [confirmedPlaceId, setConfirmedPlaceId] = useState<string | null>(null);
   const [voteLoading, setVoteLoading] = useState(false);
   const [showConfirmedModal, setShowConfirmedModal] = useState(false);
 
@@ -84,6 +85,7 @@ export default function BlockDetailPage() {
         const status = body.data?.voteStatus ?? null;
         setVoteStatus(status);
         setVoteConfirmed(status === "투표 확정");
+        if (body.data?.confirmedPlaceId != null) setConfirmedPlaceId(String(body.data.confirmedPlaceId));
         const voted = results.find(v => v.isVoted);
         if (voted) setMyVotedPlaceId(String(voted.placeId));
         const wishList = (body.data?.wishPlaceFindResponses ?? []).map((w: { placeId: number; name: string; address: string; category: string; createdBy: string }) => ({
@@ -138,6 +140,7 @@ export default function BlockDetailPage() {
         setUpdateCount(body.data?.updateCount ?? 0);
         const status = body.data?.voteStatus ?? null;
         setVoteStatus(status);
+        if (body.data?.confirmedPlaceId != null) setConfirmedPlaceId(String(body.data.confirmedPlaceId));
         const confirmed = status === "투표 확정";
         setVoteConfirmed(prev => {
           if (!prev && confirmed) setShowConfirmedModal(true);
@@ -206,8 +209,8 @@ export default function BlockDetailPage() {
   const voteClosed = voteStatus !== null && voteStatus !== "투표 진행중";
 
   const isHost = currentUser.id === (trip?.members[0]?.id);
-  const confirmedByVote = voteConfirmed && voteDetails && voteDetails.length > 0
-    ? candidates.find(c => c.id === String(voteDetails.reduce((a, b) => a.count >= b.count ? a : b).placeId))
+  const confirmedByVote = voteConfirmed && confirmedPlaceId
+    ? candidates.find(c => c.id === confirmedPlaceId)
     : null;
   const displaySelected = selected ?? confirmedByVote ?? null;
   const showCenteredEmpty = voteDetails !== null && !displaySelected && !candidatesLoading && candidates.length === 0;

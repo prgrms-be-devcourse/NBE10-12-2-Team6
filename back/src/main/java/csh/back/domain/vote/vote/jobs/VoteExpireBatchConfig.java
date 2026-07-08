@@ -22,7 +22,8 @@ import java.util.Map;
 
 @Configuration
 public class VoteExpireBatchConfig {
-    private final int CHUNK_SIZE = 100;
+//    private final int CHUNK_SIZE = 100;
+    private final int CHUNK_SIZE = 3;
 
     // ── Reader: offset-0 고정 페이징 ──────────────────────────
     @StepScope

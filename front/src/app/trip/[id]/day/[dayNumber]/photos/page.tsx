@@ -238,17 +238,17 @@ export default function PhotoUploadPage() {
 
       {showUploadModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => { setShowUploadModal(false); router.push(`/trip/${id}`); }} />
+          <div className="absolute inset-0 bg-black/40" onClick={() => { setShowUploadModal(false); router.push(`/trip/${id}/timeline?from=timeline`); }} />
           <div className="relative w-72 bg-white rounded-3xl p-6 flex flex-col items-center gap-4 shadow-xl">
             <span className="text-5xl">📸</span>
             <p className="text-lg font-bold text-center">업로드 완료!</p>
             <p className="text-sm text-gray-500 text-center">사진이 모임에 공유되었어요.</p>
             <button
-              onClick={() => { setShowUploadModal(false); router.push(`/trip/${id}`); }}
+              onClick={() => { setShowUploadModal(false); router.push(`/trip/${id}/timeline?from=timeline`); }}
               className="w-full py-3.5 rounded-2xl font-semibold text-white"
               style={{ background: "#22c55e" }}
             >
-              확인
+              전체 사진 보기
             </button>
           </div>
         </div>
