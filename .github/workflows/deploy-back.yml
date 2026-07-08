@@ -8,7 +8,7 @@ name: Deploy Spring Boot to Oracle Cloud
 on:
   push:
     branches:
-      - main
+      - dev
     paths:
       - deploy-version-back.yml
   workflow_dispatch:
