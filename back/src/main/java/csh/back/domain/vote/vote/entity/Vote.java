@@ -56,10 +56,10 @@ public class Vote extends BaseEntity {
         this.timeLine = timeLine;
         this.tripMember = tripMember;
         this.expireTime = expireTime;
-        this.status = VoteStatus.PENDDING;
+        this.status = VoteStatus.PENDING;
     }
 
-    public void updateVoteConfirmed() {
-        this.status = VoteStatus.CONFIRMED;
+    public void updateVoteStatus(VoteStatus status) {
+        this.status = status;
     }
 }

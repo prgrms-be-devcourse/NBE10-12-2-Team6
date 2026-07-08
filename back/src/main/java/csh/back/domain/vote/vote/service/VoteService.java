@@ -16,6 +16,7 @@ import csh.back.domain.vote.user.repository.VoteUserRepository;
 import csh.back.domain.vote.vote.dto.response.*;
 import csh.back.domain.vote.vote.dto.web.VoteTimeLineResponse;
 import csh.back.domain.vote.vote.entity.Vote;
+import csh.back.domain.vote.vote.enums.VoteStatus;
 import csh.back.domain.vote.vote.repository.VoteRepository;
 import csh.back.domain.vote.vote.repository.VoteTimeLineIdProjection;
 import lombok.RequiredArgsConstructor;
@@ -103,7 +104,7 @@ public class VoteService {
                 .toList();
         List<TripPlaceFindResponse> wishPlaceFindResponses = tripPlaceService.findWishPlaces(tripId, memberId);
         //장소의 아이디를 키로 하여 위의 맵에서 횟수를 매핑하여 반환
-        return VoteFindWithUpdateCountResponse.of(voteFindResponses, wishPlaceFindResponses, updateCount, vote.isConfirmed());
+        return VoteFindWithUpdateCountResponse.of(voteFindResponses, wishPlaceFindResponses, updateCount, vote.getStatus());
     }
 
     public Map<Long, Long> findAllVoteIds(List<Long> timeLineIds) {
@@ -136,12 +137,13 @@ public class VoteService {
         tripMemberValidator.validMember(tripId, memberId);
         TripGroup tripGroup = tripGroupRepository.findById(tripId).orElseThrow(RuntimeException::new);
         TripMember tripMember = tripMemberRepository.findByMemberIdAndTripGroupId(memberId, tripId).orElseThrow(RuntimeException::new);
+        LocalDateTime expireTime = tripGroup.getStartDate().minusDays(1).atStartOfDay();
         Vote vote = Vote
                 .builder()
                 .tripGroup(tripGroup)
                 .timeLine(timeLine)
                 .tripMember(tripMember)
-                .penddingDays(3)
+                .expireTime(expireTime)
                 .build();
         Vote saved = voteRepository.save(vote);
         return VoteCreateResponse.from(saved);
@@ -169,7 +171,7 @@ public class VoteService {
         VoteItem voteItem = voteItemRepository.findById(maxVoteItemId).orElseThrow(RuntimeException::new);
         Long confirmPlaceId = voteItem.getTripPlace().getId();
         TimeLine timeLine = voteRepository.findTimeLineByVoteId(voteId).orElseThrow(RuntimeException::new);
-        voteItem.getVote().updateVoteConfirmed();
+        voteItem.getVote().updateVoteStatus(VoteStatus.CONFIRMED);
         return VoteTimeLineResponse.of(confirmPlaceId, timeLine);
     }
 
@@ -180,6 +182,11 @@ public class VoteService {
                         row -> row.getVoteItemId(),
                         row -> row.getVoteCount()
                 ));
+    }
+
+    public void expireVote(Long voteId) {
+        Vote vote = voteRepository.findById(voteId).orElseThrow(RuntimeException::new);
+        vote.updateVoteStatus(VoteStatus.EXPIRED);
     }
 
     private VoteWithTimeLineResponse createVoteAndTimeLineResponse(

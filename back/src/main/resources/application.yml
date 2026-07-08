@@ -20,6 +20,9 @@ spring:
     multipart:
       max-file-size: 50MB
       max-request-size: 100MB
+  batch:
+    job:
+      enabled: false
 springdoc:
   default-produces-media-type: application/json;charset=UTF-8
 logging:
