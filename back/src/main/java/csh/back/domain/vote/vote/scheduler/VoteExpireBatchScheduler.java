@@ -18,7 +18,6 @@ public class VoteExpireBatchScheduler {
 
     // 매일 00:05 KST. 00:00 정각 아님 — expireTime==자정인 놈이랑 실행 시각 겹치는 race 회피.
     // (expireTime <= :now라 어차피 다 잡히지만 여유 5분)
-//    @Scheduled(initialDelay = 60000, fixedDelay = Long.MAX_VALUE)
     @Scheduled(cron = "0 5 0 * * *", zone = "Asia/Seoul")
     public void runExpireVoteJob() {
         try {
