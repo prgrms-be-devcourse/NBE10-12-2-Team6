@@ -9,24 +9,38 @@ type Mode = "landing" | "login" | "signup";
 
 function Toast({ message, visible }: { message: string; visible: boolean }) {
   return (
-    <div
-      className="fixed top-0 left-0 right-0 flex justify-center z-50 pointer-events-none"
-      style={{ paddingTop: "max(1.25rem, env(safe-area-inset-top))" }}
-    >
+    <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
       <div
-        className="flex items-center gap-3 px-5 py-4 rounded-2xl shadow-lg transition-all duration-200"
         style={{
+          width: 110,
+          height: 110,
           background: "#1d1d1f",
+          borderRadius: "50%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
           opacity: visible ? 1 : 0,
-          transform: visible ? "translateY(0)" : "translateY(-1.5rem)",
+          transform: visible ? "scale(1)" : "scale(0.72)",
+          transition: visible
+            ? "opacity 0.28s ease-out, transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1)"
+            : "opacity 0.24s ease-in, transform 0.24s ease-in",
         }}
       >
         <span
-          className="flex items-center justify-center rounded-full flex-shrink-0"
-          style={{ width: 32, height: 32, background: "#34c759" }}
+          style={{
+            width: 74,
+            height: 74,
+            background: "#34c759",
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M3 8L6.5 11.5L13 5" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
+            <path d="M4 12L9.5 17.5L20 7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </span>
       </div>
@@ -45,6 +59,9 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: "", visible: false });
+  const [loginAnim, setLoginAnim] = useState(false);
+  const [welcomeVisible, setWelcomeVisible] = useState(false);
+  const [isSignupReveal, setIsSignupReveal] = useState(false);
 
   const showToast = (message: string, onDone?: () => void) => {
     setToast({ message, visible: true });
@@ -53,8 +70,8 @@ export default function LoginPage() {
       setTimeout(() => {
         setToast({ message: "", visible: false });
         onDone?.();
-      }, 200);
-    }, 1000);
+      }, 300);
+    }, 1500);
   };
 
   const handleLogin = async () => {
@@ -83,7 +100,9 @@ export default function LoginPage() {
       }
       const body = await res.json().catch(() => ({}));
       login(body.data?.name, body.data?.id);
-      showToast("로그인이 완료되었어요!", () => router.replace("/home"));
+      setLoginAnim(true);
+      setTimeout(() => setWelcomeVisible(true), 500);
+      setTimeout(() => router.replace("/home"), 2200);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "로그인에 실패했습니다.");
     } finally {
@@ -114,7 +133,15 @@ export default function LoginPage() {
       setPassword("");
       setPasswordConfirm("");
       setName("");
-      showToast("회원가입이 완료되었어요!", () => setMode("login"));
+      setIsSignupReveal(true);
+      setLoginAnim(true);
+      setTimeout(() => setWelcomeVisible(true), 500);
+      setTimeout(() => {
+        setLoginAnim(false);
+        setWelcomeVisible(false);
+        setIsSignupReveal(false);
+        setMode("login");
+      }, 2200);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "회원가입에 실패했습니다.");
     } finally {
@@ -155,8 +182,66 @@ export default function LoginPage() {
   // ── 로그인 ────────────────────────────────────────────────────────────────────
   if (mode === "login") {
     return (
-      <div className="flex flex-col min-h-screen px-6">
+      <div className="relative flex flex-col min-h-screen px-6 overflow-hidden">
         <Toast message={toast.message} visible={toast.visible} />
+
+        {loginAnim && (
+          <>
+            <style>{`
+              @keyframes circularReveal {
+                from { clip-path: circle(0% at 50% 60%); }
+                to   { clip-path: circle(160% at 50% 60%); }
+              }
+              @keyframes waveHand {
+                0%   { transform: rotate(0deg); }
+                15%  { transform: rotate(-22deg); }
+                35%  { transform: rotate(18deg); }
+                55%  { transform: rotate(-12deg); }
+                70%  { transform: rotate(7deg); }
+                85%  { transform: rotate(-3deg); }
+                100% { transform: rotate(0deg); }
+              }
+            `}</style>
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                zIndex: 200,
+                background: "linear-gradient(160deg, #60a5fa 0%, #3b82f6 40%, #4338ca 100%)",
+                animation: "circularReveal 0.75s cubic-bezier(0.4, 0, 0.2, 1) forwards",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <p
+                style={{
+                  color: "white",
+                  fontSize: "1.75rem",
+                  fontWeight: 700,
+                  letterSpacing: "-0.02em",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  opacity: welcomeVisible ? 1 : 0,
+                  transform: welcomeVisible ? "translateY(0)" : "translateY(8px)",
+                  transition: "opacity 0.5s ease, transform 0.5s ease",
+                }}
+              >
+                환영합니다
+                <span
+                  style={{
+                    display: "inline-block",
+                    animation: welcomeVisible ? "waveHand 1.1s ease-in-out 0.1s both" : "none",
+                    transformOrigin: "70% 80%",
+                  }}
+                >
+                  👋
+                </span>
+              </p>
+            </div>
+          </>
+        )}
         <div className="flex items-center gap-3 pt-14 pb-4 border-b border-gray-100">
           <button onClick={() => { setMode("landing"); setError(""); }} className="text-blue-500">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -214,8 +299,68 @@ export default function LoginPage() {
 
   // ── 회원가입 ──────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col min-h-screen px-6">
+    <div className="relative flex flex-col min-h-screen px-6 overflow-hidden">
       <Toast message={toast.message} visible={toast.visible} />
+
+      {loginAnim && (
+        <>
+          <style>{`
+            @keyframes circularReveal {
+              from { clip-path: circle(0% at 50% 60%); }
+              to   { clip-path: circle(160% at 50% 60%); }
+            }
+            @keyframes popConfetti {
+              0%   { transform: scale(1) rotate(0deg); }
+              20%  { transform: scale(1.5) rotate(-15deg); }
+              45%  { transform: scale(0.88) rotate(10deg); }
+              70%  { transform: scale(1.2) rotate(-5deg); }
+              100% { transform: scale(1) rotate(0deg); }
+            }
+          `}</style>
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 200,
+              background: "linear-gradient(160deg, #60a5fa 0%, #3b82f6 40%, #4338ca 100%)",
+              animation: "circularReveal 0.75s cubic-bezier(0.4, 0, 0.2, 1) forwards",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <p
+              style={{
+                color: "white",
+                fontSize: "1.75rem",
+                fontWeight: 700,
+                letterSpacing: "-0.02em",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                opacity: welcomeVisible ? 1 : 0,
+                transform: welcomeVisible ? "translateY(0)" : "translateY(8px)",
+                transition: "opacity 0.5s ease, transform 0.5s ease",
+              }}
+            >
+              {isSignupReveal ? "가입을 축하해요" : "환영합니다"}
+              <span
+                style={{
+                  display: "inline-block",
+                  animation: welcomeVisible
+                    ? isSignupReveal
+                      ? "popConfetti 0.8s ease-in-out 0.1s both"
+                      : "none"
+                    : "none",
+                }}
+              >
+                {isSignupReveal ? "🎉" : "👋"}
+              </span>
+            </p>
+          </div>
+        </>
+      )}
+
       <div className="flex items-center gap-3 pt-14 pb-4 border-b border-gray-100">
         <button onClick={() => { setMode("landing"); setError(""); }} className="text-blue-500">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
