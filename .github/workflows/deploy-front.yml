@@ -13,6 +13,10 @@ on:
       - deploy-version-front.yml
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   packages: write   # ghcr.io에 이미지 push 권한
