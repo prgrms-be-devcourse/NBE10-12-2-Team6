@@ -5,7 +5,7 @@ import csh.back.domain.trip.place.entity.TripPlace;
 public record TripPlaceFindResponse(Long placeId,
                                     String name,
                                     String address,
-                                    String theme,
+                                    String category,
                                     String createdBy
 
                                 ) {

@@ -17,6 +17,7 @@ import csh.back.domain.trip.timeline.repository.TimeLineRepository;
 import csh.back.domain.vote.vote.dto.response.VoteConfirmResponse;
 import csh.back.domain.vote.vote.dto.web.VoteTimeLineResponse;
 import csh.back.domain.vote.vote.enums.VoteConfirmStatus;
+import csh.back.domain.vote.vote.enums.VoteStatus;
 import csh.back.domain.vote.vote.repository.VoteRepository;
 import csh.back.domain.vote.vote.service.VoteService;
 import jakarta.persistence.EntityManager;
@@ -29,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @Service
@@ -45,10 +47,10 @@ public class TimeLineService {
     private final TimeLineEventService timeLineEventService;
     private final TripMemberValidator tripMemberValidator;
     private final EntityManager entityManager;
+    private final VoteRepository voteRepository;
 
     //최소 일차
     private static final int MINIMUM_DAY = 1;
-    private final VoteRepository voteRepository;
 
     //단건 타임라인 생성
     public TimeLineResponse createTimeLine(Long tripId, Long memberId, TimeLineCreateRequest request) {
@@ -212,10 +214,8 @@ public class TimeLineService {
 
     }
 
+
     public VoteConfirmResponse confirmVote(Long tripId, Long memberId, Long voteId) {
-        //보안 문제로 인한 주석 처리
-        //System.out.println(tripId);
-        //System.out.println(memberId);
 
         tripMemberValidator.validMember(tripId, memberId);
 
@@ -225,36 +225,66 @@ public class TimeLineService {
                 .filter(entry -> entry.getValue() == maxCount)
                 .map(Map.Entry::getKey)
                 .toList();
+        boolean isTie = maxKeys.size() == 1 ? false : true;
+        Long maxVoteItemId = maxKeys.size() == 1
+                ? maxKeys.get(0)
+                : maxKeys.get(ThreadLocalRandom.current().nextInt(maxKeys.size()));
 
-        if(maxKeys.size() > 1) {
-            return VoteConfirmResponse.of(VoteConfirmStatus.TIED, null, maxKeys);
-        }
-
-        Long maxVoteItemId = maxKeys.get(0);
         VoteTimeLineResponse voteTimeLineResponse = voteService.voteConfirm(maxVoteItemId, voteId);
         Long confirmPlaceId = voteTimeLineResponse.confirmPlaceId();
         confirmPlaceByHost(voteTimeLineResponse.timeLine() ,tripId, confirmPlaceId);
-        //서버에 이벤트 발송
-        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId, memberId);
-        return VoteConfirmResponse.of(VoteConfirmStatus.CONFIRMED, confirmPlaceId, null);
+        return VoteConfirmResponse.of(VoteStatus.CONFIRMED.getNickname(), confirmPlaceId, isTie);
     }
 
-    //확정된 장소 삽입하는 메서드
-    public VoteConfirmResponse confirmTiedVote(
-            Long tripId,
-            Long memberId,
-            Long voteId,
-            Long confirmPlaceId) {
+//    //확정된 장소 삽입하는 메서드
+//    public VoteConfirmResponse confirmTiedVote(
+//            Long tripId,
+//            Long memberId,
+//            Long voteId,
+//            Long confirmPlaceId) {
+//
+//        //여행 모임 멤버 여부 검증 추가
+//        tripMemberValidator.validMember(tripId, memberId);
+//        //tripId + timelineId로 타임라인 조회
+//        TimeLine timeLine = voteRepository.findTimeLineByVoteId(voteId).orElseThrow(RuntimeException::new);
+//        confirmPlaceByHost(timeLine, tripId, confirmPlaceId);
+//        //서버에 이벤트 발송
+//        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId, memberId);
+//        //응답 반환
+//        return VoteConfirmResponse.of(VoteConfirmStatus.CONFIRMED, confirmPlaceId, null);
+//    }
 
-        //여행 모임 멤버 여부 검증 추가
-        tripMemberValidator.validMember(tripId, memberId);
-        //tripId + timelineId로 타임라인 조회
-        TimeLine timeLine = voteRepository.findTimeLineByVoteId(voteId).orElseThrow(RuntimeException::new);
-        confirmPlaceByHost(timeLine, tripId, confirmPlaceId);
-        //서버에 이벤트 발송
-        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId, memberId);
-        //응답 반환
-        return VoteConfirmResponse.of(VoteConfirmStatus.CONFIRMED, confirmPlaceId, null);
+    public void expireAndConfirmBySystem(Long voteId) {
+        // reader가 넘긴 건 detached라 id로 받음. 여기선 voteId로 집계부터.
+        Map<Long, Long> countMap = voteService.voteCount(voteId);
+
+        // ── 0표: 확정 없이 만료만 ──────────────────────────────
+        if (countMap.isEmpty() || Collections.max(countMap.values()) == 0L) {
+            voteService.expireVote(voteId);   // ★ 아래 설명 — Vote status를 EXPIRE로 (VoteService에 필요)
+            return;
+        }
+
+        // ── 표 있음: (동점 랜덤) 확정 ──────────────────────────
+        long maxCount = Collections.max(countMap.values());
+        List<Long> maxKeys = countMap.entrySet().stream()
+                .filter(e -> e.getValue() == maxCount)
+                .map(Map.Entry::getKey)
+                .toList();
+
+        Long winnerVoteItemId = maxKeys.size() == 1
+                ? maxKeys.get(0)
+                : maxKeys.get(ThreadLocalRandom.current().nextInt(maxKeys.size()));
+
+        // 수동과 동일: voteConfirm(CONFIRMED 박기 + timeLine 조회) → 장소 확정
+        VoteTimeLineResponse res = voteService.voteConfirm(winnerVoteItemId, voteId);
+        confirmPlaceBySystem(res.timeLine(), res.confirmPlaceId());   // ★ tripId 검증 없는 버전
+    }
+
+    // confirmPlaceByHost의 배치 버전: tripId 검증 없이 findById만
+    private void confirmPlaceBySystem(TimeLine timeLine, Long confirmPlaceId) {
+        TripPlace tripPlace = tripPlaceRepository.findById(confirmPlaceId)
+                .orElseThrow(() -> new IllegalStateException("확정 장소 없음: " + confirmPlaceId));
+        timeLine.updateConfirmedPlace(tripPlace);
     }
 
     private void confirmPlaceByHost(TimeLine timeLine, Long tripId, Long confirmPlaceId) {
@@ -264,6 +294,14 @@ public class TimeLineService {
         //타임라인에 확정 장소 반영
         timeLine.updateConfirmedPlace(tripPlace);
     }
+
+    private Long resolveTripIdByVoteId(Long voteId) {
+        TimeLine timeLine = voteRepository.findTimeLineByVoteId(voteId)   // ★ 실제 조회로 교체
+                .orElseThrow(() -> new IllegalStateException("TimeLine 없음: voteId=" + voteId));
+        return timeLine.getTripGroup().getId();
+    }
+
+
 
     private void deleteVotesByTimeLine(Long timelineId) {
         entityManager.createQuery("""

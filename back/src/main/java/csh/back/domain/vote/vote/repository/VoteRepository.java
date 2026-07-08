@@ -4,6 +4,7 @@ import csh.back.domain.trip.timeline.entity.TimeLine;
 import csh.back.domain.vote.vote.entity.Vote;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Map;
@@ -19,4 +20,5 @@ public interface VoteRepository extends JpaRepository<Vote, Long> {
 
     @Query("SELECT v.timeLine FROM Vote v WHERE v.id = :voteId")
     Optional<TimeLine> findTimeLineByVoteId(Long voteId);
+
 }
