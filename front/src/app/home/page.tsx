@@ -264,6 +264,178 @@ function DateField({
   );
 }
 
+const CHOSUNG = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+
+function getChosung(char: string): string {
+  const code = char.charCodeAt(0);
+  if (code >= 0xAC00 && code <= 0xD7A3) return CHOSUNG[Math.floor((code - 0xAC00) / (21 * 28))];
+  return char;
+}
+
+function matchesRegion(city: string, query: string): boolean {
+  if (!query) return true;
+  if (city.includes(query)) return true;
+  if ([...query].every(c => CHOSUNG.includes(c))) {
+    return [...city].map(getChosung).join("").includes(query);
+  }
+  return false;
+}
+
+const DOMESTIC_REGIONS = [
+  { group: "수도권", cities: ["서울", "인천", "수원", "경기"] },
+  { group: "강원", cities: ["강릉", "속초", "춘천", "동해", "원주", "평창"] },
+  { group: "충청", cities: ["대전", "청주", "천안", "세종", "공주", "충주"] },
+  { group: "전라", cities: ["광주", "전주", "여수", "순천", "목포", "군산"] },
+  { group: "경상", cities: ["부산", "대구", "울산", "경주", "거제", "통영", "진주", "포항", "안동"] },
+  { group: "제주", cities: ["제주", "서귀포"] },
+];
+
+function RegionSheetPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [inputValue, setInputValue] = useState(value);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const inlineSuggestions = inputValue.trim()
+    ? DOMESTIC_REGIONS.flatMap(({ cities }) =>
+        cities.filter(c => matchesRegion(c, inputValue.trim()))
+      )
+    : [];
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleInlineSelect = (city: string) => {
+    setInputValue(city);
+    onChange(city);
+  };
+
+  const handleSheetOpen = () => {
+    setOpen(true);
+    setShowSuggestions(false);
+  };
+
+  const handleSheetSelect = (city: string) => {
+    setInputValue(city);
+    onChange(city);
+    setOpen(false);
+    setShowSuggestions(true);
+  };
+
+  return (
+    <>
+      <div ref={containerRef} className="relative">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+            </svg>
+            <input
+              className="w-full pl-9 pr-4 py-3 bg-gray-100 rounded-xl text-sm outline-none"
+              placeholder="지역 검색 또는 직접 입력"
+              value={inputValue}
+              onChange={e => { setInputValue(e.target.value); onChange(e.target.value); setShowSuggestions(true); }}
+              onFocus={() => { if (inputValue.trim()) setShowSuggestions(true); }}
+              autoComplete="off"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleSheetOpen}
+            className="w-12 flex items-center justify-center bg-gray-100 rounded-xl text-gray-500 shrink-0"
+            aria-label="전체 지역 목록"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="mt-2 h-[6.4rem] border border-gray-200 rounded-xl overflow-hidden">
+          {showSuggestions && inlineSuggestions.length > 0 ? (
+            <div className="flex flex-wrap gap-2 content-start p-3 h-full overflow-hidden">
+              {inlineSuggestions.map(city => (
+                <button
+                  key={city}
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); handleInlineSelect(city); }}
+                  className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition shrink-0 ${
+                    inputValue === city
+                      ? "bg-blue-500 text-white"
+                      : "bg-white text-gray-700 shadow-sm border border-gray-100 active:bg-gray-100"
+                  }`}
+                >
+                  {city}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-xs text-gray-300">지역명을 입력하면 추천 지역이 나타나요</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {open && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
+          <div className="relative w-full max-w-md bg-white rounded-t-3xl max-h-[85vh] flex flex-col sheet-slide-up">
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
+              <p className="text-lg font-bold">지역 선택</p>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="w-9 h-9 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"
+                aria-label="닫기"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="overflow-y-auto px-5 pb-8 flex flex-col gap-5">
+              {DOMESTIC_REGIONS.map(({ group, cities }) => (
+                <div key={group}>
+                  <p className="text-xs font-bold text-gray-400 mb-2.5">{group}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {cities.map(city => (
+                      <button
+                        key={city}
+                        type="button"
+                        onClick={() => handleSheetSelect(city)}
+                        className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
+                          value === city
+                            ? "bg-blue-500 text-white"
+                            : "bg-gray-100 text-gray-700 active:bg-gray-200"
+                        }`}
+                      >
+                        {city}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 function TripCard({ trip }: { trip: ApiTrip }) {
   const status = getTripStatus(trip.startDate, trip.nights);
   const badge = STATUS_BADGE[status];
@@ -436,7 +608,7 @@ export default function HomePage() {
               </div>
               <div>
                 <label className="text-sm font-semibold mb-1.5 block">지역</label>
-                <input className="w-full p-3 bg-gray-100 rounded-xl text-sm outline-none" placeholder="지역을 입력해주세요" value={tripRegion} onChange={e => setTripRegion(e.target.value)} />
+                <RegionSheetPicker value={tripRegion} onChange={setTripRegion} />
               </div>
               <div>
                 <label className="text-sm font-semibold mb-1.5 block">시작일</label>
