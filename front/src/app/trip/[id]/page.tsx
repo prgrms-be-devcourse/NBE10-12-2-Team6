@@ -42,14 +42,13 @@ function InviteSheet({ trip, onClose }: { trip: Trip; onClose: () => void }) {
 
         <p className="text-sm text-gray-500">아래 링크를 친구에게 공유해주세요.</p>
 
-        <div className="flex items-center justify-center py-6 rounded-2xl" style={{ background: "#eff6ff" }}>
+        <div className="flex items-center justify-center py-6 rounded-2xl bg-blue-50 border border-blue-100">
           <p className="text-sm font-semibold text-blue-600 break-all text-center px-2">{inviteLink}</p>
         </div>
 
         <button
           onClick={copyLink}
-          className="w-full py-3.5 rounded-2xl text-sm font-semibold"
-          style={{ background: "#dbeafe", color: "#2563eb" }}
+          className="w-full py-3.5 rounded-2xl text-sm font-semibold bg-blue-100 text-blue-600"
         >
           {copied ? "복사 완료 ✓" : "링크 복사"}
         </button>
@@ -154,7 +153,7 @@ function AddCandidateSheet({
           </div>
 
           {/* 검색 결과 */}
-          <div className="rounded-2xl p-3 flex flex-col gap-2 min-h-[300px]" style={{ background: "#f1f5f9" }}>
+          <div className="candidate-search-panel rounded-2xl p-3 flex flex-col gap-2 min-h-[300px]">
             {loading && <p className="text-sm text-gray-400 text-center py-4">검색 중...</p>}
             {!loading && hasSearched && results.length === 0 && (
               <p className="text-sm text-gray-400 text-center py-4">검색 결과가 없습니다.</p>
@@ -165,8 +164,7 @@ function AddCandidateSheet({
               return (
                 <div
                   key={i}
-                  className="p-3 rounded-xl border flex items-center gap-2 transition-all"
-                  style={{ background: isSelected ? "#dbeafe" : "white", borderColor: isSelected ? "#3b82f6" : "transparent" }}
+                  className={`candidate-search-result p-3 rounded-xl border flex items-center gap-2 transition-all ${isSelected ? "is-selected" : ""}`}
                 >
                   <button onClick={() => setSelected(place)} className="flex-1 text-left min-w-0">
                     <p className="text-sm font-semibold truncate">{place.place_name}</p>
@@ -201,7 +199,7 @@ function TripCandidatePoolCard({ trip, onUpdate, tripStatus }: { trip: Trip; onU
   const canRegister = tripStatus === "before";
 
   return (
-    <div className="p-4 flex flex-col gap-3 rounded-2xl" style={{ background: "#f0fdf4" }}>
+    <div className="candidate-pool-card p-4 flex flex-col gap-3 rounded-2xl">
       <div className="flex items-start justify-between">
         <div>
           <p className="font-semibold">후보 장소</p>
@@ -211,7 +209,7 @@ function TripCandidatePoolCard({ trip, onUpdate, tripStatus }: { trip: Trip; onU
       </div>
 
       {trip.candidates.length === 0 ? (
-        <div className="p-3 rounded-xl flex items-start gap-2" style={{ background: "#dcfce7" }}>
+        <div className="candidate-empty-card p-3 rounded-xl flex items-start gap-2">
           <span className="text-base shrink-0">📍</span>
           <div>
             <p className="text-sm font-semibold">아직 후보 장소가 없습니다.</p>
@@ -222,7 +220,7 @@ function TripCandidatePoolCard({ trip, onUpdate, tripStatus }: { trip: Trip; onU
         <div className="flex flex-col gap-2">
           {trip.candidates.map(c => (
             <div key={c.id} className="flex items-center gap-3 p-3 bg-white rounded-xl">
-              <span className="text-base shrink-0" style={{ color: "#16a34a" }}>📍</span>
+              <span className="text-base shrink-0 text-green-600">📍</span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold truncate">{c.placeName}</p>
                 <p className="text-xs text-gray-400 truncate">{c.address}</p>
@@ -236,8 +234,7 @@ function TripCandidatePoolCard({ trip, onUpdate, tripStatus }: { trip: Trip; onU
       {canRegister ? (
         <button
           onClick={() => setShowAdd(true)}
-          className="w-full py-3 rounded-xl font-semibold text-sm"
-          style={{ background: "#dcfce7", color: "#16a34a" }}
+          className="candidate-add-button w-full py-3 rounded-xl font-semibold text-sm"
         >
           + 후보 올리기
         </button>

@@ -23,6 +23,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 // 회원 관련 요청을 처리하는 컨트롤러 (회원가입, 로그인, 로그아웃)
 // 인증 방식: 쿠키(v2) + Authorization 헤더(v1) 하이브리드 지원 - 프론트 전환 기간 동안 둘 다 발급
@@ -79,6 +81,9 @@ public class MemberController {
 
         // 기존 v1 프론트 호환용 - Authorization 헤더로도 동일하게 전달
         response.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + result.refreshToken() + " " + result.accessToken());
+
+        System.out.println(ZoneId.systemDefault());
+        System.out.println(LocalDateTime.now());
 
         return new ResponseData<>(200, result.userInfo());
     }

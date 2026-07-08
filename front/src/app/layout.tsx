@@ -11,6 +11,10 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8f9fa" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f1014" },
+  ],
 };
 
 export default function RootLayout({
@@ -18,8 +22,22 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const themeScript = `
+    (() => {
+      const applyTheme = () => {
+        const theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.dataset.theme = theme;
+      };
+      applyTheme();
+      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
+    })();
+  `;
+
   return (
-    <html lang="ko" className="h-full">
+    <html lang="ko" className="h-full" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="min-h-full bg-gray-50 flex justify-center">
         <TripLogProvider>
           <div className="w-full max-w-md bg-white relative overflow-x-hidden" style={{ minHeight: "100dvh" }}>

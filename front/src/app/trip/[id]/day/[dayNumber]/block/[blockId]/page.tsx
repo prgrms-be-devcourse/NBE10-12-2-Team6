@@ -242,6 +242,11 @@ export default function BlockDetailPage() {
   const voteClosed = voteConfirmed || tripStarted;
 
   const isHost = currentUser.id === (trip?.members[0]?.id);
+  const confirmedByVote = voteConfirmed && voteDetails && voteDetails.length > 0
+    ? candidates.find(c => c.id === String(voteDetails.reduce((a, b) => a.count >= b.count ? a : b).placeId))
+    : null;
+  const displaySelected = selected ?? confirmedByVote ?? null;
+  const showCenteredEmpty = voteDetails !== null && !displaySelected && !candidatesLoading && candidates.length === 0;
 
   const decideByVote = async () => {
     if (fromVote) {
@@ -343,13 +348,7 @@ export default function BlockDetailPage() {
         </div>
 
         {/* Selected */}
-        {voteDetails === null ? null : (() => {
-          const confirmedByVote = voteConfirmed && voteDetails && voteDetails.length > 0
-            ? candidates.find(c => c.id === String(voteDetails.reduce((a, b) => a.count >= b.count ? a : b).placeId))
-            : null;
-          const displaySelected = selected ?? confirmedByVote ?? null;
-
-          return displaySelected ? (
+        {displaySelected && (
             <div className="p-4 rounded-2xl" style={{ background: "#dcfce7" }}>
               <p className="text-sm font-semibold mb-2" style={{ color: tripEnded ? "#374151" : "#15803d" }}>{tripEnded ? `${displaySelected.placeName} 어떠셨어요? 🥹` : "이 구간에 확정된 후보"}</p>
               {!tripEnded && (
@@ -363,25 +362,20 @@ export default function BlockDetailPage() {
                 </div>
               )}
             </div>
-          ) : (
-            <div className="p-3 rounded-xl flex items-start gap-2" style={{ background: tripEnded ? "#faf5ff" : tripStarted ? "#f0fdf4" : "#fff7ed" }}>
-              <span className="shrink-0">{tripEnded ? "🥹" : tripStarted ? "🌿" : "💡"}</span>
-              <div>
-                <p className="text-sm font-semibold">
-                  {tripEnded ? `${trip?.name} 여행은 어떠셨나요?` : tripStarted ? "자유로운 여행을 즐기세요~!" : "아직 확정된 후보가 없습니다."}
-                </p>
-                {!tripStarted && !tripEnded && <p className="text-xs text-gray-500">전체 후보 중 하나를 투표 또는 랜덤으로 확정하세요.</p>}
-              </div>
-            </div>
-          );
-        })()}
+        )}
 
-        {/* All candidates */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <p className="font-semibold">전체 후보 목록</p>
-            <span className="text-xs text-gray-400 font-bold">{candidates.length}개</span>
+        {showCenteredEmpty ? (
+          <div className="flex-1 min-h-[45vh] flex items-center justify-center text-center px-6">
+            <p className="text-base font-semibold text-gray-400">아직 확정된 후보가 없습니다.</p>
           </div>
+        ) : (
+          <>
+            {/* All candidates */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <p className="font-semibold">전체 후보 목록</p>
+                <span className="text-xs text-gray-400 font-bold">{candidates.length}개</span>
+              </div>
 
           {/* 동적 카테고리 필터 */}
           {candidates.length > 0 && (() => {
@@ -460,7 +454,9 @@ export default function BlockDetailPage() {
               })}
             </div>
           )}
-        </div>
+            </div>
+          </>
+        )}
 
       </div>
 
@@ -479,7 +475,7 @@ export default function BlockDetailPage() {
             className="flex-1 py-4 rounded-2xl font-semibold disabled:opacity-40"
             style={{ background: "#f3e8ff", color: "#9333ea" }}
           >
-            🔀 랜덤 투표
+            랜덤 투표
           </button>
           <button
             onClick={() => { if (pendingVote && !voteLoading) { vote(pendingVote); setPendingVote(null); } }}
