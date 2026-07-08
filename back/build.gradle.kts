@@ -23,10 +23,10 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
-    compileOnly("org.projectlombok:lombok")
-    annotationProcessor("org.projectlombok:lombok")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
+    compileOnly("org.projectlombok:lombok")
+    annotationProcessor("org.projectlombok:lombok")
     // Database
     runtimeOnly("com.h2database:h2")
     runtimeOnly("com.mysql:mysql-connector-j")
@@ -50,6 +50,9 @@ dependencies {
     annotationProcessor("com.querydsl:querydsl-jpa:5.1.0:jakarta")
     annotationProcessor("jakarta.persistence:jakarta.persistence-api")
     annotationProcessor("jakarta.annotation:jakarta.annotation-api")
+
+    //스프링 배치
+    implementation ("org.springframework.boot:spring-boot-starter-batch-jdbc")
 }
 
 tasks.withType<Test> {

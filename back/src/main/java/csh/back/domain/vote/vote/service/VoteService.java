@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -43,7 +44,6 @@ public class VoteService {
     private final TripPlaceService tripPlaceService;
 
     private final int DEFAULT_UPDATE_COUNT = 0;
-    private final boolean CONFIRM_VOTE = true;
 
     // 투표 목록 조회해오는거(투표탭에서 사용됨)
     public List<VoteFindListResponse> findVoteList(Long tripId, Long memberId) {
@@ -151,6 +151,7 @@ public class VoteService {
     public void createVoteBatch(Long tripId, Long memberId, List<TimeLine> timeLines) {
         tripMemberValidator.validMember(tripId, memberId);
         TripGroup tripGroup = tripGroupRepository.findById(tripId).orElseThrow(RuntimeException::new);
+        LocalDateTime expireTime = tripGroup.getStartDate().minusDays(1).atStartOfDay();
         TripMember tripMember = tripMemberRepository.findByMemberIdAndTripGroupId(memberId, tripId).orElseThrow(RuntimeException::new);
         List<Vote> votes = timeLines.stream()
                 .map(timeLine -> Vote
@@ -158,7 +159,7 @@ public class VoteService {
                         .tripGroup(tripGroup)
                         .timeLine(timeLine)
                         .tripMember(tripMember)
-                        .penddingDays(3)
+                        .expireTime(expireTime)
                         .build())
                 .toList();
         voteRepository.saveAll(votes);
@@ -168,7 +169,7 @@ public class VoteService {
         VoteItem voteItem = voteItemRepository.findById(maxVoteItemId).orElseThrow(RuntimeException::new);
         Long confirmPlaceId = voteItem.getTripPlace().getId();
         TimeLine timeLine = voteRepository.findTimeLineByVoteId(voteId).orElseThrow(RuntimeException::new);
-        voteItem.getVote().updateIsConfirmed(CONFIRM_VOTE);
+        voteItem.getVote().updateVoteConfirmed();
         return VoteTimeLineResponse.of(confirmPlaceId, timeLine);
     }
 
