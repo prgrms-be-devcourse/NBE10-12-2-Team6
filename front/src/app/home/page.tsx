@@ -436,6 +436,7 @@ function RegionSheetPicker({
   );
 }
 
+
 function TripCard({ trip }: { trip: ApiTrip }) {
   const status = getTripStatus(trip.startDate, trip.nights);
   const badge = STATUS_BADGE[status];
@@ -475,6 +476,7 @@ export default function HomePage() {
   const [tripNights, setTripNights] = useState(2);
   const [keyWord, setKeyWord] = useState("");
   const [searchDate, setSearchDate] = useState("");
+  const todayValue = toDateValue(new Date());
 
   const getInit = async () => {
     const p = new URLSearchParams();
@@ -611,7 +613,14 @@ export default function HomePage() {
                 <RegionSheetPicker value={tripRegion} onChange={setTripRegion} />
               </div>
               <div>
-                <label className="text-sm font-semibold mb-1.5 block">시작일</label>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <label className="text-sm font-semibold">시작일</label>
+                  {tripDate === todayValue && (
+                    <span className="text-xs font-semibold text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full">
+                      오늘 출발 시 계획 등록 제한
+                    </span>
+                  )}
+                </div>
                 <DateField
                   className="w-full"
                   value={tripDate}
