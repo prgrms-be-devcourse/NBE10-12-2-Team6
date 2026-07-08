@@ -1,5 +1,6 @@
 package csh.back.global.exception;
 
+import csh.back.domain.member.exception.ExistingMemberException;
 import csh.back.domain.trip.group.exception.NonMemberException;
 import csh.back.domain.trip.group.exception.NotFoundException;
 import csh.back.global.dto.ErrorResponse;
@@ -44,5 +45,13 @@ public class GlobalExeptionHandler {
 	) {
 		return ResponseEntity.status(HttpStatus.FORBIDDEN)
 				.body(new ErrorResponse(403, e.getMessage()));  // 따옴표 제거 + new 추가
+	}
+
+	@ExceptionHandler(ExistingMemberException.class)
+	public ResponseEntity<ErrorResponse> handleGroupNotFound(
+			ExistingMemberException e
+	) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+				.body(new ErrorResponse(404, e.getMessage()));  // 따옴표 제거 + new 추가
 	}
 }

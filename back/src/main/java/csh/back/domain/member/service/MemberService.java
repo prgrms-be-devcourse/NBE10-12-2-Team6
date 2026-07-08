@@ -4,6 +4,7 @@ import csh.back.domain.member.dto.response.LoginResponseDto;
 import csh.back.domain.member.dto.response.MemberResponseDto;
 import csh.back.domain.member.dto.web.LoginResult;
 import csh.back.domain.member.entity.Member;
+import csh.back.domain.member.exception.ExistingMemberException;
 import csh.back.domain.member.repository.MemberRepository;
 import csh.back.global.jwt.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,7 @@ public class MemberService {
     @Transactional
     public MemberResponseDto signUp(String email, String password, String name) {
         if (memberRepository.existsByEmail(email)) {
-            throw new RuntimeException("이미 사용 중인 이메일입니다.");
+            throw new ExistingMemberException("이미 사용 중인 이메일입니다.");
         }
 
         Member newMember = Member.builder()
