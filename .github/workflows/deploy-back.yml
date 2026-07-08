@@ -8,7 +8,7 @@ name: Deploy Spring Boot to Oracle Cloud
 on:
   push:
     branches:
-      - main
+      - dev
     paths:
       - deploy-version-back.yml
   workflow_dispatch:
@@ -43,9 +43,10 @@ jobs:
       # [3] GitHub Secrets에 등록된 값으로 .env 파일 생성
       - name: 🍏 Create .env file from Secrets
         run: |
-          echo "FILE_UPLOAD_BASE_URL=${{ secrets.FILE_UPLOAD_BASE_URL }}" > .env
           echo "SPRING_PROFILES_ACTIVE=prod" >> .env
+          echo "FILE_UPLOAD_BASE_URL=${{ secrets.FILE_UPLOAD_BASE_URL }}" > .env
           echo "MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}" >> .env
+          echo "CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}" >> .env
 
       # [4] ghcr.io 로그인 (GITHUB_TOKEN은 Actions에서 자동 발급, 별도 등록 불필요)
       - name: 🍏 Login to GitHub Container Registry
