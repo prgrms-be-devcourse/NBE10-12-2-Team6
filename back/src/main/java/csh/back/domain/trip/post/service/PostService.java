@@ -174,7 +174,6 @@ public class PostService {
      */
     public PostTimeLineResponse getCurrentSlot(Long tripId, Long memberId, int dayNumber) {
         LocalDateTime now = LocalDateTime.now();
-        LocalDate today = now.toLocalDate();
         LocalDateTime dayStart = now.toLocalDate().atStartOfDay();   // 오늘 00:00:00
         LocalDateTime dayEnd = dayStart.plusDays(1);                 // 내일 00:00:00
         TripMember tripMember = tripMemberRepository.findByMemberIdAndTripGroupId(memberId, tripId).orElseThrow(RuntimeException::new);

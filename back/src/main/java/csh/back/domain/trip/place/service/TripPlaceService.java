@@ -9,8 +9,10 @@ import csh.back.domain.trip.member.validator.TripMemberValidator;
 import csh.back.domain.trip.place.dto.response.TripPlaceFindResponse;
 import csh.back.domain.trip.place.dto.response.TripPlaceSaveResponse;
 import csh.back.domain.trip.place.entity.TripPlace;
+import csh.back.domain.trip.place.exception.DuplicateTripPlaceException;
 import csh.back.domain.trip.place.repository.TripPlaceRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -59,8 +61,12 @@ public class TripPlaceService {
                 .kakaoMapUrl(kakaoMapUrl)
                 .createdBy(tripMember)
                 .build();
-        TripPlace saveResult = tripPlaceRepository.save(place);
-        TripPlaceSaveResponse response = TripPlaceSaveResponse.from(saveResult);
-        return response;
+        try {
+            TripPlace saveResult = tripPlaceRepository.saveAndFlush(place);
+            return TripPlaceSaveResponse.from(saveResult);
+        } catch (DataIntegrityViolationException e) {
+            // 사전 체크를 뚫고 동시성으로 들어온 케이스
+            throw new DuplicateTripPlaceException(kakaoPlaceId);
+        }
     }
 }
