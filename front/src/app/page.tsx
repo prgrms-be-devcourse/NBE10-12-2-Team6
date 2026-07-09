@@ -71,6 +71,7 @@ export default function LoginPage() {
     setAuthTransition(transition);
     setMode(nextMode);
     setError("");
+    setEmail(""); setPassword(""); setPasswordConfirm(""); setName("");
   };
 
   useEffect(() => {
