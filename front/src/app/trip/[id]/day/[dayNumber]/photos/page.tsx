@@ -170,7 +170,7 @@ export default function PhotoUploadPage() {
     window.setTimeout(
       () => {
         setShowUploadModal(false);
-        router.push(`/trip/${id}`);
+        router.push(`/trip/${id}/timeline?from=timeline`);
       },
       prefersReducedMotion ? 0 : UPLOAD_MODAL_EXIT_MS
     );
@@ -322,7 +322,7 @@ export default function PhotoUploadPage() {
               className="w-full py-3.5 rounded-2xl font-semibold text-white"
               style={{ background: "#22c55e" }}
             >
-              확인
+              전체 사진 보기
             </button>
           </div>
         </div>

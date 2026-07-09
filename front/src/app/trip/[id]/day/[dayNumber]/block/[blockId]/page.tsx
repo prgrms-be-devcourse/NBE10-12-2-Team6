@@ -60,6 +60,8 @@ type ConfirmVoteResponse = {
   data?: {
     status?: string;
     tiedPlaceIds?: number[];
+    isTie?: boolean;
+    confirmedPlaceId?: number;
   };
 };
 
@@ -86,7 +88,10 @@ export default function BlockDetailPage() {
   const [blockOrder, setBlockOrder] = useState<number | null>(null);
   const [myVotedPlaceId, setMyVotedPlaceId] = useState<string | null>(null);
   const [updateCount, setUpdateCount] = useState<number>(0);
+  const [voteStatus, setVoteStatus] = useState<string | null>(null);
   const [voteConfirmed, setVoteConfirmed] = useState(false);
+  const [tieConfirmedName, setTieConfirmedName] = useState<string | null>(null);
+  const [confirmedPlaceId, setConfirmedPlaceId] = useState<string | null>(null);
   const [voteLoading, setVoteLoading] = useState(false);
   const [showConfirmedModal, setShowConfirmedModal] = useState(false);
   const [confirmedModalPresented, setConfirmedModalPresented] = useState(false);
@@ -132,16 +137,20 @@ export default function BlockDetailPage() {
         const results: VoteDetail[] = body.data?.voteResults ?? [];
         setVoteDetails(results);
         setUpdateCount(body.data?.updateCount ?? 0);
-        setVoteConfirmed(body.data?.isConfirmed ?? false);
+        const status = body.data?.voteStatus ?? null;
+        const confirmed = status ? status === "투표 확정" : body.data?.isConfirmed ?? false;
+        setVoteStatus(status);
+        setVoteConfirmed(confirmed);
+        if (body.data?.confirmedPlaceId != null) setConfirmedPlaceId(String(body.data.confirmedPlaceId));
         const voted = results.find(v => v.isVoted);
         if (voted) setMyVotedPlaceId(String(voted.placeId));
-        const wishList = (body.data?.wishPlaceFindResponses ?? []).map((w: { placeId: number; name: string; address: string; theme: string; createdBy: string }) => ({
+        const wishList = (body.data?.wishPlaceFindResponses ?? []).map((w: { placeId: number; name: string; address: string; theme?: string; category?: string; createdBy: string }) => ({
           id: String(w.placeId),
           authorId: 0,
           authorName: w.createdBy,
           placeName: w.name,
           address: w.address,
-          category: w.theme,
+          category: w.theme ?? w.category ?? "기타",
         }));
         setWishPlaces(wishList);
       });
@@ -197,7 +206,10 @@ export default function BlockDetailPage() {
         const results: VoteDetail[] = body.data?.voteResults ?? [];
         setVoteDetails(results);
         setUpdateCount(body.data?.updateCount ?? 0);
-        const confirmed = body.data?.isConfirmed ?? false;
+        const status = body.data?.voteStatus ?? null;
+        const confirmed = status ? status === "투표 확정" : body.data?.isConfirmed ?? false;
+        setVoteStatus(status);
+        if (body.data?.confirmedPlaceId != null) setConfirmedPlaceId(String(body.data.confirmedPlaceId));
         setVoteConfirmed(prev => {
           if (!prev && confirmed) setShowConfirmedModal(true);
           return confirmed;
@@ -262,11 +274,17 @@ export default function BlockDetailPage() {
     return today > endDate;
   })();
 
-  const voteClosed = voteConfirmed || tripStarted;
+  const voteClosed = fromVote
+    ? voteStatus ? voteStatus !== "투표 진행중" : voteConfirmed || tripStarted
+    : voteConfirmed || tripStarted;
 
   const isHost = currentUser.id === (trip?.members[0]?.id);
-  const confirmedByVote = voteConfirmed && voteDetails && voteDetails.length > 0
-    ? candidates.find(c => c.id === String(voteDetails.reduce((a, b) => a.count >= b.count ? a : b).placeId))
+  const confirmedByVote = voteConfirmed
+    ? confirmedPlaceId
+      ? candidates.find(c => c.id === confirmedPlaceId)
+      : voteDetails && voteDetails.length > 0
+        ? candidates.find(c => c.id === String(voteDetails.reduce((a, b) => a.count >= b.count ? a : b).placeId))
+        : null
     : null;
   const displaySelected = selected ?? confirmedByVote ?? null;
   const showCenteredEmpty = voteDetails !== null && !displaySelected && !candidatesLoading && candidates.length === 0;
@@ -296,6 +314,10 @@ export default function BlockDetailPage() {
           const tied = candidates.filter(c => (tiedPlaceIds ?? []).includes(Number(c.id)));
           setTieCandidates(tied);
           setShowTie(true);
+        } else if (body.data?.isTie) {
+          const picked = candidates.find(c => c.id === String(body.data?.confirmedPlaceId));
+          setTieConfirmedName(picked?.placeName ?? null);
+          refetchVoteDetails();
         } else {
           refetchVoteDetails();
         }
@@ -325,6 +347,7 @@ export default function BlockDetailPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ confirmedPlaceId: Number(candidate.id) }),
         });
+        setTieConfirmedName(candidate.placeName);
         refetchVoteDetails();
       } catch (e) {
         console.error(e);
@@ -502,7 +525,13 @@ export default function BlockDetailPage() {
       {voteClosed ? (
         <div className="px-4 py-4 border-t border-gray-100 bg-white">
           <div className="w-full py-4 rounded-2xl text-center font-semibold text-gray-400 bg-gray-100">
-            {voteConfirmed ? "투표가 종료되었습니다" : "여행이 시작되어 투표가 마감되었습니다"}
+            {fromVote
+              ? voteStatus === "투표 확정"
+                ? "투표가 확정되었습니다"
+                : "투표 기한이 만료되었습니다"
+              : voteConfirmed
+                ? "투표가 종료되었습니다"
+                : "여행이 시작되어 투표가 마감되었습니다"}
           </div>
         </div>
       ) : (
@@ -541,6 +570,13 @@ export default function BlockDetailPage() {
           <div className={`modal-card relative w-72 bg-white rounded-3xl p-6 flex flex-col items-center gap-4 shadow-xl ${confirmedModalPresented ? "is-open" : ""} ${confirmedModalClosing ? "is-closing" : ""}`}>
             <span className="text-5xl">🎉</span>
             <p className="text-lg font-bold text-center">투표가 확정되었습니다!</p>
+            {tieConfirmedName && (
+              <p className="text-sm text-center text-gray-500 leading-relaxed">
+                동점이어서 랜덤으로{" "}
+                <span className="font-semibold text-gray-800">{tieConfirmedName}</span>
+                이(가) 선택되었습니다.
+              </p>
+            )}
             <p className="text-sm text-gray-500 text-center leading-relaxed">
               장소가 확정되었어요.
               <br />
