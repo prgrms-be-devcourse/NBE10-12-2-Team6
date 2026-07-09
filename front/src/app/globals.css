@@ -124,6 +124,7 @@ html {
 .sheet-panel {
   animation: slideUp 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
   will-change: transform;
+  background-color: var(--surface);
 }
 
 .sheet-panel.is-closing {
@@ -278,6 +279,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     background-color: var(--surface-soft);
   }
 
+  .hover\:bg-gray-100:hover,
+  .hover\:bg-gray-200:hover {
+    background-color: var(--surface-soft);
+  }
+
   .border-gray-100,
   .border-gray-200,
   .border-gray-300 {
@@ -427,6 +433,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 :root[data-theme="dark"] .bg-gray-100,
 :root[data-theme="dark"] .bg-gray-200,
 :root[data-theme="dark"] .bg-gray-300 {
+  background-color: var(--surface-soft) !important;
+}
+
+:root[data-theme="dark"] .hover\:bg-gray-100:hover,
+:root[data-theme="dark"] .hover\:bg-gray-200:hover {
   background-color: var(--surface-soft) !important;
 }
 
