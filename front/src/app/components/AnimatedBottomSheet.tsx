@@ -42,7 +42,7 @@ export default function AnimatedBottomSheet({
         className={`sheet-backdrop absolute inset-0 ${overlayClassName} ${closing ? "is-closing" : ""}`}
         onClick={close}
       />
-      <div className={`sheet-panel relative w-full max-w-md max-h-[calc(100dvh-0.75rem)] bg-white rounded-t-3xl ${closing ? "is-closing" : ""} ${className}`}>
+      <div className={`sheet-panel relative w-full max-w-md max-h-[calc(100dvh-0.75rem)] rounded-t-3xl ${closing ? "is-closing" : ""} ${className}`}>
         {children(close)}
       </div>
     </div>,
