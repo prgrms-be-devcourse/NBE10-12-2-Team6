@@ -233,6 +233,8 @@ public class TimeLineService {
         VoteTimeLineResponse voteTimeLineResponse = voteService.voteConfirm(maxVoteItemId, voteId);
         Long confirmPlaceId = voteTimeLineResponse.confirmPlaceId();
         confirmPlaceByHost(voteTimeLineResponse.timeLine() ,tripId, confirmPlaceId);
+        //        //서버에 이벤트 발송
+        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId, memberId);
         return VoteConfirmResponse.of(VoteStatus.CONFIRMED.getNickname(), confirmPlaceId, isTie);
     }
 

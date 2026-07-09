@@ -467,14 +467,14 @@ export default function TripDetailPage() {
     apiFetch(`${API_BASE}/api/v1/trips/${id}/wish-places`)
       .then(r => r.json())
       .then(body => {
-        const wishes: { placeId: number; name: string; address: string; theme?: string; category?: string; createdBy: string }[] = body.data ?? [];
+        const wishes: { placeId: number; name: string; address: string; category: string; createdBy: string }[] = body.data ?? [];
         const candidates = wishes.map(w => ({
           id: String(w.placeId),
           authorId: 0,
           authorName: w.createdBy,
           placeName: w.name,
           address: w.address,
-          category: w.theme ?? w.category,
+          category: w.category,
         }));
         updateTrip({ ...trip, candidates });
       })
@@ -698,9 +698,9 @@ export default function TripDetailPage() {
                                   </p>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
-                                  {tl.voteStatus === "투표 확정" || tl.confirmedPlaceName
+                                  {tl.voteStatus === "투표 확정"
                                     ? <span className="text-xs font-bold px-2 py-1 rounded-full" style={{ background: "#dcfce7", color: "#16a34a" }}>확정됨</span>
-                                    : tl.voteStatus === "투표 기한 만료" || (!tl.voteStatus && tripStatus !== "before")
+                                    : tl.voteStatus === "투표 기한 만료"
                                     ? <span className="text-xs font-bold px-2 py-1 rounded-full" style={{ background: "#f3f4f6", color: "#9ca3af" }}>투표 마감</span>
                                     : <span className="text-xs font-bold px-2 py-1 rounded-full" style={{ background: "#dbeafe", color: "#2563eb" }}>투표하기</span>
                                   }
