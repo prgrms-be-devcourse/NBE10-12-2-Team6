@@ -4,49 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useStore, TripDay, PlanCandidate, uid } from "../../../../../../store";
 import { timeText, useAuthGuard, apiFetch, API_BASE } from "../../../../../../lib";
-import AnimatedBottomSheet from "../../../../../../components/AnimatedBottomSheet";
-
-// ── Tie random pick sheet ─────────────────────────────────────────────────────
-
-function TieRandomSheet({
-  candidates, onPick, onClose,
-}: { candidates: PlanCandidate[]; onPick: (c: PlanCandidate) => void; onClose: () => void }) {
-  const [picked, setPicked] = useState<PlanCandidate | null>(null);
-  return (
-    <AnimatedBottomSheet onClose={onClose} className="p-6">
-      {(close) => (
-        <>
-        <p className="text-lg font-bold mb-1">동점 후보 랜덤 뽑기</p>
-        <p className="text-sm text-gray-500 mb-4">동점으로 나온 후보들끼리 랜덤 뽑기를 진행합니다.</p>
-        <div className="flex flex-col gap-2 mb-4">
-          {candidates.map(c => (
-            <div key={c.id} className="p-3 bg-gray-50 rounded-xl">
-              <p className="font-semibold text-sm">{c.placeName}</p>
-            </div>
-          ))}
-        </div>
-        {picked && <p className="text-center font-semibold mb-3" style={{ color: "#9333ea" }}>뽑힌 후보: {picked.placeName}</p>}
-        <button
-          onClick={() => setPicked(candidates[Math.floor(Math.random() * candidates.length)])}
-          className="w-full py-3.5 rounded-2xl font-semibold text-white mb-2"
-          style={{ background: "#9333ea" }}
-        >
-          랜덤 뽑기
-        </button>
-        {picked && (
-          <button
-            onClick={() => { onPick(picked); close(); }}
-            className="w-full py-3.5 rounded-2xl bg-blue-500 text-white font-semibold"
-          >
-            이 후보로 확정
-          </button>
-        )}
-        </>
-      )}
-    </AnimatedBottomSheet>
-  );
-}
-
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface VoteDetail {
@@ -55,15 +12,6 @@ interface VoteDetail {
   count: number;
   isVoted: boolean;
 }
-
-type ConfirmVoteResponse = {
-  data?: {
-    status?: string;
-    tiedPlaceIds?: number[];
-    isTie?: boolean;
-    confirmedPlaceId?: number;
-  };
-};
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
@@ -78,8 +26,6 @@ export default function BlockDetailPage() {
 
   const fromVote = searchParams.get("from") === "vote";
   const timelineId = searchParams.get("timelineId");
-  const [showTie, setShowTie] = useState(false);
-  const [tieCandidates, setTieCandidates] = useState<PlanCandidate[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [pendingVote, setPendingVote] = useState<string | null>(null);
   const [showHostMenu, setShowHostMenu] = useState(false);
@@ -144,13 +90,13 @@ export default function BlockDetailPage() {
         if (body.data?.confirmedPlaceId != null) setConfirmedPlaceId(String(body.data.confirmedPlaceId));
         const voted = results.find(v => v.isVoted);
         if (voted) setMyVotedPlaceId(String(voted.placeId));
-        const wishList = (body.data?.wishPlaceFindResponses ?? []).map((w: { placeId: number; name: string; address: string; theme?: string; category?: string; createdBy: string }) => ({
+        const wishList = (body.data?.wishPlaceFindResponses ?? []).map((w: { placeId: number; name: string; address: string; category: string; createdBy: string }) => ({
           id: String(w.placeId),
           authorId: 0,
           authorName: w.createdBy,
           placeName: w.name,
           address: w.address,
-          category: w.theme ?? w.category ?? "기타",
+          category: w.category,
         }));
         setWishPlaces(wishList);
       });
@@ -274,17 +220,11 @@ export default function BlockDetailPage() {
     return today > endDate;
   })();
 
-  const voteClosed = fromVote
-    ? voteStatus ? voteStatus !== "투표 진행중" : voteConfirmed || tripStarted
-    : voteConfirmed || tripStarted;
+  const voteClosed = voteStatus !== null && voteStatus !== "투표 진행중";
 
   const isHost = currentUser.id === (trip?.members[0]?.id);
-  const confirmedByVote = voteConfirmed
-    ? confirmedPlaceId
-      ? candidates.find(c => c.id === confirmedPlaceId)
-      : voteDetails && voteDetails.length > 0
-        ? candidates.find(c => c.id === String(voteDetails.reduce((a, b) => a.count >= b.count ? a : b).placeId))
-        : null
+  const confirmedByVote = voteConfirmed && confirmedPlaceId
+    ? candidates.find(c => c.id === confirmedPlaceId)
     : null;
   const displaySelected = selected ?? confirmedByVote ?? null;
   const showCenteredEmpty = voteDetails !== null && !displaySelected && !candidatesLoading && candidates.length === 0;
@@ -297,30 +237,12 @@ export default function BlockDetailPage() {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
         });
-        if (!res.ok) throw new Error("투표 확정에 실패했습니다.");
-
-        const text = await res.text();
-        let body: ConfirmVoteResponse = {};
-        if (text.trim()) {
-          try {
-            body = JSON.parse(text) as ConfirmVoteResponse;
-          } catch {
-            body = {};
-          }
-        }
-
-        const { status, tiedPlaceIds } = body.data ?? {};
-        if (status === "TIED") {
-          const tied = candidates.filter(c => (tiedPlaceIds ?? []).includes(Number(c.id)));
-          setTieCandidates(tied);
-          setShowTie(true);
-        } else if (body.data?.isTie) {
-          const picked = candidates.find(c => c.id === String(body.data?.confirmedPlaceId));
+        const body = await res.json();
+        if (body.data?.isTie) {
+          const picked = candidates.find(c => c.id === String(body.data.confirmedPlaceId));
           setTieConfirmedName(picked?.placeName ?? null);
-          refetchVoteDetails();
-        } else {
-          refetchVoteDetails();
         }
+        refetchVoteDetails();
       } catch (e) {
         console.error(e);
       }
@@ -329,33 +251,9 @@ export default function BlockDetailPage() {
     if (candidates.length === 0 || !day) return;
     const maxVote = Math.max(...candidates.map(c => voteCount(c.id)));
     const winners = candidates.filter(c => voteCount(c.id) === maxVote);
-    if (winners.length === 1) {
-      setDay({ ...day, selectedCandidateByBlock: { ...day.selectedCandidateByBlock, [blockId]: winners[0].id } });
-    } else {
-      setTieCandidates(winners);
-      setShowTie(true);
-    }
+    const winner = winners[Math.floor(Math.random() * winners.length)];
+    setDay({ ...day, selectedCandidateByBlock: { ...day.selectedCandidateByBlock, [blockId]: winner.id } });
     setShowHostMenu(false);
-  };
-
-  const pickFromTie = async (candidate: PlanCandidate) => {
-    if (!day) return;
-    if (fromVote) {
-      try {
-        await apiFetch(`${API_BASE}/api/v1/trips/${id}/votes/${blockId}/confirm-tie`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ confirmedPlaceId: Number(candidate.id) }),
-        });
-        setTieConfirmedName(candidate.placeName);
-        refetchVoteDetails();
-      } catch (e) {
-        console.error(e);
-      }
-      return;
-    }
-    if (!day) return;
-    setDay({ ...day, selectedCandidateByBlock: { ...day.selectedCandidateByBlock, [blockId]: candidate.id } });
   };
 
   const closeConfirmedModal = () => {
@@ -392,7 +290,7 @@ export default function BlockDetailPage() {
                 <div className="host-menu absolute right-0 top-9 z-50 rounded-2xl shadow-xl border p-2 flex flex-col gap-1 w-36">
                   <button
                     onClick={decideByVote}
-                    disabled={candidates.length === 0 || tripStarted}
+                    disabled={candidates.length === 0 || tripStarted || voteClosed}
                     className="confirm-vote-button w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-left disabled:opacity-40"
                   >
                     📊 투표 확정
@@ -551,14 +449,6 @@ export default function BlockDetailPage() {
             {voteLoading ? "투표 중..." : "투표하기"}
           </button>
         </div>
-      )}
-
-      {showTie && (
-        <TieRandomSheet
-          candidates={tieCandidates}
-          onPick={pickFromTie}
-          onClose={() => setShowTie(false)}
-        />
       )}
 
       {showConfirmedModal && (
