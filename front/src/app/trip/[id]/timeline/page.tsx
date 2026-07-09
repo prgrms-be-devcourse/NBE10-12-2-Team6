@@ -210,84 +210,94 @@ export default function TimelinePage() {
                 {dayPosts.length === 0 ? (
                   <p className="text-sm text-gray-500">아직 사진 기록이 없습니다.</p>
                 ) : (
+                  <div className="relative">
                   <div
+                    data-scroll
                     className="flex gap-3 overflow-x-auto snap-x snap-mandatory select-none"
                     style={{ scrollbarWidth: "none", cursor: "grab" }}
+                    onScroll={(e) => {
+                      const el = e.currentTarget;
+                      const step = el.clientWidth + 12;
+                      const idx = Math.round(el.scrollLeft / step);
+                      el.parentElement!.querySelectorAll('[data-dot]').forEach((dot, i) => {
+                        (dot as HTMLElement).style.opacity = i === idx ? "1" : "0.3";
+                        (dot as HTMLElement).style.width = i === idx ? "16px" : "6px";
+                      });
+                    }}
                     onMouseDown={(e) => {
                       e.preventDefault();
                       const el = e.currentTarget;
+                      el.style.scrollSnapType = "none";
                       const startX = e.clientX;
                       const startScrollLeft = el.scrollLeft;
                       el.style.cursor = "grabbing";
-                      const onMove = (ev: MouseEvent) => { el.scrollLeft = startScrollLeft - (ev.clientX - startX); };
-                      const onUp = () => { el.style.cursor = "grab"; window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+                      let hasDragged = false;
+                      const onMove = (ev: MouseEvent) => {
+                        if (Math.abs(ev.clientX - startX) > 5) hasDragged = true;
+                        el.scrollLeft = startScrollLeft - (ev.clientX - startX);
+                      };
+                      const onUp = (ev: MouseEvent) => {
+                        el.style.cursor = "grab";
+                        window.removeEventListener("mousemove", onMove);
+                        window.removeEventListener("mouseup", onUp);
+                        const step = el.clientWidth + 12;
+                        const dx = ev.clientX - startX;
+                        const baseIdx = Math.round(startScrollLeft / step);
+                        let targetIdx = baseIdx;
+                        if (dx < -step * 0.15) targetIdx = baseIdx + 1;
+                        else if (dx > step * 0.15) targetIdx = baseIdx - 1;
+                        const maxIdx = el.children.length - 1;
+                        targetIdx = Math.max(0, Math.min(targetIdx, maxIdx));
+                        el.scrollTo({ left: targetIdx * step, behavior: "smooth" });
+                        setTimeout(() => { el.style.scrollSnapType = ""; }, 400);
+                        if (hasDragged) {
+                          const blockClick = (ec: MouseEvent) => { ec.stopPropagation(); window.removeEventListener("click", blockClick, true); };
+                          window.addEventListener("click", blockClick, true);
+                        }
+                      };
                       window.addEventListener("mousemove", onMove);
                       window.addEventListener("mouseup", onUp);
                     }}
                   >
-                    {toSegments(dayPosts).map(seg => {
-                      const posts = seg.posts;
+                    {toSegments(dayPosts).flatMap(seg => {
                       const label = seg.type === "timeline"
                         ? (seg.posts[0]?.startTime && seg.posts[0]?.endTime
                             ? `${seg.posts[0].startTime.slice(11, 16)} ~ ${seg.posts[0].endTime.slice(11, 16)}${seg.posts[0].placeName ? ` · ${seg.posts[0].placeName}` : ""}`
                             : `타임라인 #${seg.timeLineId}`)
                         : `자유 시간 · ${seg.label}`;
-                      const borderColor = seg.type === "timeline" ? "border-blue-100 bg-blue-50" : "border-gray-200 bg-gray-50";
                       const labelColor = seg.type === "timeline" ? "text-blue-400" : "text-gray-400";
-                      const key = seg.type === "timeline" ? `tl-${seg.timeLineId}` : seg.slotKey;
+                      const borderColor = seg.type === "timeline" ? "border-blue-100 bg-blue-50" : "border-gray-200 bg-gray-50";
 
-	                      return (
-	                        <div key={key} className={`rounded-2xl border p-3 flex flex-col gap-2 snap-start basis-full shrink-0 ${borderColor}`}>
-	                          <div className="flex items-start justify-between gap-3">
-	                            <p className={`text-xs font-semibold ${labelColor}`}>{label}</p>
-	                            {posts.length > 1 && (
-	                              <p className="shrink-0 text-[11px] font-medium text-gray-400">
-	                                좌우로 밀어 넘기기
-	                              </p>
-	                            )}
-	                          </div>
-	                          <div
-	                            className="flex overflow-x-auto snap-x snap-mandatory rounded-xl overflow-hidden select-none"
-	                            style={{ scrollbarWidth: "none", cursor: "grab" }}
-	                            onMouseDown={(e) => {
-	                              e.preventDefault();
-	                              e.stopPropagation();
-	                              const el = e.currentTarget;
-	                              el.style.scrollSnapType = "none";
-	                              const startX = e.clientX;
-	                              const startScrollLeft = el.scrollLeft;
-	                              el.style.cursor = "grabbing";
-	                              let hasDragged = false;
-	                              const onMove = (ev: MouseEvent) => {
-	                                if (Math.abs(ev.clientX - startX) > 5) hasDragged = true;
-	                                el.scrollLeft = startScrollLeft - (ev.clientX - startX);
-	                              };
-	                              const onUp = () => {
-	                                el.style.scrollSnapType = "";
-	                                el.style.cursor = "grab";
-	                                window.removeEventListener("mousemove", onMove);
-	                                window.removeEventListener("mouseup", onUp);
-	                                if (hasDragged) {
-	                                  const blockClick = (ev: MouseEvent) => { ev.stopPropagation(); window.removeEventListener("click", blockClick, true); };
-	                                  window.addEventListener("click", blockClick, true);
-	                                }
-	                              };
-	                              window.addEventListener("mousemove", onMove);
-	                              window.addEventListener("mouseup", onUp);
-	                            }}
-                          >
-                            {posts.map(post => {
-                              const src = resolveUrl(post.contentUrl);
-                              return (
-                                <div key={post.postId} className="basis-full shrink-0 snap-start flex items-center justify-center" style={{ height: "360px" }}>
-                                  <img src={src} alt="" draggable={false} className="max-w-full max-h-full object-contain rounded-2xl cursor-pointer" onClick={() => setLightbox(src)} />
-                                </div>
-                              );
-                            })}
+                      return seg.posts.map(post => {
+                        const src = resolveUrl(post.contentUrl);
+                        return (
+                          <div key={post.postId} className={`rounded-2xl border p-3 flex flex-col gap-2 snap-start basis-full shrink-0 ${borderColor}`}>
+                            <p className={`text-xs font-semibold ${labelColor}`}>{label}</p>
+                            <div className="flex items-center justify-center rounded-xl overflow-hidden" style={{ height: "360px" }}>
+                              <img src={src} alt="" draggable={false} className="max-w-full max-h-full object-contain cursor-pointer" onClick={() => setLightbox(src)} />
+                            </div>
                           </div>
-                        </div>
-                      );
+                        );
+                      });
                     })}
+                  </div>
+                  {dayPosts.length > 1 && (
+                    <div className="flex justify-center items-center gap-1.5 mt-4">
+                      {Array.from({ length: dayPosts.length }, (_, i) => (
+                        <div
+                          key={i}
+                          data-dot
+                          className="h-1.5 rounded-full bg-gray-400 transition-all duration-200 cursor-pointer"
+                          style={{ width: i === 0 ? "16px" : "6px", opacity: i === 0 ? 1 : 0.3 }}
+                          onClick={(e) => {
+                            const rel = (e.currentTarget as HTMLElement).closest('.relative');
+                            const el = rel?.querySelector('[data-scroll]') as HTMLElement | null;
+                            if (el) el.scrollTo({ left: i * (el.clientWidth + 12), behavior: "smooth" });
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
                   </div>
                 )}
               </div>
