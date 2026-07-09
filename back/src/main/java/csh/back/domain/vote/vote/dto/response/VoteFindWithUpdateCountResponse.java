@@ -1,7 +1,6 @@
 package csh.back.domain.vote.vote.dto.response;
 
 import csh.back.domain.trip.place.dto.response.TripPlaceFindResponse;
-import csh.back.domain.trip.place.entity.TripPlace;
 import csh.back.domain.trip.timeline.entity.TimeLine;
 import csh.back.domain.vote.vote.entity.Vote;
 import csh.back.domain.vote.vote.enums.VoteStatus;

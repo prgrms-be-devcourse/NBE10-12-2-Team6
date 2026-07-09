@@ -975,8 +975,8 @@ export default function DayPlanPage() {
   return (
     <div className={`timeline-day-page flex flex-col h-screen ${isLeavingDay ? "trip-page-exit" : ""}`}>
       <div className="flex items-center gap-3 px-4 pt-12 pb-2">
-        <button onClick={() => leaveDayWithTransition(() => router.back())} className="text-blue-500 p-1 -ml-1">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button onClick={() => leaveDayWithTransition(() => router.back())} aria-label="뒤로가기" className="trip-header-icon-button w-10 h-10 rounded-full flex items-center justify-center">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>

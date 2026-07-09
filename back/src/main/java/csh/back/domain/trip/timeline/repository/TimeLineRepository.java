@@ -62,4 +62,11 @@ public interface TimeLineRepository extends JpaRepository<TimeLine, Long> {
             "where t.tripGroup.id = :tripId and t.dayNumber = :dayNumber " +
             "order by t.startTime asc")
     List<TimeLine> findByTripAndDateSorted(Long tripId, int dayNumber);
+
+    @Query("""
+        SELECT t FROM TimeLine t
+        WHERE t.tripGroup.id = :tripId
+        ORDER BY t.startTime ASC
+        """)
+    List<TimeLine> findByTripGroupIdSorted(Long tripId);
 }
