@@ -238,24 +238,6 @@ public class TimeLineService {
         return VoteConfirmResponse.of(VoteStatus.CONFIRMED.getNickname(), confirmPlaceId, isTie);
     }
 
-//    //확정된 장소 삽입하는 메서드
-//    public VoteConfirmResponse confirmTiedVote(
-//            Long tripId,
-//            Long memberId,
-//            Long voteId,
-//            Long confirmPlaceId) {
-//
-//        //여행 모임 멤버 여부 검증 추가
-//        tripMemberValidator.validMember(tripId, memberId);
-//        //tripId + timelineId로 타임라인 조회
-//        TimeLine timeLine = voteRepository.findTimeLineByVoteId(voteId).orElseThrow(RuntimeException::new);
-//        confirmPlaceByHost(timeLine, tripId, confirmPlaceId);
-//        //서버에 이벤트 발송
-//        timeLineEventService.sendTimeLineUpdatedEventAfterCommit(tripId, memberId);
-//        //응답 반환
-//        return VoteConfirmResponse.of(VoteConfirmStatus.CONFIRMED, confirmPlaceId, null);
-//    }
-
     public void expireAndConfirmBySystem(Long voteId) {
         // reader가 넘긴 건 detached라 id로 받음. 여기선 voteId로 집계부터.
         Map<Long, Long> countMap = voteService.voteCount(voteId);

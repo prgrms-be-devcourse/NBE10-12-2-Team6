@@ -80,8 +80,7 @@ public class PostV1Controller {
         postService.delete(tripId, postId);
     }
 
-    //Swagger 문서에 일차별 타임라인 목록 조회 API 설명 표시
-    @Operation(summary = "일차별 타임라인 시간 구간 목록 조회")
+    @Operation(summary = "사진 촬영 가능 여부 판단")
     //특정 여행 모임의 특정 일차 타임라인 목록 조회
     @GetMapping("/is-taken")
     public ResponseData<PostTimeLineResponse> getPostsWithIsTaken(

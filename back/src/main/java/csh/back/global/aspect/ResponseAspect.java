@@ -18,25 +18,24 @@ public class ResponseAspect {
 
     @Around("""
             execution(public csh.back.global.dto.ResponseData *(..)) &&
-                               (
-                                   within(@org.springframework.stereotype.Controller *) ||
-                                   within(@org.springframework.web.bind.annotation.RestController *)
-                               ) &&
-                               (
-                                   @annotation(org.springframework.web.bind.annotation.GetMapping) ||
-                                   @annotation(org.springframework.web.bind.annotation.PostMapping) ||
-                                   @annotation(org.springframework.web.bind.annotation.PatchMapping) ||
-                                   @annotation(org.springframework.web.bind.annotation.DeleteMapping) ||
-                                   @annotation(org.springframework.web.bind.annotation.RequestMapping)
-                               )
+            (
+                within(@org.springframework.stereotype.Controller *) ||
+                within(@org.springframework.web.bind.annotation.RestController *)
+            ) &&
+            (
+                @annotation(org.springframework.web.bind.annotation.GetMapping) ||
+                @annotation(org.springframework.web.bind.annotation.PostMapping) ||
+                @annotation(org.springframework.web.bind.annotation.PatchMapping) ||
+                @annotation(org.springframework.web.bind.annotation.PutMapping) ||
+                @annotation(org.springframework.web.bind.annotation.DeleteMapping) ||
+                @annotation(org.springframework.web.bind.annotation.RequestMapping)
+            )
             """)
     public Object handleResponse(ProceedingJoinPoint joinPoint) throws Throwable {
-        // 원래 메서드 실행
         Object proceed = joinPoint.proceed();
-
-        // ResponseDto 타입이면 상태 코드 설정
-        ResponseData<?> rsData = (ResponseData<?>) proceed;
-        response.setStatus(rsData.statusCode());
+        if (proceed instanceof ResponseData<?> rsData) {
+            response.setStatus(rsData.statusCode());
+        }
         return proceed;
     }
 }

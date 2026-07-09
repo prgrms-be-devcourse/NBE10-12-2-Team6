@@ -3,7 +3,9 @@ package csh.back.global.exception;
 import csh.back.domain.member.exception.ExistingMemberException;
 import csh.back.domain.trip.group.exception.NonMemberException;
 import csh.back.domain.trip.group.exception.NotFoundException;
+import csh.back.domain.trip.place.exception.DuplicateTripPlaceException;
 import csh.back.global.dto.ErrorResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -11,16 +13,10 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExeptionHandler {
 
-//    @ExceptionHandler(여기는 우리가 만든 에러클래스 하면될듯.class) 이 에러가 반환되면 여기서 돌아가는거
-//    public ResponseEntity<ResponseData<Void>> handleProductNotFound(
-//            ProductNotFoundException e
-//    ) {
-//        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-//                .body(new ResponseData<>("404-1", e.getMessage(), null));
-//    }
 	@ExceptionHandler(NotFoundException.class)
 	public ResponseEntity<ErrorResponse> handleGroupNotFound(
 			NotFoundException e
@@ -53,5 +49,12 @@ public class GlobalExeptionHandler {
 	) {
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
 				.body(new ErrorResponse(404, e.getMessage()));  // 따옴표 제거 + new 추가
+	}
+
+	@ExceptionHandler(DuplicateTripPlaceException.class)
+	public ResponseEntity<ErrorResponse> handleDuplicate(DuplicateTripPlaceException e) {
+		log.warn("Duplicate trip place Id: {}", e.getMessage());
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(new ErrorResponse(409, "이미 등록된 장소입니다"));
 	}
 }

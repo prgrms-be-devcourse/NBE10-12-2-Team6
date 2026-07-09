@@ -35,7 +35,7 @@ public class VoteV1Controller {
         return new ResponseData<>(200, voteService.findVoteList(tripId, member.id()));
     }
 
-    @Operation(summary = "투표 생성", description = "특정 여행 모임에 타임라인 기반 투표를 생성")
+    @Operation(summary = "투표 생성", description = "투표 생성 실패 오류 시 사용")
     @PostMapping
     public ResponseData<VoteCreateResponse> createVote(
             @PathVariable Long tripId,
@@ -84,16 +84,4 @@ public class VoteV1Controller {
         return new ResponseData<>(200, timeLineService.confirmVote(tripId, member.id(), voteId));
     }
 
-//    //Swagger 문서에 확정 장소 반영 API 설명 표시
-//    @Operation(summary = "투표 결과 동점인 장소 확정")
-//    //특정 여행 모임의 특정 타임라인 시간 구간에 확정 장소를 반영
-//    @PatchMapping("/{voteId}/confirm-tie")
-//    public ResponseData<VoteConfirmResponse> confirmTiedVote(
-//            @PathVariable Long tripId,
-//            @PathVariable Long voteId,
-//            @AuthenticationPrincipal AuthFilterDto member,
-//            @Valid @RequestBody VoteConfirmPlaceRequest request) {
-//        //확정 장소 반영 서비스 호출
-//        return new ResponseData<>(200, timeLineService.confirmTiedVote(tripId, member.id(), voteId, request.confirmedPlaceId()));
-//    }
 }

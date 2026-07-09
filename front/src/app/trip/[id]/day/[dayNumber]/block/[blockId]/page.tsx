@@ -39,6 +39,7 @@ export default function BlockDetailPage() {
   const [tieConfirmedName, setTieConfirmedName] = useState<string | null>(null);
   const [confirmedPlaceId, setConfirmedPlaceId] = useState<string | null>(null);
   const [voteLoading, setVoteLoading] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showConfirmedModal, setShowConfirmedModal] = useState(false);
   const [confirmedModalPresented, setConfirmedModalPresented] = useState(false);
   const [confirmedModalClosing, setConfirmedModalClosing] = useState(false);
@@ -269,6 +270,29 @@ export default function BlockDetailPage() {
 
   return (
     <div className="flex flex-col h-screen">
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowConfirmModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl p-6 mx-6 flex flex-col gap-4" onClick={e => e.stopPropagation()}>
+            <p className="font-bold text-base">투표 확정</p>
+            <p className="text-sm text-gray-600">이대로 투표를 확정하시겠습니까?</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-gray-100 text-gray-600"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => { setShowConfirmModal(false); decideByVote(); }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+                style={{ background: "#dcfce7", color: "#16a34a" }}
+              >
+                확정
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex items-center gap-3 px-4 pt-12 pb-2">
         <button onClick={goBack} className="text-blue-500 p-1 -ml-1">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -289,8 +313,8 @@ export default function BlockDetailPage() {
                 <div className="fixed inset-0 z-40" onClick={() => setShowHostMenu(false)} />
                 <div className="host-menu absolute right-0 top-9 z-50 rounded-2xl shadow-xl border p-2 flex flex-col gap-1 w-36">
                   <button
-                    onClick={decideByVote}
-                    disabled={candidates.length === 0 || tripStarted || voteClosed}
+                    disabled={candidates.length === 0 || tripStarted || voteClosed || candidates.every(c => voteCount(c.id) === 0)}
+                    onClick={() => { setShowHostMenu(false); setShowConfirmModal(true); }}
                     className="confirm-vote-button w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-left disabled:opacity-40"
                   >
                     📊 투표 확정
