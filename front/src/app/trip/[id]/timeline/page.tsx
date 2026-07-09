@@ -175,10 +175,14 @@ export default function TimelinePage() {
           <img src={lightbox} alt="" className="max-w-full max-h-full object-contain" />
         </div>
       )}
-    <div className="min-h-screen">
-      <div className="flex items-center gap-3 px-4 pt-12 pb-2">
-        <button onClick={goBack} className="text-blue-500 p-1 -ml-1">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className="flex h-screen flex-col overflow-hidden">
+      <div className="shrink-0 flex items-center gap-3 px-4 pt-12 pb-2">
+        <button
+          onClick={goBack}
+          aria-label="뒤로가기"
+          className="trip-header-icon-button w-10 h-10 rounded-full flex items-center justify-center"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
@@ -186,15 +190,17 @@ export default function TimelinePage() {
         <div className="w-8" />
       </div>
 
-      <div className="px-4 pb-10 flex flex-col gap-4">
+      <div className="shrink-0 px-4 pb-3">
         <p className="text-2xl font-bold">{trip.name} 타임라인</p>
+      </div>
 
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-10 flex flex-col gap-4">
         {trip.days.map(day => {
           const group = groups.find(g => g.date === day.date);
           const dayPosts = group?.posts ?? [];
 
           return (
-            <div key={day.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div key={day.id} className="shrink-0 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-100">
                 <p className="font-semibold">{day.dayNumber}일차</p>
                 <p className="text-xs text-gray-400">{formatDate(day.date)}</p>
@@ -216,12 +222,19 @@ export default function TimelinePage() {
                       const labelColor = seg.type === "timeline" ? "text-blue-400" : "text-gray-400";
                       const key = seg.type === "timeline" ? `tl-${seg.timeLineId}` : seg.slotKey;
 
-                      return (
-                        <div key={key} className={`rounded-2xl border p-3 flex flex-col gap-2 snap-start basis-full shrink-0 ${borderColor}`}>
-                          <p className={`text-xs font-semibold ${labelColor}`}>{label}</p>
-                          <div
-                            className="flex overflow-x-auto snap-x snap-mandatory rounded-xl overflow-hidden"
-                            style={{ scrollbarWidth: "none" }}
+	                      return (
+	                        <div key={key} className={`rounded-2xl border p-3 flex flex-col gap-2 snap-start basis-full shrink-0 ${borderColor}`}>
+	                          <div className="flex items-start justify-between gap-3">
+	                            <p className={`text-xs font-semibold ${labelColor}`}>{label}</p>
+	                            {posts.length > 1 && (
+	                              <p className="shrink-0 text-[11px] font-medium text-gray-400">
+	                                좌우로 밀어 넘기기
+	                              </p>
+	                            )}
+	                          </div>
+	                          <div
+	                            className="flex overflow-x-auto snap-x snap-mandatory rounded-xl overflow-hidden"
+	                            style={{ scrollbarWidth: "none" }}
                           >
                             {posts.map(post => {
                               const src = resolveUrl(post.contentUrl);

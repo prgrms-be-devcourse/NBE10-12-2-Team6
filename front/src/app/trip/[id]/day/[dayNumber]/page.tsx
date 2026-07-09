@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef, type ReactNode } from "react";
+import { useCallback, useState, useEffect, useRef, type MouseEvent, type ReactNode } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowClockwise, Clock, Minus, PencilSimple, Plus, X } from "@phosphor-icons/react";
 import { useStore, Trip, TripDay, ActivityBlock, PlanTheme, uid } from "../../../../store";
 import { timeText, durationText, apiFetch, useAuthGuard, API_BASE } from "../../../../lib";
+import AnimatedBottomSheet from "../../../../components/AnimatedBottomSheet";
 
 const THEMES: PlanTheme[] = ["meal", "cafe", "activity", "etc"];
 const MEMBER_COLORS = ["blue", "orange", "green", "purple", "pink", "teal", "indigo", "cyan"];
@@ -40,6 +41,12 @@ const makeDraftBlock = (order: number, startMinute = 9 * 60): ActivityBlock => (
 });
 
 const isPersistedBlock = (block: ActivityBlock) => /^\d+$/.test(block.id);
+const TIMELINE_BLOCK_EXIT_MS = 180;
+const SYNC_BANNER_ENTER_MS = 640;
+const SYNC_BANNER_EXIT_MS = 420;
+const wait = (ms: number) => new Promise(resolve => window.setTimeout(resolve, ms));
+
+type SyncBannerPhase = "enter" | "visible" | "exit";
 
 const toActivityBlocks = (items: TimeLineApiItem[]): ActivityBlock[] =>
   items.map((item, i) => ({
@@ -117,14 +124,18 @@ function TimePickerSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center">
-      <div className="absolute inset-0 bg-black/35" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-white rounded-t-3xl px-5 pt-4 pb-6 sheet-slide-up">
+    <AnimatedBottomSheet
+      onClose={onClose}
+      overlayClassName="bg-black/35"
+      className="overflow-y-auto px-5 pt-4 pb-6"
+    >
+      {(close) => (
+        <>
         <div className="flex items-center gap-3 mb-4">
           <p className="font-bold flex-1">{title}</p>
           <button
             type="button"
-            onClick={onClose}
+            onClick={close}
             className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600"
             aria-label="닫기"
           >
@@ -223,14 +234,15 @@ function TimePickerSheet({
           type="button"
           onClick={() => {
             onConfirm(draft);
-            onClose();
+            close();
           }}
           className="w-full py-4 rounded-2xl bg-blue-500 text-white font-bold"
         >
           완료
         </button>
-      </div>
-    </div>
+        </>
+      )}
+    </AnimatedBottomSheet>
   );
 }
 
@@ -277,6 +289,8 @@ function BlockCard({
   disabled = false,
   onRemove,
   removeDisabled = false,
+  removing = false,
+  animationDelayMs = 0,
   footer,
   onStartChange,
   onEndChange,
@@ -287,6 +301,8 @@ function BlockCard({
   disabled?: boolean;
   onRemove?: () => void;
   removeDisabled?: boolean;
+  removing?: boolean;
+  animationDelayMs?: number;
   footer?: ReactNode;
   onStartChange: (v: number) => void;
   onEndChange: (v: number) => void;
@@ -295,7 +311,10 @@ function BlockCard({
   const selected = trip.candidates.find(c => c.id === day.selectedCandidateByBlock[block.id]);
 
   return (
-    <div className="p-4 bg-gray-50 rounded-2xl flex flex-col gap-3">
+    <div
+      className={`timeline-block-card p-4 bg-gray-50 rounded-2xl flex flex-col gap-3 ${removing ? "is-removing" : ""}`}
+      style={{ animationDelay: removing ? "0ms" : `${animationDelayMs}ms` }}
+    >
       <div className="flex items-start justify-between">
         <div>
           <p className="font-semibold">{block.order}번째 시간 구간</p>
@@ -355,21 +374,24 @@ function BlockCard({
 function AddTimeRangeSlot({
   onClick,
   disabled,
+  animationDelayMs = 0,
 }: {
   onClick: () => void;
   disabled: boolean;
+  animationDelayMs?: number;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="min-h-24 rounded-2xl border-2 border-dashed border-green-200 bg-green-50/50 text-green-600 flex flex-col items-center justify-center gap-2 disabled:opacity-40"
+      aria-label="시간 구간 추가"
+      className="timeline-block-card min-h-24 rounded-2xl border-2 border-dashed border-green-200 bg-green-50/50 text-green-600 flex flex-col items-center justify-center gap-2 disabled:opacity-40"
+      style={{ animationDelay: `${animationDelayMs}ms` }}
     >
       <span className="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center">
         <Plus size={22} weight="bold" />
       </span>
-      <span className="text-sm font-bold">시간 구간 추가</span>
     </button>
   );
 }
@@ -380,17 +402,24 @@ function PlanSummaryCard({
   block,
   voteHref,
   onVoteClick,
+  animationDelayMs = 0,
+  removing = false,
 }: {
   trip: Trip;
   day: TripDay;
   block: ActivityBlock;
   voteHref?: string;
-  onVoteClick?: () => void;
+  onVoteClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
+  animationDelayMs?: number;
+  removing?: boolean;
 }) {
   const selected = trip.candidates.find(c => c.id === day.selectedCandidateByBlock[block.id]);
   const confirmedName = block.confirmedPlaceName || selected?.placeName || null;
   const content = (
-    <div className="flex gap-4 p-4 bg-white rounded-2xl shadow-sm border border-gray-100 items-center">
+    <div
+      className={`timeline-block-card flex gap-4 p-4 bg-white rounded-2xl shadow-sm border border-gray-100 items-center ${removing ? "is-removing" : ""}`}
+      style={{ animationDelay: removing ? "0ms" : `${animationDelayMs}ms` }}
+    >
       <div className="flex flex-col items-center text-sm text-gray-400 shrink-0">
         <span className="font-bold">{timeText(block.startMinute)}</span>
         <div className="w-0.5 h-8 bg-gray-200 my-1" />
@@ -441,18 +470,90 @@ export default function DayPlanPage() {
 
   const [validationError, setValidationError] = useState("");
   const [showSyncButton, setShowSyncButton] = useState(false);
+  const [syncBannerPhase, setSyncBannerPhase] = useState<SyncBannerPhase>("enter");
+  const [syncBannerKey, setSyncBannerKey] = useState(0);
   const [syncMessage, setSyncMessage] = useState("새로운 변경 사항이 있습니다.");
   const [syncLoading, setSyncLoading] = useState(false);
   const [timelineSaving, setTimelineSaving] = useState(false);
   const [isEditingTimeRanges, setIsEditingTimeRanges] = useState(false);
+  const [removingBlockIds, setRemovingBlockIds] = useState<string[]>([]);
+  const [isLeavingDay, setIsLeavingDay] = useState(false);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const syncAnimationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const syncBannerVisibleRef = useRef(false);
 
-  const applyTimelineItems = (items: TimeLineApiItem[], clearWhenEmpty = false) => {
+  const openSyncBanner = useCallback((message: string) => {
+    if (syncAnimationTimer.current) {
+      clearTimeout(syncAnimationTimer.current);
+      syncAnimationTimer.current = null;
+    }
+
+    setSyncMessage(message);
+
+    if (syncBannerVisibleRef.current) {
+      setSyncBannerPhase("visible");
+      setShowSyncButton(true);
+      return;
+    }
+
+    syncBannerVisibleRef.current = true;
+    setSyncBannerKey(key => key + 1);
+    setSyncBannerPhase("enter");
+    setShowSyncButton(true);
+
+    syncAnimationTimer.current = setTimeout(() => {
+      setSyncBannerPhase("visible");
+      syncAnimationTimer.current = null;
+    }, SYNC_BANNER_ENTER_MS);
+  }, []);
+
+  const closeSyncBanner = useCallback(() => new Promise<void>((resolve) => {
+    if (syncAnimationTimer.current) {
+      clearTimeout(syncAnimationTimer.current);
+      syncAnimationTimer.current = null;
+    }
+
+    syncBannerVisibleRef.current = false;
+    setSyncBannerPhase("exit");
+    syncAnimationTimer.current = setTimeout(() => {
+      setShowSyncButton(false);
+      setSyncBannerPhase("enter");
+      syncAnimationTimer.current = null;
+      resolve();
+    }, SYNC_BANNER_EXIT_MS);
+  }), []);
+
+  useEffect(() => () => {
+    if (syncAnimationTimer.current) clearTimeout(syncAnimationTimer.current);
+    syncBannerVisibleRef.current = false;
+  }, []);
+
+  const applyTimelineItems = async (
+    items: TimeLineApiItem[],
+    { clearWhenEmpty = false, animateRemoved = false } = {}
+  ) => {
     if (!trip || dayIdx < 0) return;
     if (items.length === 0 && !clearWhenEmpty) return;
 
     const currentDay = trip.days[dayIdx];
     const draftBlocks = currentDay.blocks.filter(block => !isPersistedBlock(block));
+    const nextPersistedIds = new Set(
+      items
+        .map(item => item.timeLineId ?? item.timelineId)
+        .filter((timelineId): timelineId is number => timelineId != null)
+        .map(String)
+    );
+    const removedBlockIds = animateRemoved
+      ? currentDay.blocks
+          .filter(block => isPersistedBlock(block) && !nextPersistedIds.has(block.id))
+          .map(block => block.id)
+      : [];
+
+    if (removedBlockIds.length > 0) {
+      setRemovingBlockIds(ids => Array.from(new Set([...ids, ...removedBlockIds])));
+      await wait(TIMELINE_BLOCK_EXIT_MS);
+    }
+
     const blocks = items.length > 0
       ? toActivityBlocks(items)
       : (draftBlocks.length > 0 ? draftBlocks : [makeDraftBlock(1)]);
@@ -469,15 +570,19 @@ export default function DayPlanPage() {
         : d
       ),
     });
+
+    if (removedBlockIds.length > 0) {
+      setRemovingBlockIds(ids => ids.filter(id => !removedBlockIds.includes(id)));
+    }
   };
 
-  const fetchTimeLinesForDay = async ({ clearWhenEmpty = true } = {}) => {
+  const fetchTimeLinesForDay = async ({ clearWhenEmpty = true, animateRemoved = false } = {}) => {
     if (!id || !trip || dayIdx < 0) return;
     const response = await apiFetch(`${API_BASE}/api/v1/trips/${id}/timelines?dayNumber=${dayNum}`);
     if (!response.ok) throw new Error("타임라인을 불러오지 못했습니다.");
     const body = await response.json();
     const items: TimeLineApiItem[] = body.data ?? [];
-    applyTimelineItems(items, clearWhenEmpty);
+    await applyTimelineItems(items, { clearWhenEmpty, animateRemoved });
   };
 
   useEffect(() => {
@@ -558,8 +663,7 @@ export default function DayPlanPage() {
         return;
       }
 
-      setSyncMessage(payload.message || "새로운 변경 사항이 있습니다.");
-      setShowSyncButton(true);
+      openSyncBanner(payload.message || "새로운 변경 사항이 있습니다.");
     };
 
     const connect = async () => {
@@ -602,7 +706,7 @@ export default function DayPlanPage() {
       controller.abort();
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
     };
-  }, [id, trip?.id, dayIdx, currentUser.id]);
+  }, [id, trip?.id, dayIdx, currentUser.id, openSyncBanner]);
 
   if (!trip || dayIdx < 0) return (
     <div className="flex items-center justify-center min-h-screen">
@@ -620,6 +724,22 @@ export default function DayPlanPage() {
   })();
   const sortedBlocks = [...day.blocks].sort((a, b) => a.startMinute - b.startMinute);
   const canComplete = isAdmin && day.blocks.length > 0;
+
+  const leaveDayWithTransition = (navigate: () => void) => {
+    if (isLeavingDay) return;
+    setIsLeavingDay(true);
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.setTimeout(navigate, prefersReducedMotion ? 0 : 240);
+  };
+
+  const markBlockRemoving = async (blockId: string) => {
+    setRemovingBlockIds(ids => ids.includes(blockId) ? ids : [...ids, blockId]);
+    await wait(TIMELINE_BLOCK_EXIT_MS);
+  };
+
+  const clearBlockRemoving = (blockId: string) => {
+    setRemovingBlockIds(ids => ids.filter(id => id !== blockId));
+  };
 
   const setDay = (updated: TripDay) => {
     updateTrip({ ...trip, days: trip.days.map((d, i) => i === dayIdx ? updated : d) });
@@ -658,8 +778,8 @@ export default function DayPlanPage() {
   const syncTimeLines = async () => {
     setSyncLoading(true);
     try {
-      await fetchTimeLinesForDay({ clearWhenEmpty: true });
-      setShowSyncButton(false);
+      await fetchTimeLinesForDay({ clearWhenEmpty: true, animateRemoved: true });
+      await closeSyncBanner();
       setIsEditingTimeRanges(false);
     } catch (error) {
       console.error("[타임라인 동기화 실패]", error);
@@ -725,6 +845,7 @@ export default function DayPlanPage() {
     if (!isPersistedBlock(block)) return;
 
     setTimelineSaving(true);
+    await markBlockRemoving(block.id);
     try {
       const response = await apiFetch(`${API_BASE}/api/v1/trips/${id}/timelines/${block.id}`, {
         method: "DELETE",
@@ -734,10 +855,32 @@ export default function DayPlanPage() {
     } catch (error) {
       console.error("[타임라인 삭제 실패]", error);
       setValidationError("시간 구간을 삭제하지 못했습니다.");
+      clearBlockRemoving(block.id);
       await fetchTimeLinesForDay({ clearWhenEmpty: true }).catch(() => {});
     } finally {
       setTimelineSaving(false);
     }
+  };
+
+  const removeLocalBlock = async (block: ActivityBlock) => {
+    if (day.blocks.length <= 1) return;
+
+    setTimelineSaving(true);
+    await markBlockRemoving(block.id);
+
+    const remaining = day.blocks.filter(item => item.id !== block.id);
+    const selected = { ...day.selectedCandidateByBlock };
+    delete selected[block.id];
+    const voted = { ...day.votedUserIDsByBlockAndCandidate };
+    delete voted[block.id];
+    setDay({
+      ...day,
+      blocks: normalizeOrders(remaining),
+      selectedCandidateByBlock: selected,
+      votedUserIDsByBlockAndCandidate: voted,
+    });
+    clearBlockRemoving(block.id);
+    setTimelineSaving(false);
   };
 
   const increaseBlocks = async () => {
@@ -767,17 +910,7 @@ export default function DayPlanPage() {
       return;
     }
 
-    const remaining = day.blocks.filter(block => block.id !== removed.id);
-    const selected = { ...day.selectedCandidateByBlock };
-    delete selected[removed.id];
-    const voted = { ...day.votedUserIDsByBlockAndCandidate };
-    delete voted[removed.id];
-    setDay({
-      ...day,
-      blocks: normalizeOrders(remaining),
-      selectedCandidateByBlock: selected,
-      votedUserIDsByBlockAndCandidate: voted,
-    });
+    await removeLocalBlock(removed);
   };
 
   const removeBlock = async (block: ActivityBlock) => {
@@ -789,18 +922,7 @@ export default function DayPlanPage() {
       return;
     }
 
-    if (day.blocks.length <= 1) return;
-    const remaining = day.blocks.filter(item => item.id !== block.id);
-    const selected = { ...day.selectedCandidateByBlock };
-    delete selected[block.id];
-    const voted = { ...day.votedUserIDsByBlockAndCandidate };
-    delete voted[block.id];
-    setDay({
-      ...day,
-      blocks: normalizeOrders(remaining),
-      selectedCandidateByBlock: selected,
-      votedUserIDsByBlockAndCandidate: voted,
-    });
+    await removeLocalBlock(block);
   };
 
   const updateBlockTime = async (blockId: string, start: number, end: number) => {
@@ -851,9 +973,9 @@ export default function DayPlanPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className={`timeline-day-page flex flex-col h-screen ${isLeavingDay ? "trip-page-exit" : ""}`}>
       <div className="flex items-center gap-3 px-4 pt-12 pb-2">
-        <button onClick={() => router.back()} className="text-blue-500 p-1 -ml-1">
+        <button onClick={() => leaveDayWithTransition(() => router.back())} className="text-blue-500 p-1 -ml-1">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
@@ -863,13 +985,16 @@ export default function DayPlanPage() {
       </div>
 
       {showSyncButton && (
-        <div className="px-4 pt-2">
-          <div className="rounded-2xl bg-blue-50 px-4 py-3 flex items-center gap-3">
-            <p className="flex-1 text-sm font-semibold text-blue-700">{syncMessage}</p>
+        <div
+          key={syncBannerKey}
+          className={`sync-banner-shell px-4 is-${syncBannerPhase}`}
+        >
+          <div className="sync-banner-card rounded-2xl bg-blue-50 px-4 py-3 flex items-center gap-3">
+            <p className="flex-1 min-w-0 text-sm font-semibold text-blue-700 leading-snug">{syncMessage}</p>
             <button
               onClick={syncTimeLines}
               disabled={syncLoading}
-              className="px-3 py-2 rounded-xl bg-white text-blue-600 font-bold text-xs flex items-center gap-1.5 disabled:opacity-60"
+              className="shrink-0 px-3 py-2 rounded-xl bg-white text-blue-600 font-bold text-xs flex items-center gap-1.5 disabled:opacity-60"
             >
               <ArrowClockwise size={15} weight="bold" className={syncLoading ? "animate-spin" : ""} />
               동기화
@@ -884,6 +1009,10 @@ export default function DayPlanPage() {
           <p className="text-xs text-gray-500 mt-1">시간 구간을 정한 뒤, 여행 전체 후보 중 하나를 선택합니다.</p>
         </div>
 
+        <div
+          key={`${day.isPlanCompleted ? "completed" : "draft"}-${isEditingTimeRanges ? "editing" : "view"}-${day.isPlanSkipped ? "skipped" : "active"}`}
+          className="timeline-section-transition"
+        >
         {day.isPlanSkipped ? (
           <div className="p-4 bg-gray-50 rounded-2xl">
             <p className="font-semibold mb-1">이 일차는 계획을 건너뛰었습니다.</p>
@@ -929,12 +1058,14 @@ export default function DayPlanPage() {
 
             {isEditingTimeRanges ? (
               <>
-                {sortedBlocks.map(block => (
+                {sortedBlocks.map((block, index) => (
                   <BlockCard
                     key={block.id}
                     trip={trip}
                     day={day}
                     block={block}
+                    removing={removingBlockIds.includes(block.id)}
+                    animationDelayMs={index * 45}
                     disabled={timelineSaving}
                     onRemove={isAdmin ? () => removeBlock(block) : undefined}
                     removeDisabled={timelineSaving}
@@ -946,18 +1077,25 @@ export default function DayPlanPage() {
                   <AddTimeRangeSlot
                     onClick={increaseBlocks}
                     disabled={timelineSaving}
+                    animationDelayMs={sortedBlocks.length * 45}
                   />
                 )}
               </>
             ) : (
-              sortedBlocks.map(block => (
+              sortedBlocks.map((block, index) => (
                 <PlanSummaryCard
                   key={block.id}
                   trip={trip}
                   day={day}
                   block={block}
+                  removing={removingBlockIds.includes(block.id)}
+                  animationDelayMs={index * 45}
                   voteHref={!tripStarted && block.voteId ? `/trip/${id}/day/${dayNum}/block/${block.voteId}?from=vote&timelineId=${block.id}` : undefined}
-                  onVoteClick={() => block.voteId && localStorage.setItem(`block-order-${block.voteId}`, String(block.order))}
+                  onVoteClick={(event) => {
+                    event.preventDefault();
+                    if (block.voteId) localStorage.setItem(`block-order-${block.voteId}`, String(block.order));
+                    leaveDayWithTransition(() => router.push(`/trip/${id}/day/${dayNum}/block/${block.voteId}?from=vote&timelineId=${block.id}`));
+                  }}
                 />
               ))
             )}
@@ -990,12 +1128,14 @@ export default function DayPlanPage() {
               </div>
             </div>
 
-            {sortedBlocks.map(block => (
+            {sortedBlocks.map((block, index) => (
               <BlockCard
                 key={block.id}
                 trip={trip}
                 day={day}
                 block={block}
+                removing={removingBlockIds.includes(block.id)}
+                animationDelayMs={index * 45}
                 disabled={timelineSaving}
                 onStartChange={start => updateBlockTime(block.id, start, block.endMinute)}
                 onEndChange={end => updateBlockTime(block.id, block.startMinute, end)}
@@ -1003,6 +1143,7 @@ export default function DayPlanPage() {
             ))}
           </div>
         )}
+        </div>
       </div>
 
       {isAdmin && !day.isPlanCompleted && !day.isPlanSkipped && (

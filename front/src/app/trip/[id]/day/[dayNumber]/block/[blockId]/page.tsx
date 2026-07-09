@@ -4,6 +4,48 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useStore, TripDay, PlanCandidate, uid } from "../../../../../../store";
 import { timeText, useAuthGuard, apiFetch, API_BASE } from "../../../../../../lib";
+import AnimatedBottomSheet from "../../../../../../components/AnimatedBottomSheet";
+
+// ── Tie random pick sheet ─────────────────────────────────────────────────────
+
+function TieRandomSheet({
+  candidates, onPick, onClose,
+}: { candidates: PlanCandidate[]; onPick: (c: PlanCandidate) => void; onClose: () => void }) {
+  const [picked, setPicked] = useState<PlanCandidate | null>(null);
+  return (
+    <AnimatedBottomSheet onClose={onClose} className="p-6">
+      {(close) => (
+        <>
+        <p className="text-lg font-bold mb-1">동점 후보 랜덤 뽑기</p>
+        <p className="text-sm text-gray-500 mb-4">동점으로 나온 후보들끼리 랜덤 뽑기를 진행합니다.</p>
+        <div className="flex flex-col gap-2 mb-4">
+          {candidates.map(c => (
+            <div key={c.id} className="p-3 bg-gray-50 rounded-xl">
+              <p className="font-semibold text-sm">{c.placeName}</p>
+            </div>
+          ))}
+        </div>
+        {picked && <p className="text-center font-semibold mb-3" style={{ color: "#9333ea" }}>뽑힌 후보: {picked.placeName}</p>}
+        <button
+          onClick={() => setPicked(candidates[Math.floor(Math.random() * candidates.length)])}
+          className="w-full py-3.5 rounded-2xl font-semibold text-white mb-2"
+          style={{ background: "#9333ea" }}
+        >
+          랜덤 뽑기
+        </button>
+        {picked && (
+          <button
+            onClick={() => { onPick(picked); close(); }}
+            className="w-full py-3.5 rounded-2xl bg-blue-500 text-white font-semibold"
+          >
+            이 후보로 확정
+          </button>
+        )}
+        </>
+      )}
+    </AnimatedBottomSheet>
+  );
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -13,6 +55,15 @@ interface VoteDetail {
   count: number;
   isVoted: boolean;
 }
+
+type ConfirmVoteResponse = {
+  data?: {
+    status?: string;
+    tiedPlaceIds?: number[];
+    isTie?: boolean;
+    confirmedPlaceId?: number;
+  };
+};
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
@@ -27,6 +78,8 @@ export default function BlockDetailPage() {
 
   const fromVote = searchParams.get("from") === "vote";
   const timelineId = searchParams.get("timelineId");
+  const [showTie, setShowTie] = useState(false);
+  const [tieCandidates, setTieCandidates] = useState<PlanCandidate[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [pendingVote, setPendingVote] = useState<string | null>(null);
   const [showHostMenu, setShowHostMenu] = useState(false);
@@ -41,6 +94,8 @@ export default function BlockDetailPage() {
   const [confirmedPlaceId, setConfirmedPlaceId] = useState<string | null>(null);
   const [voteLoading, setVoteLoading] = useState(false);
   const [showConfirmedModal, setShowConfirmedModal] = useState(false);
+  const [confirmedModalPresented, setConfirmedModalPresented] = useState(false);
+  const [confirmedModalClosing, setConfirmedModalClosing] = useState(false);
 
   const trip = trips.find(t => t.id === id);
   const dayNum = parseInt(dayNumber);
@@ -83,22 +138,35 @@ export default function BlockDetailPage() {
         setVoteDetails(results);
         setUpdateCount(body.data?.updateCount ?? 0);
         const status = body.data?.voteStatus ?? null;
+        const confirmed = status ? status === "투표 확정" : body.data?.isConfirmed ?? false;
         setVoteStatus(status);
-        setVoteConfirmed(status === "투표 확정");
+        setVoteConfirmed(confirmed);
         if (body.data?.confirmedPlaceId != null) setConfirmedPlaceId(String(body.data.confirmedPlaceId));
         const voted = results.find(v => v.isVoted);
         if (voted) setMyVotedPlaceId(String(voted.placeId));
-        const wishList = (body.data?.wishPlaceFindResponses ?? []).map((w: { placeId: number; name: string; address: string; category: string; createdBy: string }) => ({
+        const wishList = (body.data?.wishPlaceFindResponses ?? []).map((w: { placeId: number; name: string; address: string; theme?: string; category?: string; createdBy: string }) => ({
           id: String(w.placeId),
           authorId: 0,
           authorName: w.createdBy,
           placeName: w.name,
           address: w.address,
-          category: w.category,
+          category: w.theme ?? w.category ?? "기타",
         }));
         setWishPlaces(wishList);
       });
   }, [fromVote, id, blockId]);
+
+  useEffect(() => {
+    if (!showConfirmedModal) {
+      setConfirmedModalPresented(false);
+      return;
+    }
+
+    setConfirmedModalClosing(false);
+    setConfirmedModalPresented(false);
+    const frame = requestAnimationFrame(() => setConfirmedModalPresented(true));
+    return () => cancelAnimationFrame(frame);
+  }, [showConfirmedModal]);
 
   if (!trip && !fromVote) return null;
 
@@ -139,9 +207,9 @@ export default function BlockDetailPage() {
         setVoteDetails(results);
         setUpdateCount(body.data?.updateCount ?? 0);
         const status = body.data?.voteStatus ?? null;
+        const confirmed = status ? status === "투표 확정" : body.data?.isConfirmed ?? false;
         setVoteStatus(status);
         if (body.data?.confirmedPlaceId != null) setConfirmedPlaceId(String(body.data.confirmedPlaceId));
-        const confirmed = status === "투표 확정";
         setVoteConfirmed(prev => {
           if (!prev && confirmed) setShowConfirmedModal(true);
           return confirmed;
@@ -206,11 +274,17 @@ export default function BlockDetailPage() {
     return today > endDate;
   })();
 
-  const voteClosed = voteStatus !== null && voteStatus !== "투표 진행중";
+  const voteClosed = fromVote
+    ? voteStatus ? voteStatus !== "투표 진행중" : voteConfirmed || tripStarted
+    : voteConfirmed || tripStarted;
 
   const isHost = currentUser.id === (trip?.members[0]?.id);
-  const confirmedByVote = voteConfirmed && confirmedPlaceId
-    ? candidates.find(c => c.id === confirmedPlaceId)
+  const confirmedByVote = voteConfirmed
+    ? confirmedPlaceId
+      ? candidates.find(c => c.id === confirmedPlaceId)
+      : voteDetails && voteDetails.length > 0
+        ? candidates.find(c => c.id === String(voteDetails.reduce((a, b) => a.count >= b.count ? a : b).placeId))
+        : null
     : null;
   const displaySelected = selected ?? confirmedByVote ?? null;
   const showCenteredEmpty = voteDetails !== null && !displaySelected && !candidatesLoading && candidates.length === 0;
@@ -223,12 +297,30 @@ export default function BlockDetailPage() {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
         });
-        const body = await res.json();
-        if (body.data?.isTie) {
-          const picked = candidates.find(c => c.id === String(body.data.confirmedPlaceId));
-          setTieConfirmedName(picked?.placeName ?? null);
+        if (!res.ok) throw new Error("투표 확정에 실패했습니다.");
+
+        const text = await res.text();
+        let body: ConfirmVoteResponse = {};
+        if (text.trim()) {
+          try {
+            body = JSON.parse(text) as ConfirmVoteResponse;
+          } catch {
+            body = {};
+          }
         }
-        refetchVoteDetails();
+
+        const { status, tiedPlaceIds } = body.data ?? {};
+        if (status === "TIED") {
+          const tied = candidates.filter(c => (tiedPlaceIds ?? []).includes(Number(c.id)));
+          setTieCandidates(tied);
+          setShowTie(true);
+        } else if (body.data?.isTie) {
+          const picked = candidates.find(c => c.id === String(body.data?.confirmedPlaceId));
+          setTieConfirmedName(picked?.placeName ?? null);
+          refetchVoteDetails();
+        } else {
+          refetchVoteDetails();
+        }
       } catch (e) {
         console.error(e);
       }
@@ -237,9 +329,44 @@ export default function BlockDetailPage() {
     if (candidates.length === 0 || !day) return;
     const maxVote = Math.max(...candidates.map(c => voteCount(c.id)));
     const winners = candidates.filter(c => voteCount(c.id) === maxVote);
-    const winner = winners[Math.floor(Math.random() * winners.length)];
-    setDay({ ...day, selectedCandidateByBlock: { ...day.selectedCandidateByBlock, [blockId]: winner.id } });
+    if (winners.length === 1) {
+      setDay({ ...day, selectedCandidateByBlock: { ...day.selectedCandidateByBlock, [blockId]: winners[0].id } });
+    } else {
+      setTieCandidates(winners);
+      setShowTie(true);
+    }
     setShowHostMenu(false);
+  };
+
+  const pickFromTie = async (candidate: PlanCandidate) => {
+    if (!day) return;
+    if (fromVote) {
+      try {
+        await apiFetch(`${API_BASE}/api/v1/trips/${id}/votes/${blockId}/confirm-tie`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirmedPlaceId: Number(candidate.id) }),
+        });
+        setTieConfirmedName(candidate.placeName);
+        refetchVoteDetails();
+      } catch (e) {
+        console.error(e);
+      }
+      return;
+    }
+    if (!day) return;
+    setDay({ ...day, selectedCandidateByBlock: { ...day.selectedCandidateByBlock, [blockId]: candidate.id } });
+  };
+
+  const closeConfirmedModal = () => {
+    if (confirmedModalClosing) return;
+    setConfirmedModalPresented(false);
+    setConfirmedModalClosing(true);
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.setTimeout(() => {
+      setShowConfirmedModal(false);
+      setConfirmedModalClosing(false);
+    }, prefersReducedMotion ? 0 : 220);
   };
 
   return (
@@ -255,20 +382,18 @@ export default function BlockDetailPage() {
           <div className="relative">
             <button
               onClick={() => !tripStarted && setShowHostMenu(v => !v)}
-              className="text-xs font-bold px-2.5 py-1.5 rounded-full"
-              style={{ background: showHostMenu ? "#fef08a" : "#fef9c3", color: "#92400e" }}
+              className={`host-badge ${showHostMenu ? "is-open" : ""} text-xs font-bold px-2.5 py-1.5 rounded-full`}
             >
               방장
             </button>
             {showHostMenu && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowHostMenu(false)} />
-                <div className="absolute right-0 top-9 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 flex flex-col gap-1 w-36">
+                <div className="host-menu absolute right-0 top-9 z-50 rounded-2xl shadow-xl border p-2 flex flex-col gap-1 w-36">
                   <button
                     onClick={decideByVote}
                     disabled={candidates.length === 0 || tripStarted}
-                    className="w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-left disabled:opacity-40"
-                    style={{ background: "#dcfce7", color: "#16a34a" }}
+                    className="confirm-vote-button w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-left disabled:opacity-40"
                   >
                     📊 투표 확정
                   </button>
@@ -290,8 +415,8 @@ export default function BlockDetailPage() {
 
         {/* Selected */}
         {displaySelected && (
-            <div className="p-4 rounded-2xl" style={{ background: "#dcfce7" }}>
-              <p className="text-sm font-semibold mb-2" style={{ color: tripEnded ? "#374151" : "#15803d" }}>{tripEnded ? `${displaySelected.placeName} 어떠셨어요? 🥹` : "이 구간에 확정된 후보"}</p>
+            <div className="confirmed-candidate-card p-4 rounded-2xl">
+              <p className={`text-sm font-semibold mb-2 ${tripEnded ? "text-gray-700" : "confirmed-candidate-title"}`}>{tripEnded ? `${displaySelected.placeName} 어떠셨어요? 🥹` : "이 구간에 확정된 후보"}</p>
               {!tripEnded && (
                 <div className="flex items-start gap-3">
                   <span className="text-xl mt-0.5 text-green-500">✓</span>
@@ -328,8 +453,7 @@ export default function BlockDetailPage() {
               <div className="flex gap-2 overflow-x-auto pb-2 mb-3">
                 <button
                   onClick={() => setActiveCategory(null)}
-                  className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
-                  style={activeCategory === null ? { background: "#3b82f6", color: "white", borderColor: "#3b82f6" } : { background: "white", color: "#6b7280", borderColor: "#e5e7eb" }}
+                  className={`vote-category-chip shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${activeCategory === null ? "is-active" : ""}`}
                 >
                   전체
                 </button>
@@ -337,8 +461,7 @@ export default function BlockDetailPage() {
                   <button
                     key={cat}
                     onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
-                    className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
-                    style={activeCategory === cat ? { background: "#3b82f6", color: "white", borderColor: "#3b82f6" } : { background: "white", color: "#6b7280", borderColor: "#e5e7eb" }}
+                    className={`vote-category-chip shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${activeCategory === cat ? "is-active" : ""}`}
                   >
                     {cat}
                   </button>
@@ -360,15 +483,12 @@ export default function BlockDetailPage() {
               }).map(c => {
                 const isSelected = c.id === selectedId;
                 const voted = isVoted(c.id);
+                const cardState = isSelected ? "is-selected" : pendingVote === c.id ? "is-pending" : voted ? "is-voted" : "";
                 return (
                   <div
                     key={c.id}
                     onClick={() => { if (!voteClosed) setPendingVote(c.id); }}
-                    className={`p-4 rounded-2xl border transition-transform ${voteClosed ? "cursor-default" : "cursor-pointer active:scale-[0.98]"}`}
-                    style={{
-                      background: isSelected ? "#dcfce7" : pendingVote === c.id ? "#fefce8" : voted ? "#eff6ff" : "white",
-                      borderColor: isSelected ? "#4ade80" : pendingVote === c.id ? "#facc15" : voted ? "#93c5fd" : "#e5e7eb",
-                    }}
+                    className={`vote-candidate-card ${cardState} p-4 rounded-2xl border transition-transform ${voteClosed ? "cursor-default" : "cursor-pointer active:scale-[0.98]"}`}
                   >
                     <div className="flex items-start gap-2 mb-2">
                       <div className="flex-1 min-w-0">
@@ -384,7 +504,7 @@ export default function BlockDetailPage() {
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-gray-600">{voteCount(c.id)}표</span>
                         {voted && (
-                          <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: "#dbeafe", color: "#2563eb" }}>
+                          <span className="my-vote-badge text-xs font-semibold px-2 py-0.5 rounded-full">
                             내 투표
                           </span>
                         )}
@@ -405,7 +525,13 @@ export default function BlockDetailPage() {
       {voteClosed ? (
         <div className="px-4 py-4 border-t border-gray-100 bg-white">
           <div className="w-full py-4 rounded-2xl text-center font-semibold text-gray-400 bg-gray-100">
-            {voteStatus === "투표 확정" ? "투표가 확정되었습니다" : "투표 기한이 만료되었습니다"}
+            {fromVote
+              ? voteStatus === "투표 확정"
+                ? "투표가 확정되었습니다"
+                : "투표 기한이 만료되었습니다"
+              : voteConfirmed
+                ? "투표가 종료되었습니다"
+                : "여행이 시작되어 투표가 마감되었습니다"}
           </div>
         </div>
       ) : (
@@ -413,34 +539,51 @@ export default function BlockDetailPage() {
           <button
             onClick={randomVote}
             disabled={candidates.length === 0 || updateCount >= 2}
-            className="flex-1 py-4 rounded-2xl font-semibold disabled:opacity-40"
-            style={{ background: "#f3e8ff", color: "#9333ea" }}
+            className="vote-random-button flex-1 py-4 rounded-2xl font-semibold disabled:opacity-40"
           >
             랜덤 투표
           </button>
           <button
             onClick={() => { if (pendingVote && !voteLoading) { vote(pendingVote); setPendingVote(null); } }}
             disabled={!pendingVote || voteLoading || updateCount >= 2}
-            className="flex-1 py-4 rounded-2xl font-semibold disabled:opacity-40"
-            style={{ background: "#dbeafe", color: "#2563eb" }}
+            className="vote-submit-button flex-1 py-4 rounded-2xl font-semibold disabled:opacity-40"
           >
             {voteLoading ? "투표 중..." : "투표하기"}
           </button>
         </div>
       )}
 
+      {showTie && (
+        <TieRandomSheet
+          candidates={tieCandidates}
+          onPick={pickFromTie}
+          onClose={() => setShowTie(false)}
+        />
+      )}
+
       {showConfirmedModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowConfirmedModal(false)} />
-          <div className="relative w-72 bg-white rounded-3xl p-6 flex flex-col items-center gap-4 shadow-xl">
+          <div
+            className={`modal-backdrop absolute inset-0 bg-black/40 ${confirmedModalPresented ? "is-open" : ""} ${confirmedModalClosing ? "is-closing" : ""}`}
+            onClick={closeConfirmedModal}
+          />
+          <div className={`modal-card relative w-72 bg-white rounded-3xl p-6 flex flex-col items-center gap-4 shadow-xl ${confirmedModalPresented ? "is-open" : ""} ${confirmedModalClosing ? "is-closing" : ""}`}>
             <span className="text-5xl">🎉</span>
             <p className="text-lg font-bold text-center">투표가 확정되었습니다!</p>
             {tieConfirmedName && (
-              <p className="text-sm text-center text-gray-500">동점이어서 랜덤으로 <span className="font-semibold text-gray-800">{tieConfirmedName}</span>이(가) 선택되었습니다.</p>
+              <p className="text-sm text-center text-gray-500 leading-relaxed">
+                동점이어서 랜덤으로{" "}
+                <span className="font-semibold text-gray-800">{tieConfirmedName}</span>
+                이(가) 선택되었습니다.
+              </p>
             )}
-            <p className="text-sm text-gray-500 text-center">장소가 확정되었어요. 일정 화면에서 확인해보세요.</p>
+            <p className="text-sm text-gray-500 text-center leading-relaxed">
+              장소가 확정되었어요.
+              <br />
+              일정 화면에서 확인해보세요.
+            </p>
             <button
-              onClick={() => setShowConfirmedModal(false)}
+              onClick={closeConfirmedModal}
               className="w-full py-3.5 rounded-2xl font-semibold text-white"
               style={{ background: "#3b82f6" }}
             >

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import AnimatedBottomSheet from "../components/AnimatedBottomSheet";
 
 // ── Shared small components ───────────────────────────────────────────────────
 
@@ -547,12 +548,12 @@ function VoteSheet({
   const data = themeData[theme];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-white rounded-t-3xl max-h-[90vh] flex flex-col">
+    <AnimatedBottomSheet onClose={onClose} className="max-h-[90vh] flex flex-col">
+      {(close) => (
+        <>
         <div className="flex items-center justify-between px-4 pt-5 pb-3 border-b border-gray-100 shrink-0">
           <h2 className="text-base font-bold">일정 후보 투표</h2>
-          <button onClick={onClose} className="text-blue-500 font-medium">닫기</button>
+          <button onClick={close} className="text-blue-500 font-medium">닫기</button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-5">
@@ -657,8 +658,9 @@ function VoteSheet({
             </div>
           )}
         </div>
-      </div>
-    </div>
+        </>
+      )}
+    </AnimatedBottomSheet>
   );
 }
 

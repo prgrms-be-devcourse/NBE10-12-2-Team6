@@ -6,6 +6,7 @@ import { useStore } from "./store";
 import { API_BASE } from "./lib";
 
 type Mode = "landing" | "login" | "signup";
+type AuthTransition = "forward" | "back" | "swap";
 
 function Toast({ message, visible }: { message: string; visible: boolean }) {
   return (
@@ -62,6 +63,26 @@ export default function LoginPage() {
   const [loginAnim, setLoginAnim] = useState(false);
   const [welcomeVisible, setWelcomeVisible] = useState(false);
   const [isSignupReveal, setIsSignupReveal] = useState(false);
+  const [authTransition, setAuthTransition] = useState<AuthTransition>("forward");
+  const [landingVisible, setLandingVisible] = useState(false);
+
+  const changeMode = (nextMode: Mode, transition: AuthTransition = "forward") => {
+    if (nextMode === "landing") setLandingVisible(false);
+    setAuthTransition(transition);
+    setMode(nextMode);
+    setError("");
+  };
+
+  useEffect(() => {
+    if (mode !== "landing") return;
+
+    setLandingVisible(false);
+    const firstFrame = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setLandingVisible(true));
+    });
+
+    return () => cancelAnimationFrame(firstFrame);
+  }, [mode]);
 
   const showToast = (message: string, onDone?: () => void) => {
     setToast({ message, visible: true });
@@ -140,7 +161,7 @@ export default function LoginPage() {
         setLoginAnim(false);
         setWelcomeVisible(false);
         setIsSignupReveal(false);
-        setMode("login");
+        changeMode("login", "back");
       }, 2200);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "회원가입에 실패했습니다.");
@@ -152,24 +173,33 @@ export default function LoginPage() {
   // ── 랜딩 ──────────────────────────────────────────────────────────────────────
   if (mode === "landing") {
     return (
-      <div className="flex flex-col px-6" style={{ height: "100dvh", paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}>
+      <div className={`auth-landing-screen ${landingVisible ? "is-open" : ""} flex flex-col px-6`} style={{ height: "100dvh", paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}>
       <Toast message={toast.message} visible={toast.visible} />
-        <div className="flex-1 flex flex-col items-center justify-center gap-4">
-          <span className="text-6xl">🗺️</span>
+        <div className="auth-landing-brand flex-1 flex flex-col items-center justify-center gap-4">
+          <span className="auth-landing-icon" aria-hidden="true">
+            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 18v-3.5C23 9.8 26.8 6 31.5 6h1C37.2 6 41 9.8 41 14.5V18" strokeWidth="4" />
+              <path d="M17 25c0-5 4-9 9-9h12c5 0 9 4 9 9v24c0 5-4 9-9 9H26c-5 0-9-4-9-9V25Z" strokeWidth="4" />
+              <path d="M17 32h-3c-2.2 0-4 1.8-4 4v10c0 2.2 1.8 4 4 4h3" strokeWidth="4" />
+              <path d="M47 32h3c2.2 0 4 1.8 4 4v10c0 2.2-1.8 4-4 4h-3" strokeWidth="4" />
+              <path d="M24 38h16v9c0 3.3-2.7 6-6 6h-4c-3.3 0-6-2.7-6-6v-9Z" strokeWidth="4" />
+              <path d="M25 28h14" strokeWidth="4" />
+            </svg>
+          </span>
           <h1 className="text-4xl font-bold tracking-tight">TripLog</h1>
           <p className="text-gray-500 text-center leading-relaxed">
             친구들과 여행을 계획하고,<br />여행 중 순간을 기록해보세요.
           </p>
         </div>
-        <div className="flex flex-col gap-3">
+        <div className="auth-landing-actions flex flex-col gap-3">
           <button
-            onClick={() => setMode("login")}
+            onClick={() => changeMode("login", "forward")}
             className="w-full py-4 rounded-2xl bg-blue-500 text-white font-semibold text-base active:opacity-80"
           >
             로그인하기
           </button>
           <button
-            onClick={() => setMode("signup")}
+            onClick={() => changeMode("signup", "forward")}
             className="w-full py-4 rounded-2xl bg-gray-100 text-gray-800 font-semibold text-base active:opacity-80"
           >
             회원가입
@@ -182,7 +212,7 @@ export default function LoginPage() {
   // ── 로그인 ────────────────────────────────────────────────────────────────────
   if (mode === "login") {
     return (
-      <div className="relative flex flex-col min-h-screen px-6 overflow-hidden">
+      <div className={`auth-screen-transition auth-${authTransition} relative flex flex-col min-h-screen px-6 overflow-hidden`}>
         <Toast message={toast.message} visible={toast.visible} />
 
         {loginAnim && (
@@ -243,8 +273,12 @@ export default function LoginPage() {
           </>
         )}
         <div className="flex items-center gap-3 pt-14 pb-4 border-b border-gray-100">
-          <button onClick={() => { setMode("landing"); setError(""); }} className="text-blue-500">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button
+            onClick={() => changeMode("landing", "back")}
+            aria-label="뒤로가기"
+            className="trip-header-icon-button w-10 h-10 rounded-full flex items-center justify-center"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
@@ -287,7 +321,7 @@ export default function LoginPage() {
           </button>
 
           <button
-            onClick={() => { setMode("signup"); setError(""); }}
+            onClick={() => changeMode("signup", "swap")}
             className="text-sm text-gray-500 text-center underline"
           >
             계정이 없으신가요? 회원가입
@@ -299,7 +333,7 @@ export default function LoginPage() {
 
   // ── 회원가입 ──────────────────────────────────────────────────────────────────
   return (
-    <div className="relative flex flex-col min-h-screen px-6 overflow-hidden">
+    <div className={`auth-screen-transition auth-${authTransition} relative flex flex-col min-h-screen px-6 overflow-hidden`}>
       <Toast message={toast.message} visible={toast.visible} />
 
       {loginAnim && (
@@ -362,8 +396,12 @@ export default function LoginPage() {
       )}
 
       <div className="flex items-center gap-3 pt-14 pb-4 border-b border-gray-100">
-        <button onClick={() => { setMode("landing"); setError(""); }} className="text-blue-500">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button
+          onClick={() => changeMode("landing", "back")}
+          aria-label="뒤로가기"
+          className="trip-header-icon-button w-10 h-10 rounded-full flex items-center justify-center"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
@@ -432,7 +470,7 @@ export default function LoginPage() {
         </button>
 
         <button
-          onClick={() => { setMode("login"); setError(""); }}
+          onClick={() => changeMode("login", "back")}
           className="text-sm text-gray-500 text-center underline"
         >
           이미 계정이 있으신가요? 로그인

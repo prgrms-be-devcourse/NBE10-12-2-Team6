@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, type MouseEvent } from "react";
 import Link from "next/link";
-import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
+import { Camera } from "@phosphor-icons/react";
 import { useStore, TripDay, PhotoRecord, uid } from "../../../../../store";
 import { timeText, API_BASE, apiFetch } from "../../../../../lib";
 
@@ -14,6 +15,8 @@ interface TimelineBlock {
   isTaken: boolean;
 }
 
+const UPLOAD_MODAL_EXIT_MS = 220;
+
 function isoToMinutes(iso: string) {
   const [h, m] = iso.split("T")[1].split(":").map(Number);
   return h * 60 + (m || 0);
@@ -22,7 +25,6 @@ function isoToMinutes(iso: string) {
 export default function PhotoUploadPage() {
   const router = useRouter();
   const { id, dayNumber } = useParams<{ id: string; dayNumber: string }>();
-  const searchParams = useSearchParams();
   const { trips, updateTrip, upsertTrip } = useStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -32,6 +34,9 @@ export default function PhotoUploadPage() {
   const [currentBlock, setCurrentBlock] = useState<TimelineBlock | null>(null);
   const [timelineLoaded, setTimelineLoaded] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [uploadModalClosing, setUploadModalClosing] = useState(false);
+  const [isLeavingPhotoPage, setIsLeavingPhotoPage] = useState(false);
 
   const trip = trips.find(t => t.id === id);
   const dayNum = parseInt(dayNumber);
@@ -81,6 +86,20 @@ export default function PhotoUploadPage() {
       .finally(() => setTimelineLoaded(true));
   }, [id, isDuringTrip, trip]);
 
+  useEffect(() => {
+    if (!showUploadModal) {
+      setUploadModalOpen(false);
+      return;
+    }
+
+    setUploadModalOpen(false);
+    const firstFrame = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setUploadModalOpen(true));
+    });
+
+    return () => cancelAnimationFrame(firstFrame);
+  }, [showUploadModal]);
+
   if (!trip || dayIdx < 0) return (
     <div className="flex items-center justify-center min-h-screen">
       <p className="text-gray-400 text-sm">불러오는 중...</p>
@@ -95,6 +114,7 @@ export default function PhotoUploadPage() {
 
   const recordKey = currentBlock ? String(currentBlock.timelineId) : `free-${dayNum}`;
   const record = day.records.find(r => r.blockId === recordKey);
+  const showUploadButton = !!selectedFile || record?.status === "uploaded";
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -121,6 +141,7 @@ export default function PhotoUploadPage() {
         body: form,
       });
       if (res.ok) {
+        setUploadModalClosing(false);
         setShowUploadModal(true);
         return;
       }
@@ -141,6 +162,20 @@ export default function PhotoUploadPage() {
     }
   };
 
+  const closeUploadModal = () => {
+    if (uploadModalClosing) return;
+    setUploadModalOpen(false);
+    setUploadModalClosing(true);
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.setTimeout(
+      () => {
+        setShowUploadModal(false);
+        router.push(`/trip/${id}/timeline?from=timeline`);
+      },
+      prefersReducedMotion ? 0 : UPLOAD_MODAL_EXIT_MS
+    );
+  };
+
   const handleSkip = () => {
     const title = currentBlock
       ? `${timeText(isoToMinutes(currentBlock.startTime))}~${timeText(isoToMinutes(currentBlock.endTime))} 활동`
@@ -152,26 +187,63 @@ export default function PhotoUploadPage() {
     setDay({ ...day, records: newRecords });
   };
 
-  const goBack = () => {
-    if (searchParams.get("from") === "timeline") router.push(`/trip/${id}`);
-    else router.back();
+  const moveToTripTab = (target: "trip" | "candidates" | "vote" | "timeline") => {
+    if (target === "timeline") return;
+    sessionStorage.setItem(`active-tab-${id}`, target);
+    sessionStorage.removeItem(`return-tab-${id}`);
+    router.push(`/trip/${id}`);
+  };
+
+  const goAllTimelineWithTransition = (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    if (isLeavingPhotoPage) return;
+
+    setIsLeavingPhotoPage(true);
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.setTimeout(
+      () => router.push(`/trip/${id}/timeline?from=timeline`),
+      prefersReducedMotion ? 0 : 240
+    );
+  };
+
+  const goHomeWithTransition = (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    if (isLeavingPhotoPage) return;
+
+    setIsLeavingPhotoPage(true);
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.setTimeout(
+      () => router.push("/home"),
+      prefersReducedMotion ? 0 : 240
+    );
   };
 
   return (
-    <div className="flex flex-col h-screen px-4">
-      <div className="flex items-center gap-3 pt-12 pb-2 shrink-0">
-        <button onClick={goBack} className="text-blue-500 p-1 -ml-1">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+    <div className={`photo-page-transition flex flex-col h-screen px-4 pt-3 pb-[4.875rem] ${isLeavingPhotoPage ? "trip-page-exit" : ""}`}>
+      <div className="relative flex items-center shrink-0 h-24">
+        <Link
+          href="/home"
+          onClick={goHomeWithTransition}
+          aria-label="여행방 목록"
+          className="trip-header-icon-button absolute left-0 top-1/2 z-10 w-10 h-10 -translate-y-1/2 rounded-full flex items-center justify-center"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 10.75 12 4l8.25 6.75" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5.75 9.75V20h12.5V9.75" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 20v-5.25h4.5V20" />
           </svg>
-        </button>
-        <h1 className="font-semibold text-base flex-1 text-center">{dayNum}일차 사진 기록</h1>
+        </Link>
+        <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-semibold text-base whitespace-nowrap">{dayNum}일차 사진 기록</h1>
         {isDuringTrip ? (
-          <Link href={`/trip/${id}/timeline?from=timeline`} className="text-xs font-semibold text-blue-500">
+          <Link
+            href={`/trip/${id}/timeline?from=timeline`}
+            onClick={goAllTimelineWithTransition}
+            className="absolute right-0 top-1/2 -translate-y-1/2 text-xs font-semibold text-blue-500"
+          >
             전체보기
           </Link>
         ) : (
-          <div className="w-16" />
+          <div className="absolute right-0 top-1/2 w-16 -translate-y-1/2" />
         )}
       </div>
 
@@ -213,38 +285,40 @@ export default function PhotoUploadPage() {
         onChange={handleFileChange}
       />
 
-      {currentBlock?.isTaken ? (
-        <div className="flex-1 rounded-3xl bg-blue-50 flex flex-col items-center justify-center gap-3 px-8 text-center">
-          <span className="text-5xl">📸</span>
-          <p className="font-bold text-blue-800 text-base">해당 타임라인에 이미 사진 찍으셨네요!</p>
-          <p className="text-sm text-blue-500">전체 보기를 눌러 모임에서 찍은 사진을 구경하세요</p>
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="flex-1 rounded-3xl overflow-hidden flex flex-col items-center justify-center gap-2 bg-gray-100 active:opacity-80 transition-opacity"
-        >
-          {previewUrl ? (
-            <img src={previewUrl} alt="preview" className="w-full h-full object-contain" />
-          ) : (
-            <>
-              <span className="text-5xl text-gray-300">📷</span>
-              <p className="text-sm text-gray-400">탭해서 사진 찍기</p>
-            </>
-          )}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => { if (!currentBlock?.isTaken) fileInputRef.current?.click(); }}
+        aria-disabled={!!currentBlock?.isTaken}
+        className={`photo-capture-panel flex-1 rounded-3xl overflow-hidden flex flex-col items-center justify-center gap-2 transition-opacity ${currentBlock?.isTaken ? "cursor-default" : "active:opacity-80"}`}
+      >
+        {currentBlock?.isTaken ? (
+          <>
+            <Camera size={52} weight="regular" className="text-blue-400" />
+            <p className="font-bold text-blue-400 text-base">해당 타임라인에 이미 사진 찍으셨네요!</p>
+            <p className="text-sm text-blue-400">전체 보기를 눌러 모임에서 찍은 사진을 구경하세요</p>
+          </>
+        ) : previewUrl ? (
+          <img src={previewUrl} alt="preview" className="w-full h-full object-contain" />
+        ) : (
+          <>
+            <Camera size={52} weight="regular" className="text-gray-400" />
+            <p className="text-sm text-gray-400">탭해서 사진 찍기</p>
+          </>
+        )}
+      </button>
 
       {showUploadModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => { setShowUploadModal(false); router.push(`/trip/${id}/timeline?from=timeline`); }} />
-          <div className="relative w-72 bg-white rounded-3xl p-6 flex flex-col items-center gap-4 shadow-xl">
-            <span className="text-5xl">📸</span>
+          <div
+            className={`upload-complete-backdrop absolute inset-0 bg-black/40 ${uploadModalOpen ? "is-open" : ""} ${uploadModalClosing ? "is-closing" : ""}`}
+            onClick={closeUploadModal}
+          />
+          <div className={`upload-complete-card relative w-72 bg-white rounded-3xl p-6 flex flex-col items-center gap-4 shadow-xl ${uploadModalOpen ? "is-open" : ""} ${uploadModalClosing ? "is-closing" : ""}`}>
+            <Camera size={52} weight="regular" className="text-green-500" />
             <p className="text-lg font-bold text-center">업로드 완료!</p>
             <p className="text-sm text-gray-500 text-center">사진이 모임에 공유되었어요.</p>
             <button
-              onClick={() => { setShowUploadModal(false); router.push(`/trip/${id}/timeline?from=timeline`); }}
+              onClick={closeUploadModal}
               className="w-full py-3.5 rounded-2xl font-semibold text-white"
               style={{ background: "#22c55e" }}
             >
@@ -254,22 +328,69 @@ export default function PhotoUploadPage() {
         </div>
       )}
 
-      {/* 하단 버튼 — 공간은 항상 유지, 사진 선택 후에만 표시 */}
-      <div className="py-4 shrink-0">
-        <button
-          onClick={handleUpload}
-          disabled={uploading || (isDuringTrip && !timelineLoaded) || !!currentBlock?.isTaken}
-          className={`w-full py-4 rounded-2xl text-white font-semibold transition-colors disabled:opacity-60 ${
-            selectedFile || record?.status === "uploaded" ? "visible" : "invisible"
-          }`}
-          style={{
-            background: record?.status === "uploaded"
-              ? "#16a34a"
-              : uploading ? "#86efac" : "#22c55e",
-          }}
-        >
-          {uploading ? "업로드 중..." : record?.status === "uploaded" ? "✓ 사진 올렸어요" : "사진 올리기"}
-        </button>
+      {showUploadButton && (
+        <div className="py-4 shrink-0">
+          <button
+            onClick={handleUpload}
+            disabled={uploading || (isDuringTrip && !timelineLoaded) || !!currentBlock?.isTaken}
+            className="w-full py-4 rounded-2xl text-white font-semibold transition-colors disabled:opacity-60"
+            style={{
+              background: record?.status === "uploaded"
+                ? "#16a34a"
+                : uploading ? "#86efac" : "#22c55e",
+            }}
+          >
+            {uploading ? "업로드 중..." : record?.status === "uploaded" ? "✓ 사진 올렸어요" : "사진 올리기"}
+          </button>
+        </div>
+      )}
+
+      <div
+        className="pointer-events-none fixed bottom-0 left-0 right-0 z-40 flex justify-center px-6"
+        style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+      >
+        <div className="trip-floating-tab-bar pointer-events-auto is-timeline">
+          <span className="trip-floating-tab-indicator" aria-hidden="true" />
+          {([
+            { key: "trip", label: "여행 모임", icon: (
+              <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            )},
+            { key: "candidates", label: "후보 장소", icon: (
+              <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            )},
+            { key: "vote", label: "투표", icon: (
+              <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+            )},
+            { key: "timeline", label: "타임라인", icon: (
+              <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            )},
+          ] as const).map(({ key, label, icon }) => {
+            const active = key === "timeline";
+            return (
+              <button
+                key={key}
+                onClick={() => moveToTripTab(key)}
+                className="trip-floating-tab-button"
+                aria-label={label}
+                aria-current={active ? "page" : undefined}
+              >
+                <span className={`trip-floating-tab-icon ${active ? "is-active" : ""}`}>
+                  {icon}
+                </span>
+                <span className="sr-only">{label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
