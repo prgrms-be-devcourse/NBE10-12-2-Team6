@@ -8,6 +8,8 @@ import csh.back.domain.trip.place.service.TripPlaceService;
 
 import csh.back.global.annotation.ApiV1;
 import csh.back.global.dto.ResponseData;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,9 +25,11 @@ import java.util.List;
 @RequestMapping("/trips")
 @RequiredArgsConstructor
 @RestController
+@Tag(name = "여행 위시 장소", description = "여행 모임 위시 장소 관련 API")
 public class TripPlaceV1Controller {
     private final TripPlaceService tripPlaceService;
 
+    @Operation(summary = "위시 장소 목록 조회")
     @GetMapping("/{tripId}/wish-places")
     public ResponseData<List<TripPlaceFindResponse>> findWishPlaces(
             @PathVariable Long tripId,
@@ -37,6 +41,7 @@ public class TripPlaceV1Controller {
     }
 
 
+    @Operation(summary = "위시 장소 저장")
     @PostMapping("/{tripId}/wish-places")
     public ResponseData<TripPlaceSaveResponse> saveWishPlace(
             @RequestBody TripPlaceSaveRequest request,

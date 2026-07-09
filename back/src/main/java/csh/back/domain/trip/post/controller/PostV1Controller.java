@@ -24,7 +24,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @ApiV1
 @RequestMapping("/trips/{tripId}/posts")
-@Tag(name = "Post", description = "게시글 API")
+@Tag(name = "게시물", description = "게시글 API")
 public class PostV1Controller {
 
     private final PostService postService;
