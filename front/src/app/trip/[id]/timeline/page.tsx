@@ -210,7 +210,21 @@ export default function TimelinePage() {
                 {dayPosts.length === 0 ? (
                   <p className="text-sm text-gray-500">아직 사진 기록이 없습니다.</p>
                 ) : (
-                  <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory" style={{ scrollbarWidth: "none" }}>
+                  <div
+                    className="flex gap-3 overflow-x-auto snap-x snap-mandatory select-none"
+                    style={{ scrollbarWidth: "none", cursor: "grab" }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      const el = e.currentTarget;
+                      const startX = e.clientX;
+                      const startScrollLeft = el.scrollLeft;
+                      el.style.cursor = "grabbing";
+                      const onMove = (ev: MouseEvent) => { el.scrollLeft = startScrollLeft - (ev.clientX - startX); };
+                      const onUp = () => { el.style.cursor = "grab"; window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+                      window.addEventListener("mousemove", onMove);
+                      window.addEventListener("mouseup", onUp);
+                    }}
+                  >
                     {toSegments(dayPosts).map(seg => {
                       const posts = seg.posts;
                       const label = seg.type === "timeline"
@@ -233,14 +247,40 @@ export default function TimelinePage() {
 	                            )}
 	                          </div>
 	                          <div
-	                            className="flex overflow-x-auto snap-x snap-mandatory rounded-xl overflow-hidden"
-	                            style={{ scrollbarWidth: "none" }}
+	                            className="flex overflow-x-auto snap-x snap-mandatory rounded-xl overflow-hidden select-none"
+	                            style={{ scrollbarWidth: "none", cursor: "grab" }}
+	                            onMouseDown={(e) => {
+	                              e.preventDefault();
+	                              e.stopPropagation();
+	                              const el = e.currentTarget;
+	                              el.style.scrollSnapType = "none";
+	                              const startX = e.clientX;
+	                              const startScrollLeft = el.scrollLeft;
+	                              el.style.cursor = "grabbing";
+	                              let hasDragged = false;
+	                              const onMove = (ev: MouseEvent) => {
+	                                if (Math.abs(ev.clientX - startX) > 5) hasDragged = true;
+	                                el.scrollLeft = startScrollLeft - (ev.clientX - startX);
+	                              };
+	                              const onUp = () => {
+	                                el.style.scrollSnapType = "";
+	                                el.style.cursor = "grab";
+	                                window.removeEventListener("mousemove", onMove);
+	                                window.removeEventListener("mouseup", onUp);
+	                                if (hasDragged) {
+	                                  const blockClick = (ev: MouseEvent) => { ev.stopPropagation(); window.removeEventListener("click", blockClick, true); };
+	                                  window.addEventListener("click", blockClick, true);
+	                                }
+	                              };
+	                              window.addEventListener("mousemove", onMove);
+	                              window.addEventListener("mouseup", onUp);
+	                            }}
                           >
                             {posts.map(post => {
                               const src = resolveUrl(post.contentUrl);
                               return (
                                 <div key={post.postId} className="basis-full shrink-0 snap-start flex items-center justify-center" style={{ height: "360px" }}>
-                                  <img src={src} alt="" className="max-w-full max-h-full object-contain rounded-2xl cursor-pointer" onClick={() => setLightbox(src)} />
+                                  <img src={src} alt="" draggable={false} className="max-w-full max-h-full object-contain rounded-2xl cursor-pointer" onClick={() => setLightbox(src)} />
                                 </div>
                               );
                             })}

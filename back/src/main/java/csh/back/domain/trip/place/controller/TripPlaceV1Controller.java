@@ -25,11 +25,11 @@ import java.util.List;
 @RequestMapping("/trips")
 @RequiredArgsConstructor
 @RestController
-@Tag(name = "여행 위시 장소", description = "여행 모임 위시 장소 관련 API")
+@Tag(name = "여행 후보 장소", description = "여행 후보 추천 장소 관련 API")
 public class TripPlaceV1Controller {
     private final TripPlaceService tripPlaceService;
 
-    @Operation(summary = "위시 장소 목록 조회")
+    @Operation(summary = "후보 장소 목록 조회")
     @GetMapping("/{tripId}/wish-places")
     public ResponseData<List<TripPlaceFindResponse>> findWishPlaces(
             @PathVariable Long tripId,
@@ -41,7 +41,7 @@ public class TripPlaceV1Controller {
     }
 
 
-    @Operation(summary = "위시 장소 저장")
+    @Operation(summary = "후보 장소 저장")
     @PostMapping("/{tripId}/wish-places")
     public ResponseData<TripPlaceSaveResponse> saveWishPlace(
             @RequestBody TripPlaceSaveRequest request,
