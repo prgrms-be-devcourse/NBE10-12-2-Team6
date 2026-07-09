@@ -555,7 +555,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-right: 2px;
-  padding-bottom: max(2.5rem, calc(2rem + env(safe-area-inset-bottom)));
+  padding-bottom: max(132px, calc(116px + env(safe-area-inset-bottom)));
   -webkit-overflow-scrolling: touch;
 }
 
@@ -608,6 +608,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 .trip-day-list-scroll::-webkit-scrollbar-track {
+  margin-bottom: max(110px, calc(98px + env(safe-area-inset-bottom)));
+}
+
+.home-list-scroll::-webkit-scrollbar-track {
   margin-bottom: max(110px, calc(98px + env(safe-area-inset-bottom)));
 }
 
@@ -803,6 +807,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 .trip-floating-tab-bar.is-timeline .trip-floating-tab-indicator {
   transform: translate3d(calc((var(--tab-size) + var(--tab-gap)) * 3), -50%, 0);
+}
+
+.home-floating-tab-bar {
+  grid-template-columns: repeat(2, var(--tab-size));
+}
+
+.home-floating-tab-bar.is-profile .trip-floating-tab-indicator {
+  transform: translate3d(calc(var(--tab-size) + var(--tab-gap)), -50%, 0);
 }
 
 .trip-floating-tab-button {
@@ -1011,6 +1023,24 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes homeLogoutConfirmIn {
+  0% {
+    opacity: 0;
+    transform: translateY(34px) scale(0.92);
+    filter: blur(8px);
+  }
+  72% {
+    opacity: 1;
+    transform: translateY(-3px) scale(1.015);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
   }
 }
 
@@ -1244,6 +1274,66 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 .home-search-results {
   animation: homeSearchResultsIn 0.24s ease-out both;
+}
+
+.home-logout-confirm-item {
+  animation: homeLogoutConfirmIn 0.58s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: opacity, transform, filter;
+}
+
+.home-logout-actions {
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+  width: 100%;
+  transition: gap 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.home-logout-actions.is-confirming {
+  gap: 0.75rem;
+}
+
+.home-logout-cancel-action {
+  flex: 0 0 0;
+  min-width: 0;
+  padding-left: 0;
+  padding-right: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateX(22px) scale(0.94);
+  transition:
+    flex-basis 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.24s ease,
+    padding 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.home-logout-actions.is-confirming .home-logout-cancel-action {
+  flex-basis: calc((100% - 0.75rem) / 2);
+  padding-left: 1rem;
+  padding-right: 1rem;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0) scale(1);
+}
+
+.home-logout-main-action {
+  flex: 1 1 100%;
+  min-width: 0;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  white-space: nowrap;
+  transform-origin: center;
+  transition:
+    flex-basis 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.home-logout-actions.is-confirming .home-logout-main-action {
+  flex: 0 0 calc((100% - 0.75rem) / 2);
+  transform: scale(0.985);
 }
 
 @media (prefers-reduced-motion: reduce) {
