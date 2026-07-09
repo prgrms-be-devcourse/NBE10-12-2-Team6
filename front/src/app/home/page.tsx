@@ -579,8 +579,8 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen">
-      <div className="flex items-center justify-between px-4 pt-14 pb-2">
+    <div className="home-page min-h-screen">
+      <div className="shrink-0 flex items-center justify-between px-4 pt-14 pb-2">
         <p className="text-3xl font-bold">내 여행</p>
         <button onClick={() => setShowCreate(true)} aria-label="여행 모임 만들기" className="home-create-button w-10 h-10 flex items-center justify-center rounded-full">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.75} viewBox="0 0 24 24">
@@ -589,13 +589,13 @@ export default function HomePage() {
         </button>
       </div>
 
-      <div className="px-4 pb-10">
-        <div className="mb-5">
+      <div className="home-content px-4 pb-0">
+        <div className="shrink-0 mb-5">
           <p className="text-2xl font-bold">안녕하세요, {currentUser.name}님</p>
           <p className="text-sm text-gray-500 mt-1">여행 모임을 만들고 초대 링크로 멤버를 초대해보세요.</p>
         </div>
 
-        <div className="flex flex-col gap-2 mb-4">
+        <div className="shrink-0 flex flex-col gap-2 mb-4">
           <input
             className="w-full p-3 bg-gray-100 rounded-xl text-sm outline-none"
             placeholder="여행 이름, 지역, 멤버명으로 검색"
@@ -632,36 +632,38 @@ export default function HomePage() {
           </div>
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-10">
-            <p className="text-sm text-gray-400">불러오는 중...</p>
-          </div>
-        ) : trips.length === 0 && hasSearched ? (
-          <p key={resultAnimationKey} className="home-search-empty py-12 text-center text-sm text-gray-400">
-            찾는 여행 모임이 없습니다
-          </p>
-        ) : trips.length === 0 ? (
-          <div key={resultAnimationKey} className="home-search-empty flex flex-col items-center gap-4 p-7 bg-gray-50 rounded-2xl text-center">
-            <span className="text-blue-400">
-              <svg className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth={2.75} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5a4 4 0 0 0-5.66 0l-2.34 2.34a4 4 0 1 0 5.66 5.66l1.05-1.05" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 13.5a4 4 0 0 0 5.66 0l2.34-2.34A4 4 0 1 0 12.84 5.5L11.8 6.55" />
-              </svg>
-            </span>
-            <p className="font-semibold">아직 여행 모임이 없어요</p>
-            <p className="text-sm text-gray-500">여행 모임을 만들면 초대 링크가 생성됩니다.</p>
-            <button onClick={() => setShowCreate(true)} className="px-6 py-3 rounded-2xl bg-blue-500 text-white font-semibold text-sm">
-              여행 모임 만들기
-            </button>
-          </div>
-        ) : (
-          <div key={resultAnimationKey} className="home-search-results flex flex-col gap-3">
-            {[...trips].sort((a, b) => {
-              const order = { during: 0, before: 1, after: 2 };
-              return order[getTripStatus(a.startDate, a.nights)] - order[getTripStatus(b.startDate, b.nights)];
-            }).map((trip, index) => <TripCard key={trip.id} trip={trip} animationDelayMs={Math.min(index, 6) * 55} />)}
-          </div>
-        )}
+        <div className="home-list-scroll">
+          {loading ? (
+            <div className="flex justify-center py-10">
+              <p className="text-sm text-gray-400">불러오는 중...</p>
+            </div>
+          ) : trips.length === 0 && hasSearched ? (
+            <p key={resultAnimationKey} className="home-search-empty py-12 text-center text-sm text-gray-400">
+              찾는 여행 모임이 없습니다
+            </p>
+          ) : trips.length === 0 ? (
+            <div key={resultAnimationKey} className="home-search-empty flex flex-col items-center gap-4 p-7 bg-gray-50 rounded-2xl text-center">
+              <span className="text-blue-400">
+                <svg className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth={2.75} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5a4 4 0 0 0-5.66 0l-2.34 2.34a4 4 0 1 0 5.66 5.66l1.05-1.05" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 13.5a4 4 0 0 0 5.66 0l2.34-2.34A4 4 0 1 0 12.84 5.5L11.8 6.55" />
+                </svg>
+              </span>
+              <p className="font-semibold">아직 여행 모임이 없어요</p>
+              <p className="text-sm text-gray-500">여행 모임을 만들면 초대 링크가 생성됩니다.</p>
+              <button onClick={() => setShowCreate(true)} className="px-6 py-3 rounded-2xl bg-blue-500 text-white font-semibold text-sm">
+                여행 모임 만들기
+              </button>
+            </div>
+          ) : (
+            <div key={resultAnimationKey} className="home-search-results flex flex-col gap-3">
+              {[...trips].sort((a, b) => {
+                const order = { during: 0, before: 1, after: 2 };
+                return order[getTripStatus(a.startDate, a.nights)] - order[getTripStatus(b.startDate, b.nights)];
+              }).map((trip, index) => <TripCard key={trip.id} trip={trip} animationDelayMs={Math.min(index, 6) * 55} />)}
+            </div>
+          )}
+        </div>
       </div>
 
       {showCreate && (

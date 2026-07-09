@@ -520,6 +520,30 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   padding-bottom: 0;
 }
 
+.home-page {
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.home-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.home-list-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+  padding-bottom: max(2.5rem, calc(2rem + env(safe-area-inset-bottom)));
+  -webkit-overflow-scrolling: touch;
+}
+
 .trip-tab-content,
 .trip-overview-panel,
 .candidate-section-panel,
@@ -574,7 +598,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 .trip-day-list-scroll::-webkit-scrollbar-thumb,
 .candidate-list-scroll::-webkit-scrollbar-thumb,
-.vote-list-scroll::-webkit-scrollbar-thumb {
+.vote-list-scroll::-webkit-scrollbar-thumb,
+.home-list-scroll::-webkit-scrollbar-thumb {
   border-radius: 9999px;
 }
 
