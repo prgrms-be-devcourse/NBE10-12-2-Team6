@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useStore } from "../store";
-import { formatDate, apiFetch, useAuthGuard, API_BASE } from "../lib";
+import { Avatar, formatDate, apiFetch, useAuthGuard, API_BASE } from "../lib";
 import { useTripOwnerStore } from "../stores/tripOwnerStore";
 import AnimatedBottomSheet from "../components/AnimatedBottomSheet";
 
@@ -484,6 +484,8 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [resultAnimationKey, setResultAnimationKey] = useState(0);
   const [hasSearched, setHasSearched] = useState(false);
+  const [showLogout, setShowLogout] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   const tripTitleRef = useRef<HTMLInputElement>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -576,6 +578,11 @@ export default function HomePage() {
     } catch (e) {
       console.error("[여행 만들기 실패]", e);
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.clear();
+    router.replace("/");
   };
 
   return (
@@ -719,6 +726,113 @@ export default function HomePage() {
                 여행 모임 만들기
               </button>
             </div>
+            </>
+          )}
+        </AnimatedBottomSheet>
+      )}
+
+      <div
+        className="pointer-events-none fixed bottom-0 left-0 right-0 z-40 flex justify-center px-6"
+        style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+      >
+        <div className={`trip-floating-tab-bar home-floating-tab-bar pointer-events-auto ${showLogout ? "is-profile" : "is-home"}`}>
+          <span className="trip-floating-tab-indicator" aria-hidden="true" />
+          <button
+            type="button"
+            onClick={() => {
+              setShowLogout(false);
+              setConfirmLogout(false);
+            }}
+            className="trip-floating-tab-button"
+            aria-label="여행 모임 목록"
+            aria-current={!showLogout ? "page" : undefined}
+          >
+            <span className={`trip-floating-tab-icon ${!showLogout ? "is-active" : ""}`}>
+              <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.75 11.25 12 4.5l8.25 6.75M5.75 10.75V20h4.5v-5.25h3.5V20h4.5v-9.25" />
+              </svg>
+            </span>
+            <span className="sr-only">여행 모임 목록</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowLogout(true);
+              setConfirmLogout(false);
+            }}
+            className="trip-floating-tab-button"
+            aria-label="내 정보"
+            aria-current={showLogout ? "page" : undefined}
+          >
+            <span className={`trip-floating-tab-icon ${showLogout ? "is-active" : ""}`}>
+              <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.75 7.75a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.75 19.25a7.25 7.25 0 0 1 14.5 0" />
+              </svg>
+            </span>
+            <span className="sr-only">내 정보</span>
+          </button>
+        </div>
+      </div>
+
+      {showLogout && (
+        <AnimatedBottomSheet
+          onClose={() => {
+            setShowLogout(false);
+            setConfirmLogout(false);
+          }}
+          className="px-5 pt-5 pb-6"
+        >
+          {(close) => (
+            <>
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <p className="text-lg font-bold">{confirmLogout ? "로그아웃" : "내 정보"}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={close}
+                  className="w-9 h-9 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"
+                  aria-label="닫기"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="home-logout-body">
+                {confirmLogout ? (
+                  <div className="home-logout-confirm-item rounded-2xl bg-gray-50 p-5 mb-4 text-center">
+                    <p className="font-bold">정말 로그아웃하시겠습니까?</p>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl bg-gray-50 p-4 mb-4">
+                    <p className="text-sm text-gray-500 mb-3">현재 계정</p>
+                    <div className="flex items-center gap-3">
+                      <Avatar user={{ ...currentUser, name: currentUser.name || "사용자" }} size={42} />
+                      <p className="font-bold">{currentUser.name || "사용자"}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className={`home-logout-actions ${confirmLogout ? "is-confirming" : ""}`}>
+                <button
+                  type="button"
+                  onClick={close}
+                  disabled={!confirmLogout}
+                  aria-hidden={!confirmLogout}
+                  tabIndex={confirmLogout ? 0 : -1}
+                  className="home-logout-cancel-action py-4 rounded-2xl bg-gray-100 text-gray-700 font-bold active:opacity-80"
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmLogout ? handleLogout : () => setConfirmLogout(true)}
+                  className="home-logout-main-action py-4 rounded-2xl bg-red-500 text-white font-bold active:opacity-80"
+                >
+                  로그아웃
+                </button>
+              </div>
             </>
           )}
         </AnimatedBottomSheet>
