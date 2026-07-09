@@ -20,6 +20,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Configuration
@@ -49,6 +50,7 @@ public class SecurityConfig {
                                 // 회원가입, 로그인은 인증 없이 접근 허용
                         .requestMatchers(
                                 "/swagger-ui/**",
+                                "/swagger-ui.html",
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
                                 "/h2-console/**",
@@ -68,7 +70,6 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Authorization"));

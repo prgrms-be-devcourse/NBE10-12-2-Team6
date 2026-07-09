@@ -9,6 +9,7 @@ import csh.back.domain.vote.vote.service.VoteService;
 import csh.back.global.annotation.ApiV1;
 import csh.back.global.dto.ResponseData;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,10 +21,12 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/trips/{tripId}/votes")
+@Tag(name = "투표", description = "여행 모임 투표 관련 API")
 public class VoteV1Controller {
     private final VoteService voteService;
     private final TimeLineService timeLineService;
 
+    @Operation(summary = "투표 목록 조회", description = "특정 여행 모임의 투표 목록을 조회")
     @GetMapping
     public ResponseData<List<VoteFindListResponse>> findVoteList(
             @PathVariable Long tripId,
@@ -32,6 +35,7 @@ public class VoteV1Controller {
         return new ResponseData<>(200, voteService.findVoteList(tripId, member.id()));
     }
 
+    @Operation(summary = "투표 생성", description = "특정 여행 모임에 타임라인 기반 투표를 생성")
     @PostMapping
     public ResponseData<VoteCreateResponse> createVote(
             @PathVariable Long tripId,
@@ -45,6 +49,7 @@ public class VoteV1Controller {
         );
     }
 
+    @Operation(summary = "투표 항목 및 투표 수 조회", description = "특정 투표의 장소별 항목과 투표 수 조회")
     @GetMapping("/{voteId}/count")
     public ResponseData<VoteFindWithUpdateCountResponse> findVoteItemAndCount(
             @PathVariable Long tripId,
@@ -57,6 +62,7 @@ public class VoteV1Controller {
         );
     }
 
+    @Operation(summary = "특정 장소 투표 참여자 조회", description = "특정 장소에 투표한 사용자 목록을 조회")
     @GetMapping("/{voteId}/places/{placeId}")
     public ResponseData<List<VoteFindUserResponse>> findVoteUserThisPlace(
             @PathVariable Long tripId,

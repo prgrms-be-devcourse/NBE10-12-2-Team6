@@ -10,6 +10,8 @@ import csh.back.domain.trip.member.service.TripMemberService;
 import csh.back.global.annotation.ApiV1;
 import csh.back.global.dto.ResponseData;
 import csh.back.global.jwt.CookieNames;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,11 +34,12 @@ import java.time.ZoneId;
 @RequiredArgsConstructor
 @RequestMapping("/auth")
 @RestController
+@Tag(name = "회원 인증", description = "회원가입, 로그인, 로그아웃 관련 API")
 public class MemberController {
     private final MemberService memberService;
     private final TripMemberService tripMemberService;
 
-    // 회원가입 요청 처리
+    @Operation(summary = "회원가입")
     @PostMapping("/signup")
     public ResponseData<MemberResponseDto> signUp(
             @RequestBody @Valid MemberRequestDto request) {
@@ -49,6 +52,7 @@ public class MemberController {
      * - 기존 v1 프론트 호환을 위해 Authorization 헤더로도 동일한 토큰을 함께 전달
      * - joinCode가 있으면 로그인과 동시에 해당 여행 그룹에 참여 처리
      */
+    @Operation(summary = "로그인")
     @PostMapping("/login")
     public ResponseData<LoginResponseDto> login(
             @RequestBody @Valid LoginRequestDto request,
@@ -96,6 +100,7 @@ public class MemberController {
      * - 인증되지 않은 요청은 SecurityConfig(anyRequest().authenticated())에서
      *   컨트롤러 진입 전에 이미 걸러지므로, 아래 null 체크는 방어 코드 성격
      */
+    @Operation(summary = "로그아웃")
     @PostMapping("/logout")
     public ResponseData<Void> logout(HttpServletResponse response) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

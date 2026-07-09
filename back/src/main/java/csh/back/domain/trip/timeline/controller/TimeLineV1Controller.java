@@ -25,7 +25,6 @@ import java.util.List;
 
 @Slf4j
 @ApiV1
-//Swagger에서 여행 타임라인 API 그룹으로 표시
 @Tag(name = "여행 타임라인", description = "여행 타임라인 시간 구간 API")
 @RequiredArgsConstructor
 //공통 URL 경로 설정
@@ -38,7 +37,6 @@ public class TimeLineV1Controller {
     private final TimeLineService timeLineService;
     private final TimeLineEventService timeLineEventService;
 
-    //Swagger 문서에 타임라인 생성 API 설명 표시
     @Operation(summary = "타임라인 시간 구간 단건 생성")
     //타임라인 시간 구간 등록
     @PostMapping
@@ -54,7 +52,6 @@ public class TimeLineV1Controller {
 
     //타임라인 시간 구간 일괄 생성
     @Tag(name = "여행 타임라인", description = "일괄 여행 타임라인 시간 구간 API")
-    //Swagger 문서에 타임라인 생성 API 설명 표시
     @Operation(summary = "타임라인 시간 구간 일괄 생성")
     @PostMapping("/batch")
     public ResponseData<List<TimeLineResponse>> createAllTimeLines(
@@ -68,7 +65,6 @@ public class TimeLineV1Controller {
         return new ResponseData<>(201, timeLineService.createAllTimeLines(tripId, memberId, request));
     }
 
-    //Swagger 문서에 일차별 타임라인 목록 조회 API 설명 표시
     @Operation(summary = "일차별 타임라인 시간 구간 목록 조회")
     //특정 여행 모임의 특정 일차 타임라인 목록 조회
     @GetMapping
@@ -95,7 +91,6 @@ public class TimeLineV1Controller {
 
     }
 
-    //Swagger 문서에 방 내 전체 타임라인 개수 목록 API 설명 표시
     @Operation(summary = "방 내 전체 타임라인 개수 목록 반환")
     //방 내 전체 타임라인 개수 목록 조회
     @GetMapping("/count")
@@ -108,7 +103,6 @@ public class TimeLineV1Controller {
         return new ResponseData<>(200, timeLineService.getTimeLinesCount(tripId, memberId));
     }
 
-    //Swagger 문서에 타임라인 수정 API 설명 표시
     @Operation(summary = "타임라인 시간 구간 수정")
     //특정 타임라인 시간 구간 수정
     @PatchMapping("/{timelineId}")
@@ -122,7 +116,6 @@ public class TimeLineV1Controller {
         return new ResponseData<>(200, timeLineService.updateTimeLine(tripId, timelineId, memberId, request));
     }
 
-    //Swagger 문서에 타임라인 삭제 API 설명 표시
     @Operation(summary = "타임라인 시간 구간 삭제")
     //특정 타임라인 시간 구간 삭제
     @DeleteMapping("/{timelineId}")
