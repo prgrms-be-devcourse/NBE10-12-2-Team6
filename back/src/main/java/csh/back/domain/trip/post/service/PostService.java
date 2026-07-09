@@ -40,6 +40,46 @@ public class PostService {
     private final TripGroupService tripGroupService;
 
     @Transactional(readOnly = true)
+    public List<PostsDailyResponse> getPosts(Long tripId, Long memberId) {
+        tripMemberValidator.validMember(tripId, memberId);
+
+        TripGroup tripGroup = tripGroupService.findTripGroupById(tripId);
+        List<TripMember> tripMembers = tripMemberRepository.findByTripGroupId(tripGroup.getId());
+
+        // 사진 목록 (timeline + confirmedPlace fetch join 되어 있음)
+        List<Post> posts = postRepository.findWithTimeLineAndPlaceByAuthorIdIn(tripMembers);
+
+        // 여행 전체 timeline 한 번 조회 → 날짜별 맵 (빈 칸 슬롯 계산에 재사용, 쿼리 1번)
+        List<TimeLine> allSchedules = timeLineRepository.findByTripGroupIdSorted(tripId);
+        Map<LocalDate, List<TimeLine>> scheduleByDate = allSchedules.stream()
+                .collect(Collectors.groupingBy(t -> t.getStartTime().toLocalDate()));
+
+        // 사진 날짜별 그룹핑 (TreeMap으로 날짜 오름차순 자동 정렬)
+        Map<LocalDate, List<Post>> postsByDate = posts.stream()
+                .collect(Collectors.groupingBy(
+                        post -> post.getCreatedAt().toLocalDate(),
+                        TreeMap::new,
+                        Collectors.toList()
+                ));
+
+        return postsByDate.entrySet().stream()
+                .map(entry -> {
+                    LocalDate date = entry.getKey();
+                    List<Post> dailyPosts = entry.getValue();
+
+                    // 그날 일정 (없는 날이면 빈 리스트 → 전부 빈 칸 슬롯으로 계산됨)
+                    List<TimeLine> daySchedules = scheduleByDate.getOrDefault(date, List.of());
+
+                    List<PostsDailyResponse.PostSummary> summaries = dailyPosts.stream()
+                            .map(post -> toSummaryWithSlot(post, daySchedules))
+                            .toList();
+
+                    return new PostsDailyResponse(date, summaries);
+                })
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public PostResponse getPost(Long tripId, Long postId) {
         //값 검사
         Post post = postRepository.findById(postId)
@@ -52,32 +92,32 @@ public class PostService {
         return PostResponse.from(post);
     }
     //게시글 전체조회
-    @Transactional(readOnly = true)
-    public List<PostsDailyResponse> getPosts(Long tripId, Long memberId) {
-        tripMemberValidator.validMember(tripId, memberId);
-
-        TripGroup tripGroup = tripGroupService.findTripGroupById(tripId);
-
-        List<TripMember> tripMembers = tripMemberRepository.findByTripGroupId(tripGroup.getId());
-
-        List<Post> posts = postRepository.findWithTimeLineAndPlaceByAuthorIdIn(tripMembers);
-
-        Map<LocalDate, List<Post>> map = posts.stream()
-                .collect(Collectors.groupingBy(
-                        post -> post.getCreatedAt().toLocalDate(),
-                        TreeMap::new,
-                        Collectors.toList()
-                ));
-
-        return map.entrySet().stream()
-                .map(entry -> new PostsDailyResponse(
-                        entry.getKey(),
-                        entry.getValue().stream()
-                                .map(PostsDailyResponse.PostSummary::from)
-                                .toList()
-                ))
-                .toList();
-    }
+//    @Transactional(readOnly = true)
+//    public List<PostsDailyResponse> getPosts(Long tripId, Long memberId) {
+//        tripMemberValidator.validMember(tripId, memberId);
+//
+//        TripGroup tripGroup = tripGroupService.findTripGroupById(tripId);
+//
+//        List<TripMember> tripMembers = tripMemberRepository.findByTripGroupId(tripGroup.getId());
+//
+//        List<Post> posts = postRepository.findWithTimeLineAndPlaceByAuthorIdIn(tripMembers);
+//
+//        Map<LocalDate, List<Post>> map = posts.stream()
+//                .collect(Collectors.groupingBy(
+//                        post -> post.getCreatedAt().toLocalDate(),
+//                        TreeMap::new,
+//                        Collectors.toList()
+//                ));
+//
+//        return map.entrySet().stream()
+//                .map(entry -> new PostsDailyResponse(
+//                        entry.getKey(),
+//                        entry.getValue().stream()
+//                                .map(PostsDailyResponse.PostSummary::from)
+//                                .toList()
+//                ))
+//                .toList();
+//    }
     // 게시글 수정
     @Transactional
     public void update(Long tripId, Long postId, UpdatePostRequest request) {
@@ -173,7 +213,7 @@ public class PostService {
      * - isTaken: 그 유저가 이 슬롯 시간대에 이미 사진을 올렸는지
      */
     public PostTimeLineResponse getCurrentSlot(Long tripId, Long memberId, int dayNumber) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now().minusHours(1).minusMinutes(10);
         LocalDateTime dayStart = now.toLocalDate().atStartOfDay();   // 오늘 00:00:00
         LocalDateTime dayEnd = dayStart.plusDays(1);                 // 내일 00:00:00
         TripMember tripMember = tripMemberRepository.findByMemberIdAndTripGroupId(memberId, tripId).orElseThrow(RuntimeException::new);
@@ -189,6 +229,7 @@ public class PostService {
         LocalDateTime slotStart;
         LocalDateTime slotEnd;
         String placeName = null;
+        Long timeLineId = null;   // 빈 칸이면 null 유지
 
         Optional<TimeLine> current = schedules.stream()
                 .filter(s -> !now.isBefore(s.getStartTime()) && now.isBefore(s.getEndTime()))
@@ -196,14 +237,17 @@ public class PostService {
 
         if (current.isPresent()) {
             // 일정 슬롯 → 일정 실제 범위 그대로
-            slotStart = current.get().getStartTime();
-            slotEnd = current.get().getEndTime();
+            TimeLine timeLine = current.get();
+            slotStart = timeLine.getStartTime();
+            slotEnd = timeLine.getEndTime();
+            timeLineId = timeLine.getId();   // ← 일정 슬롯이면 timeLineId 채움
 
             // 장소 확정된 경우만 이름, 미확정이면 null
-            TripPlace place = current.get().getConfirmedPlace();
+            TripPlace place = timeLine.getConfirmedPlace();
             placeName = (place != null) ? place.getName() : null;
+
         } else {
-            // 빈 칸 슬롯 → 정시 격자 규칙, placeName은 null 유지
+            // 빈 칸 슬롯 → 정시 격자 규칙, placeName/timeLineId 는 null 유지
             slotStart = calcEmptySlotStart(now, schedules);
             slotEnd = calcEmptySlotEnd(slotStart, schedules);
         }
@@ -213,7 +257,70 @@ public class PostService {
                 .anyMatch(p -> !p.getCreatedAt().isBefore(slotStart)
                         && p.getCreatedAt().isBefore(slotEnd));
 
-        return new PostTimeLineResponse(slotStart, slotEnd, placeName, isTaken);
+        return new PostTimeLineResponse(slotStart, slotEnd, timeLineId, placeName, isTaken);
+    }
+
+    private PostsDailyResponse.PostSummary toSummaryWithSlot(Post post, List<TimeLine> daySchedules) {
+        TimeLine timeLine = post.getTimeLine();
+
+        // 일정 슬롯: timeline 값 그대로
+        if (timeLine != null) {
+            TripPlace tripPlace = timeLine.getConfirmedPlace();
+            return new PostsDailyResponse.PostSummary(
+                    post.getId(),
+                    post.getContentUrl(),
+                    timeLine.getId(),
+                    timeLine.getStartTime(),
+                    timeLine.getEndTime(),
+                    (tripPlace != null) ? tripPlace.getName() : null,
+                    post.getCreatedAt()
+            );
+        }
+
+        // 빈 칸 슬롯: createdAt 기준 슬롯 범위 계산
+        LocalDateTime captured = post.getCreatedAt();
+        LocalDateTime slotStart = calcSlotStart(captured, daySchedules);
+        LocalDateTime slotEnd = calcSlotEnd(slotStart, daySchedules);
+
+        return new PostsDailyResponse.PostSummary(
+                post.getId(),
+                post.getContentUrl(),
+                null,          // timeLineId 없음
+                slotStart,     // 계산된 슬롯 시작
+                slotEnd,       // 계산된 슬롯 끝
+                null,          // 빈 칸이니 장소 없음
+                post.getCreatedAt()
+        );
+    }
+
+    private LocalDateTime calcSlotStart(LocalDateTime time, List<TimeLine> daySchedules) {
+        LocalDateTime hourFloor = time.truncatedTo(ChronoUnit.HOURS);
+
+        LocalDateTime lastScheduleEnd = daySchedules.stream()
+                .map(TimeLine::getEndTime)
+                .filter(end -> !end.isAfter(time))   // time 이전에 끝난 일정만
+                .max(Comparator.naturalOrder())
+                .orElse(hourFloor);
+
+        return hourFloor.isAfter(lastScheduleEnd) ? hourFloor : lastScheduleEnd;
+    }
+
+    private LocalDateTime calcSlotEnd(LocalDateTime slotStart, List<TimeLine> daySchedules) {
+        LocalDateTime end = isOnTheHour(slotStart)
+                ? slotStart.plusHours(1)
+                : slotStart.truncatedTo(ChronoUnit.HOURS).plusHours(1);
+
+        LocalDateTime nextScheduleStart = daySchedules.stream()
+                .map(TimeLine::getStartTime)
+                .filter(start -> start.isAfter(slotStart))
+                .min(Comparator.naturalOrder())
+                .orElse(end);
+
+        return end.isBefore(nextScheduleStart) ? end : nextScheduleStart;
+    }
+
+    private boolean isOnTheHour(LocalDateTime t) {
+        return t.getMinute() == 0 && t.getSecond() == 0 && t.getNano() == 0;
     }
 
     /**
@@ -252,7 +359,5 @@ public class PostService {
         return end.isBefore(nextScheduleStart) ? end : nextScheduleStart;
     }
 
-    private boolean isOnTheHour(LocalDateTime t) {
-        return t.getMinute() == 0 && t.getSecond() == 0 && t.getNano() == 0;
-    }
+
 }

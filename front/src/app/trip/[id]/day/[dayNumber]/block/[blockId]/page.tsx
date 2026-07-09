@@ -269,7 +269,7 @@ export default function BlockDetailPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="trip-page-transition flex flex-col h-screen">
       {showConfirmModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowConfirmModal(false)}>
           <div className="bg-white rounded-2xl shadow-xl p-6 mx-6 flex flex-col gap-4" onClick={e => e.stopPropagation()}>
@@ -294,8 +294,8 @@ export default function BlockDetailPage() {
         </div>
       )}
       <div className="flex items-center gap-3 px-4 pt-12 pb-2">
-        <button onClick={goBack} className="text-blue-500 p-1 -ml-1">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button onClick={goBack} aria-label="뒤로가기" className="trip-header-icon-button w-10 h-10 rounded-full flex items-center justify-center">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
@@ -408,9 +408,10 @@ export default function BlockDetailPage() {
                 const cardState = isSelected ? "is-selected" : pendingVote === c.id ? "is-pending" : voted ? "is-voted" : "";
                 return (
                   <div
-                    key={c.id}
+                    key={`${activeCategory ?? "all"}-${c.id}`}
                     onClick={() => { if (!voteClosed) setPendingVote(c.id); }}
-                    className={`vote-candidate-card ${cardState} p-4 rounded-2xl border transition-transform ${voteClosed ? "cursor-default" : "cursor-pointer active:scale-[0.98]"}`}
+                    className={`home-trip-card vote-candidate-card ${cardState} p-4 rounded-2xl border transition-transform ${voteClosed ? "cursor-default" : "cursor-pointer active:scale-[0.98]"}`}
+                    style={{ animationDelay: `${candidates.filter(c2 => { if (!activeCategory) return true; if (activeCategory === "기타") return !c2.category; return c2.category === activeCategory; }).indexOf(c) * 40}ms` }}
                   >
                     <div className="flex items-start gap-2 mb-2">
                       <div className="flex-1 min-w-0">

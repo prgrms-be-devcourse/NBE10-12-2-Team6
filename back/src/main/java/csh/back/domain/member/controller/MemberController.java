@@ -86,9 +86,6 @@ public class MemberController {
         // 기존 v1 프론트 호환용 - Authorization 헤더로도 동일하게 전달
         response.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + result.refreshToken() + " " + result.accessToken());
 
-        System.out.println(ZoneId.systemDefault());
-        System.out.println(LocalDateTime.now());
-
         return new ResponseData<>(200, result.userInfo());
     }
 

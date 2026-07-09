@@ -260,11 +260,11 @@ export default function TimelinePage() {
                     }}
                   >
                     {toSegments(dayPosts).flatMap(seg => {
-                      const label = seg.type === "timeline"
-                        ? (seg.posts[0]?.startTime && seg.posts[0]?.endTime
-                            ? `${seg.posts[0].startTime.slice(11, 16)} ~ ${seg.posts[0].endTime.slice(11, 16)}${seg.posts[0].placeName ? ` · ${seg.posts[0].placeName}` : ""}`
-                            : `타임라인 #${seg.timeLineId}`)
-                        : `자유 시간 · ${seg.label}`;
+                      const fp = seg.posts[0];
+                      const timeRange = fp?.startTime ? `${fp.startTime.slice(11, 16)} ~ ${fp.endTime!.slice(11, 16)}` : "";
+                      const label = timeRange
+                        ? `${timeRange} · ${fp?.placeName ?? "자유 시간"}`
+                        : (fp?.placeName ?? "자유 시간");
                       const labelColor = seg.type === "timeline" ? "text-blue-400" : "text-gray-400";
                       const borderColor = seg.type === "timeline" ? "border-blue-100 bg-blue-50" : "border-gray-200 bg-gray-50";
 

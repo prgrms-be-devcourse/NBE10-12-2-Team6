@@ -579,8 +579,8 @@ export default function TripDetailPage() {
                               return (
                                 <div key={item.timeLineId ?? idx} className="flex items-center gap-3 bg-white rounded-xl px-3 py-2.5">
                                   <span className="text-xs text-gray-400 font-bold shrink-0">{t(toMin(item.startTime))}~{t(toMin(item.endTime))}</span>
-                                  {item.category && (
-                                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 shrink-0">{item.category}</span>
+                                  {(item.category || item.confirmedPlaceName) && (
+                                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 shrink-0">{item.category ?? "기타"}</span>
                                   )}
                                   <p className="text-sm font-semibold truncate">{item.confirmedPlaceName || "미확정"}</p>
                                 </div>
