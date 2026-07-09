@@ -710,11 +710,11 @@ export default function TripDetailPage() {
                                 </div>
                               </div>
                             </Link>
-                          );
-                        })}
-                      </div>
-                    );
-                  })}
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
                   </div>
               )}
             </div>

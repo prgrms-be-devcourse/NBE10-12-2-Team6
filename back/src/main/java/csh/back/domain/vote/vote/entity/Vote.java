@@ -3,6 +3,8 @@ package csh.back.domain.vote.vote.entity;
 import csh.back.domain.trip.group.entity.TripGroup;
 import csh.back.domain.trip.member.entity.TripMember;
 import csh.back.domain.trip.timeline.entity.TimeLine;
+import csh.back.domain.vote.vote.enums.VoteConfirmStatus;
+import csh.back.domain.vote.vote.enums.VoteStatus;
 import csh.back.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -12,52 +14,52 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+import static jakarta.persistence.EnumType.STRING;
+
 
 @Getter
 @Entity
-@Table(name = "trip_place_votes")
+@Table(name = "trip_votes")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Vote extends BaseEntity {
 
     //FK
     //Join TripGroup Table
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "trip_id", nullable = false)
+    @JoinColumn(name = "trip_group_id", nullable = false)
     private TripGroup tripGroup;
 
     //FK
     //Join TripTimeline Table
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "timeline_id",  nullable = false)
+    @JoinColumn(name = "trip_timeline_id",  nullable = false)
     private TimeLine timeLine;
 
     //FK
     //Join TripMember Table
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by",  nullable = false)
+    @JoinColumn(name = "trip_member_id",  nullable = false)
     private TripMember tripMember;
 
     //만료시간
+    @Column(nullable = false)
     private LocalDateTime expireTime;
 
-    @Column(nullable = false)
-    private boolean isConfirmed = false;
+    @Enumerated(STRING)
+    private VoteStatus status = VoteStatus.PENDING;
 
 
     //생성자
     //빌드 사용
     @Builder
-    private Vote(TripGroup tripGroup, TimeLine timeLine, TripMember tripMember, int penddingDays) {
-        if(penddingDays < 1) penddingDays = 3;
-
+    private Vote(TripGroup tripGroup, TimeLine timeLine, TripMember tripMember, LocalDateTime expireTime) {
         this.tripGroup = tripGroup;
         this.timeLine = timeLine;
         this.tripMember = tripMember;
-        this.expireTime = LocalDateTime.now().plusDays(penddingDays);
-        this.isConfirmed = false;
+        this.expireTime = expireTime;
     }
 
-    public void updateIsConfirmed(boolean isConfirmed) {
-        this.isConfirmed = isConfirmed;
+    public void updateStatus(VoteStatus status) {
+        this.status = status;
     }
 }
