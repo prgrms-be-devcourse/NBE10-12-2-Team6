@@ -91,33 +91,7 @@ public class PostService {
 
         return PostResponse.from(post);
     }
-    //게시글 전체조회
-//    @Transactional(readOnly = true)
-//    public List<PostsDailyResponse> getPosts(Long tripId, Long memberId) {
-//        tripMemberValidator.validMember(tripId, memberId);
-//
-//        TripGroup tripGroup = tripGroupService.findTripGroupById(tripId);
-//
-//        List<TripMember> tripMembers = tripMemberRepository.findByTripGroupId(tripGroup.getId());
-//
-//        List<Post> posts = postRepository.findWithTimeLineAndPlaceByAuthorIdIn(tripMembers);
-//
-//        Map<LocalDate, List<Post>> map = posts.stream()
-//                .collect(Collectors.groupingBy(
-//                        post -> post.getCreatedAt().toLocalDate(),
-//                        TreeMap::new,
-//                        Collectors.toList()
-//                ));
-//
-//        return map.entrySet().stream()
-//                .map(entry -> new PostsDailyResponse(
-//                        entry.getKey(),
-//                        entry.getValue().stream()
-//                                .map(PostsDailyResponse.PostSummary::from)
-//                                .toList()
-//                ))
-//                .toList();
-//    }
+
     // 게시글 수정
     @Transactional
     public void update(Long tripId, Long postId, UpdatePostRequest request) {
@@ -228,7 +202,7 @@ public class PostService {
         // 3. 현재 시각이 속한 슬롯 범위 계산 + placeName 계산
         LocalDateTime slotStart;
         LocalDateTime slotEnd;
-        String placeName = null;
+        String confirmedPlaceName = null;
         Long timeLineId = null;   // 빈 칸이면 null 유지
 
         Optional<TimeLine> current = schedules.stream()
@@ -244,7 +218,7 @@ public class PostService {
 
             // 장소 확정된 경우만 이름, 미확정이면 null
             TripPlace place = timeLine.getConfirmedPlace();
-            placeName = (place != null) ? place.getName() : null;
+            confirmedPlaceName = (place != null) ? place.getName() : null;
 
         } else {
             // 빈 칸 슬롯 → 정시 격자 규칙, placeName/timeLineId 는 null 유지
@@ -257,7 +231,7 @@ public class PostService {
                 .anyMatch(p -> !p.getCreatedAt().isBefore(slotStart)
                         && p.getCreatedAt().isBefore(slotEnd));
 
-        return new PostTimeLineResponse(slotStart, slotEnd, timeLineId, placeName, isTaken);
+        return new PostTimeLineResponse(slotStart, slotEnd, timeLineId, confirmedPlaceName, isTaken);
     }
 
     private PostsDailyResponse.PostSummary toSummaryWithSlot(Post post, List<TimeLine> daySchedules) {

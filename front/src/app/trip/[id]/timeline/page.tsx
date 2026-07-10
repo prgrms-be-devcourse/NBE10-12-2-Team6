@@ -12,7 +12,7 @@ interface Post {
   createdAt?: string;
   startTime?: string;
   endTime?: string;
-  placeName?: string;
+  confirmedPlaceName?: string;
 }
 
 interface DateGroup {
@@ -22,41 +22,7 @@ interface DateGroup {
 
 type Segment =
   | { type: "timeline"; timeLineId: number; posts: Post[] }
-  | { type: "free"; slotKey: string; label: string; posts: Post[] };
-
-function isoToMins(iso: string) {
-  const t = iso.includes("T") ? iso.split("T")[1] : iso;
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + (m || 0);
-}
-
-function fmtMins(m: number) {
-  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-}
-
-function getFreeSlot(createdAt: string, sortedBlocks: { startTime: string; endTime: string }[]): { key: string; label: string } {
-  const mins = isoToMins(createdAt);
-  let gapStart = 0;
-  let gapEnd = 24 * 60;
-
-  for (let i = 0; i < sortedBlocks.length; i++) {
-    const bStart = isoToMins(sortedBlocks[i].startTime);
-    const bEnd = isoToMins(sortedBlocks[i].endTime);
-    if (mins < bStart) {
-      gapEnd = bStart;
-      if (i > 0) gapStart = isoToMins(sortedBlocks[i - 1].endTime);
-      break;
-    }
-    gapStart = bEnd;
-  }
-
-  const offset = mins - gapStart;
-  const chunkIdx = Math.floor(offset / 60);
-  const slotStart = gapStart + chunkIdx * 60;
-  const slotEnd = Math.min(slotStart + 60, gapEnd);
-  const key = `free-${slotStart}-${slotEnd}`;
-  return { key, label: `${fmtMins(slotStart)} ~ ${fmtMins(slotEnd)}` };
-}
+  | { type: "free"; slotKey: string; posts: Post[] };
 
 function resolveUrl(contentUrl: string): string {
   if (!contentUrl.startsWith("http")) return `${API_BASE}${contentUrl}`;
@@ -73,45 +39,35 @@ function resolveUrl(contentUrl: string): string {
 }
 
 function toSegments(posts: Post[]): Segment[] {
-  const blockMap = new Map<number, { startTime: string; endTime: string }>();
-  for (const post of posts) {
-    if (post.timeLineId !== null && post.startTime && !blockMap.has(post.timeLineId)) {
-      blockMap.set(post.timeLineId, { startTime: post.startTime, endTime: post.endTime! });
-    }
-  }
-  const sortedBlocks = [...blockMap.values()].sort((a, b) => a.startTime.localeCompare(b.startTime));
-
   const timelineSegs = new Map<number, Segment & { type: "timeline" }>();
   const freeSegs = new Map<string, Segment & { type: "free" }>();
   const order: string[] = [];
 
   for (const post of posts) {
     if (post.timeLineId !== null) {
-      const key = `tl-${post.timeLineId}`;
+      const orderKey = `tl-${post.timeLineId}`;
       if (!timelineSegs.has(post.timeLineId)) {
-        const seg: Segment & { type: "timeline" } = { type: "timeline", timeLineId: post.timeLineId, posts: [post] };
-        timelineSegs.set(post.timeLineId, seg);
-        order.push(key);
+        timelineSegs.set(post.timeLineId, { type: "timeline", timeLineId: post.timeLineId, posts: [post] });
+        order.push(orderKey);
       } else {
         timelineSegs.get(post.timeLineId)!.posts.push(post);
       }
     } else {
-      const { key, label } = post.createdAt
-        ? getFreeSlot(post.createdAt, sortedBlocks)
-        : { key: "free-unknown", label: "자유 시간" };
-      if (!freeSegs.has(key)) {
-        const seg: Segment & { type: "free" } = { type: "free", slotKey: key, label, posts: [post] };
-        freeSegs.set(key, seg);
-        order.push(key);
+      const slotKey = post.startTime && post.endTime
+        ? `${post.startTime}-${post.endTime}`
+        : "unknown";
+      if (!freeSegs.has(slotKey)) {
+        freeSegs.set(slotKey, { type: "free", slotKey, posts: [post] });
+        order.push(`free-${slotKey}`);
       } else {
-        freeSegs.get(key)!.posts.push(post);
+        freeSegs.get(slotKey)!.posts.push(post);
       }
     }
   }
 
   return order.map(k => k.startsWith("tl-")
     ? timelineSegs.get(Number(k.slice(3)))!
-    : freeSegs.get(k)!
+    : freeSegs.get(k.slice(5))!
   );
 }
 
@@ -326,8 +282,8 @@ export default function TimelinePage() {
                           const fp = seg.posts[0];
                           const timeRange = fp?.startTime ? `${fp.startTime.slice(11, 16)} ~ ${fp.endTime!.slice(11, 16)}` : "";
                           const label = timeRange
-                            ? `${timeRange} · ${fp?.placeName ?? "자유 시간"}`
-                            : (fp?.placeName ?? "자유 시간");
+                            ? `${timeRange} · ${fp?.confirmedPlaceName ?? "자유 시간"}`
+                            : (fp?.confirmedPlaceName ?? "자유 시간");
                           const labelColor = seg.type === "timeline" ? "text-blue-400" : "text-gray-400";
                           const borderColor = seg.type === "timeline" ? "border-blue-100 bg-blue-50" : "border-gray-200 bg-gray-50";
 

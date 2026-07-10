@@ -11,7 +11,7 @@ interface TimelineBlock {
   timelineId?: number | null;
   startTime: string;
   endTime: string;
-  placeName?: string | null;
+  confirmedPlaceName?: string | null;
   isTaken: boolean;
 }
 
@@ -259,8 +259,8 @@ export default function PhotoUploadPage() {
               {timeText(isoToMinutes(currentBlock.startTime))} ~ {timeText(isoToMinutes(currentBlock.endTime))}
             </p>
             <p className="font-bold text-base text-blue-800 text-center">
-              {currentBlock.placeName
-                ? `${currentBlock.placeName} 에서의 한 컷`
+              {currentBlock.confirmedPlaceName
+                ? `${currentBlock.confirmedPlaceName} 에서의 한 컷`
                 : "자유롭게 한 컷"}
             </p>
           </div>

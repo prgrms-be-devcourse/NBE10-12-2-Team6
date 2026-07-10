@@ -25,7 +25,7 @@ public record PostsDailyResponse(
             Long timeLineId,
             LocalDateTime startTime,
             LocalDateTime endTime,
-            String placeName,
+            String confirmedPlaceName,
             LocalDateTime createdAt
     ) {
         public static PostSummary from(Post post) {
@@ -33,7 +33,7 @@ public record PostsDailyResponse(
             LocalDateTime startTime = timeLineId != null ? post.getTimeLine().getStartTime() : null;
             LocalDateTime endTime = timeLineId != null ? post.getTimeLine().getEndTime() : null;
             TimeLine timeLine = post.getTimeLine();
-            String placeName = timeLine != null && timeLine.getConfirmedPlace() != null ? post.getTimeLine().getConfirmedPlace().getName() : null;
+            String confirmedPlaceName = timeLine != null && timeLine.getConfirmedPlace() != null ? post.getTimeLine().getConfirmedPlace().getName() : null;
 
             return new PostSummary(
                     post.getId(),
@@ -41,7 +41,7 @@ public record PostsDailyResponse(
                     timeLineId,
                     startTime,
                     endTime,
-                    placeName,
+                    confirmedPlaceName,
                     post.getCreatedAt()
             );
         }
