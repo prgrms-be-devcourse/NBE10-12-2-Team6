@@ -5,22 +5,18 @@ import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { Camera } from "@phosphor-icons/react";
 import { useStore, TripDay, PhotoRecord, uid } from "../../../../../store";
-import { timeText, API_BASE, apiFetch } from "../../../../../lib";
+import { API_BASE, apiFetch } from "../../../../../lib";
 
 interface TimelineBlock {
-  timelineId?: number | null;
+  timeLineId?: number | null;
   startTime: string;
   endTime: string;
-  placeName?: string | null;
+  confirmedPlaceName?: string | null;
   isTaken: boolean;
 }
 
 const UPLOAD_MODAL_EXIT_MS = 220;
 
-function isoToMinutes(iso: string) {
-  const [h, m] = iso.split("T")[1].split(":").map(Number);
-  return h * 60 + (m || 0);
-}
 
 export default function PhotoUploadPage() {
   const router = useRouter();
@@ -112,7 +108,7 @@ export default function PhotoUploadPage() {
     updateTrip({ ...trip, days: trip.days.map((d, i) => i === dayIdx ? updated : d) });
   };
 
-  const recordKey = currentBlock ? String(currentBlock.timelineId) : `free-${dayNum}`;
+  const recordKey = currentBlock ? String(currentBlock.timeLineId) : `free-${dayNum}`;
   const record = day.records.find(r => r.blockId === recordKey);
   const showUploadButton = !!selectedFile || record?.status === "uploaded";
 
@@ -134,7 +130,7 @@ export default function PhotoUploadPage() {
       form.append("image", selectedFile);
       form.append(
         "request",
-        new Blob([JSON.stringify({ timeLineId: currentBlock?.timelineId ?? null })], { type: "application/json" })
+        new Blob([JSON.stringify({ timeLineId: currentBlock?.timeLineId ?? null })], { type: "application/json" })
       );
       const res = await apiFetch(`${API_BASE}/api/v1/trips/${id}/posts`, {
         method: "POST",
@@ -146,7 +142,7 @@ export default function PhotoUploadPage() {
         return;
       }
       const title = currentBlock
-        ? `${timeText(isoToMinutes(currentBlock.startTime))}~${timeText(isoToMinutes(currentBlock.endTime))} 활동`
+        ? `${currentBlock.startTime.slice(11, 16)}~${currentBlock.endTime.slice(11, 16)} 활동`
         : "자유 시간";
       const already = day.records.find(r => r.blockId === recordKey);
       const newRecords = already
@@ -174,17 +170,6 @@ export default function PhotoUploadPage() {
       },
       prefersReducedMotion ? 0 : UPLOAD_MODAL_EXIT_MS
     );
-  };
-
-  const handleSkip = () => {
-    const title = currentBlock
-      ? `${timeText(isoToMinutes(currentBlock.startTime))}~${timeText(isoToMinutes(currentBlock.endTime))} 활동`
-      : "자유 시간";
-    const already = day.records.find(r => r.blockId === recordKey);
-    const newRecords = already
-      ? day.records.map(r => r.blockId === recordKey ? { ...r, status: "skipped" as const } : r)
-      : [...day.records, { id: uid(), blockId: recordKey, title, status: "skipped" } as PhotoRecord];
-    setDay({ ...day, records: newRecords });
   };
 
   const moveToTripTab = (target: "trip" | "candidates" | "vote" | "timeline") => {
@@ -256,11 +241,11 @@ export default function PhotoUploadPage() {
         ) : currentBlock ? (
           <div className="w-full px-5 py-3 rounded-3xl bg-blue-50 flex flex-col items-center gap-1">
             <p className="text-xs font-bold text-blue-400">
-              {timeText(isoToMinutes(currentBlock.startTime))} ~ {timeText(isoToMinutes(currentBlock.endTime))}
+              {currentBlock.startTime.slice(11, 16)} ~ {currentBlock.endTime.slice(11, 16)}
             </p>
             <p className="font-bold text-base text-blue-800 text-center">
-              {currentBlock.placeName
-                ? `${currentBlock.placeName} 에서의 한 컷`
+              {currentBlock.confirmedPlaceName
+                ? `${currentBlock.confirmedPlaceName} 에서의 한 컷`
                 : "자유롭게 한 컷"}
             </p>
           </div>

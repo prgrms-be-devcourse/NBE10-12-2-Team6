@@ -8,7 +8,7 @@ public record PostTimeLineResponse(
         LocalDateTime startTime,
         LocalDateTime endTime,
         Long timeLineId,      // ← 추가: 일정 슬롯이면 값, 빈 칸이면 null
-        String placeName,
+        String confirmedPlaceName,
         boolean isTaken
 
 ) {
