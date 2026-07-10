@@ -404,7 +404,7 @@ export default function TripDetailPage() {
         }));
         return { ...day, blocks, isPlanCompleted: true };
       });
-      console.log(tripData.ownerId);
+
 
       if (tripData.ownerId) setOwnerId(tripData.ownerId);
       upsertTrip({
@@ -574,11 +574,9 @@ export default function TripDetailPage() {
                         ) : (
                           <div className="flex flex-col gap-2">
                             {items.map((item, idx) => {
-                              const toMin = (iso: string) => { const [h, m] = iso.split("T")[1].split(":").map(Number); return h * 60 + m; };
-                              const t = (min: number) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
                               return (
                                 <div key={item.timeLineId ?? idx} className="flex items-center gap-3 bg-white rounded-xl px-3 py-2.5">
-                                  <span className="text-xs text-gray-400 font-bold shrink-0">{t(toMin(item.startTime))}~{t(toMin(item.endTime))}</span>
+                                  <span className="text-xs text-gray-400 font-bold shrink-0">{item.startTime.slice(11, 16)}~{item.endTime.slice(11, 16)}</span>
                                   {(item.category || item.confirmedPlaceName) && (
                                     <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 shrink-0">{item.category ?? "기타"}</span>
                                   )}
@@ -629,7 +627,7 @@ export default function TripDetailPage() {
             const d = new Date(date + "T00:00:00");
             return Math.round((d.getTime() - start.getTime()) / 86400000) + 1;
           };
-          const toTimeStr = (iso: string) => (iso.split("T")[1] ?? "").slice(0, 5);
+          const toTimeStr = (iso: string) => iso.slice(11, 16);
 
           const createVote = async (timeLineId: number) => {
             await apiFetch(`${API_BASE}/api/v1/trips/${id}/votes`, {

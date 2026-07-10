@@ -58,7 +58,7 @@ export default function BlockDetailPage() {
         upsertTrip({
           id: String(tripData.id), name: tripData.name, region: tripData.region,
           startDate: tripData.startDate, nights: tripData.nights,
-          members: (tripData.members ?? []).map((m: { memberId: number; name: string }, i: number) => ({ id: m.memberId, name: m.name, color: ["#f87171","#fb923c","#34d399","#60a5fa","#a78bfa"][i % 5] })),
+          members: (tripData.members ?? []).map((m: { memberId: number; name: string; admin: boolean }, i: number) => ({ id: m.memberId, name: m.name, isAdmin: m.admin, color: ["#f87171","#fb923c","#34d399","#60a5fa","#a78bfa"][i % 5] })),
           days: Array.from({ length: (tripData.nights ?? 0) + 1 }, (_, i) => {
             const d = new Date(tripData.startDate + "T00:00:00");
             d.setDate(d.getDate() + i);
@@ -223,7 +223,7 @@ export default function BlockDetailPage() {
 
   const voteClosed = voteStatus !== null && voteStatus !== "투표 진행중";
 
-  const isHost = currentUser.id === (trip?.members[0]?.id);
+  const isHost = trip?.members.find(m => m.id === currentUser.id)?.isAdmin ?? false;
   const confirmedByVote = voteConfirmed && confirmedPlaceId
     ? candidates.find(c => c.id === confirmedPlaceId)
     : null;
