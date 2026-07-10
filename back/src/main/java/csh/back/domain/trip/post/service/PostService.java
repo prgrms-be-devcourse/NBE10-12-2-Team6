@@ -213,7 +213,7 @@ public class PostService {
      * - isTaken: 그 유저가 이 슬롯 시간대에 이미 사진을 올렸는지
      */
     public PostTimeLineResponse getCurrentSlot(Long tripId, Long memberId, int dayNumber) {
-        LocalDateTime now = LocalDateTime.now().minusHours(1).minusMinutes(10);
+        LocalDateTime now = LocalDateTime.now();
         LocalDateTime dayStart = now.toLocalDate().atStartOfDay();   // 오늘 00:00:00
         LocalDateTime dayEnd = dayStart.plusDays(1);                 // 내일 00:00:00
         TripMember tripMember = tripMemberRepository.findByMemberIdAndTripGroupId(memberId, tripId).orElseThrow(RuntimeException::new);
