@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useStore, uid } from "../../../store";
 import { formatDate, apiFetch, API_BASE } from "../../../lib";
@@ -115,6 +115,61 @@ function toSegments(posts: Post[]): Segment[] {
   );
 }
 
+// ── Dynamic Dots ──────────────────────────────────────────────────────────────
+
+const DOT_MAX = 5;
+
+function DynamicDots({ total, active, onDotClick }: {
+  total: number;
+  active: number;
+  onDotClick: (i: number) => void;
+}) {
+  if (total <= 1) return null;
+
+  if (total <= DOT_MAX) {
+    return (
+      <div className="flex justify-center items-center gap-1.5 mt-4">
+        {Array.from({ length: total }, (_, i) => (
+          <div
+            key={i}
+            onClick={() => onDotClick(i)}
+            className="h-1.5 rounded-full bg-gray-400 transition-all duration-200 cursor-pointer"
+            style={{ width: i === active ? "16px" : "6px", opacity: i === active ? 1 : 0.3 }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  // 5개 고정 윈도우, active를 중앙에 유지
+  let start = Math.max(0, active - Math.floor(DOT_MAX / 2));
+  const end = Math.min(total, start + DOT_MAX);
+  if (end - start < DOT_MAX) start = Math.max(0, end - DOT_MAX);
+
+  return (
+    <div className="flex justify-center items-center gap-1.5 mt-4">
+      {Array.from({ length: DOT_MAX }, (_, i) => {
+        const idx = start + i;
+        const isActive = idx === active;
+        const isEdge = (i === 0 && start > 0) || (i === DOT_MAX - 1 && end < total);
+        return (
+          <div
+            key={idx}
+            onClick={() => onDotClick(idx)}
+            className="h-1.5 rounded-full bg-gray-400 transition-all duration-200 cursor-pointer"
+            style={{
+              width: isActive ? "16px" : isEdge ? "4px" : "6px",
+              opacity: isActive ? 1 : isEdge ? 0.15 : 0.3,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+
 export default function TimelinePage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
@@ -122,6 +177,8 @@ export default function TimelinePage() {
   const { trips, upsertTrip } = useStore();
   const [groups, setGroups] = useState<DateGroup[]>([]);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [activeDots, setActiveDots] = useState<Record<string, number>>({});
+  const scrollRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const goBack = () => {
     if (searchParams.get("from") === "timeline") router.push(`/trip/${id}?tab=timeline`);
@@ -155,7 +212,6 @@ export default function TimelinePage() {
     apiFetch(`${API_BASE}/api/v1/trips/${id}/posts`)
       .then(r => r.json())
       .then(body => {
-        console.log("posts response:", body);
         const raw = Array.isArray(body) ? body : (body.data ?? []);
         setGroups(raw);
       })
@@ -175,137 +231,133 @@ export default function TimelinePage() {
           <img src={lightbox} alt="" className="max-w-full max-h-full object-contain" />
         </div>
       )}
-    <div className="flex h-screen flex-col overflow-hidden">
-      <div className="shrink-0 flex items-center gap-3 px-4 pt-12 pb-2">
-        <button
-          onClick={goBack}
-          aria-label="뒤로가기"
-          className="trip-header-icon-button w-10 h-10 rounded-full flex items-center justify-center"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <h1 className="font-semibold text-base flex-1 text-center">여행 타임라인</h1>
-        <div className="w-8" />
-      </div>
+      <div className="flex h-screen flex-col overflow-hidden">
+        <div className="shrink-0 flex items-center gap-3 px-4 pt-12 pb-2">
+          <button
+            onClick={goBack}
+            aria-label="뒤로가기"
+            className="trip-header-icon-button w-10 h-10 rounded-full flex items-center justify-center"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <h1 className="font-semibold text-base flex-1 text-center">여행 타임라인</h1>
+          <div className="w-8" />
+        </div>
 
-      <div className="shrink-0 px-4 pb-3">
-        <p className="text-2xl font-bold">{trip.name} 타임라인</p>
-      </div>
+        <div className="shrink-0 px-4 pb-3">
+          <p className="text-2xl font-bold">{trip.name} 타임라인</p>
+        </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-10 flex flex-col gap-4">
-        {trip.days.map(day => {
-          const group = groups.find(g => g.date === day.date);
-          const dayPosts = group?.posts ?? [];
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-10 flex flex-col gap-4">
+          {trip.days.map(day => {
+            const group = groups.find(g => g.date === day.date);
+            const dayPosts = group?.posts ?? [];
+            const activeIdx = activeDots[day.id] ?? 0;
 
-          return (
-            <div key={day.id} className="shrink-0 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100">
-                <p className="font-semibold">{day.dayNumber}일차</p>
-                <p className="text-xs text-gray-400">{formatDate(day.date)}</p>
-              </div>
+            const handleDotClick = (i: number) => {
+              const el = scrollRefs.current[day.id];
+              if (!el) return;
+              el.scrollTo({ left: i * (el.clientWidth + 12), behavior: "smooth" });
+              setActiveDots(prev => ({ ...prev, [day.id]: i }));
+            };
 
-              <div className="p-4">
-                {dayPosts.length === 0 ? (
-                  <p className="text-sm text-gray-500">아직 사진 기록이 없습니다.</p>
-                ) : (
-                  <div className="relative">
-                  <div
-                    data-scroll
-                    className="flex gap-3 overflow-x-auto snap-x snap-mandatory select-none"
-                    style={{ scrollbarWidth: "none", cursor: "grab" }}
-                    onScroll={(e) => {
-                      const el = e.currentTarget;
-                      const step = el.clientWidth + 12;
-                      const idx = Math.round(el.scrollLeft / step);
-                      el.parentElement!.querySelectorAll('[data-dot]').forEach((dot, i) => {
-                        (dot as HTMLElement).style.opacity = i === idx ? "1" : "0.3";
-                        (dot as HTMLElement).style.width = i === idx ? "16px" : "6px";
-                      });
-                    }}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      const el = e.currentTarget;
-                      el.style.scrollSnapType = "none";
-                      const startX = e.clientX;
-                      const startScrollLeft = el.scrollLeft;
-                      el.style.cursor = "grabbing";
-                      let hasDragged = false;
-                      const onMove = (ev: MouseEvent) => {
-                        if (Math.abs(ev.clientX - startX) > 5) hasDragged = true;
-                        el.scrollLeft = startScrollLeft - (ev.clientX - startX);
-                      };
-                      const onUp = (ev: MouseEvent) => {
-                        el.style.cursor = "grab";
-                        window.removeEventListener("mousemove", onMove);
-                        window.removeEventListener("mouseup", onUp);
-                        const step = el.clientWidth + 12;
-                        const dx = ev.clientX - startX;
-                        const baseIdx = Math.round(startScrollLeft / step);
-                        let targetIdx = baseIdx;
-                        if (dx < -step * 0.15) targetIdx = baseIdx + 1;
-                        else if (dx > step * 0.15) targetIdx = baseIdx - 1;
-                        const maxIdx = el.children.length - 1;
-                        targetIdx = Math.max(0, Math.min(targetIdx, maxIdx));
-                        el.scrollTo({ left: targetIdx * step, behavior: "smooth" });
-                        setTimeout(() => { el.style.scrollSnapType = ""; }, 400);
-                        if (hasDragged) {
-                          const blockClick = (ec: MouseEvent) => { ec.stopPropagation(); window.removeEventListener("click", blockClick, true); };
-                          window.addEventListener("click", blockClick, true);
-                        }
-                      };
-                      window.addEventListener("mousemove", onMove);
-                      window.addEventListener("mouseup", onUp);
-                    }}
-                  >
-                    {toSegments(dayPosts).flatMap(seg => {
-                      const fp = seg.posts[0];
-                      const timeRange = fp?.startTime ? `${fp.startTime.slice(11, 16)} ~ ${fp.endTime!.slice(11, 16)}` : "";
-                      const label = timeRange
-                        ? `${timeRange} · ${fp?.placeName ?? "자유 시간"}`
-                        : (fp?.placeName ?? "자유 시간");
-                      const labelColor = seg.type === "timeline" ? "text-blue-400" : "text-gray-400";
-                      const borderColor = seg.type === "timeline" ? "border-blue-100 bg-blue-50" : "border-gray-200 bg-gray-50";
+            return (
+              <div key={day.id} className="shrink-0 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <p className="font-semibold">{day.dayNumber}일차</p>
+                  <p className="text-xs text-gray-400">{formatDate(day.date)}</p>
+                </div>
 
-                      return seg.posts.map(post => {
-                        const src = resolveUrl(post.contentUrl);
-                        return (
-                          <div key={post.postId} className={`rounded-2xl border p-3 flex flex-col gap-2 snap-start basis-full shrink-0 ${borderColor}`}>
-                            <p className={`text-xs font-semibold ${labelColor}`}>{label}</p>
-                            <div className="flex items-center justify-center rounded-xl overflow-hidden" style={{ height: "360px" }}>
-                              <img src={src} alt="" draggable={false} className="max-w-full max-h-full object-contain cursor-pointer" onClick={() => setLightbox(src)} />
-                            </div>
-                          </div>
-                        );
-                      });
-                    })}
-                  </div>
-                  {dayPosts.length > 1 && (
-                    <div className="flex justify-center items-center gap-1.5 mt-4">
-                      {Array.from({ length: dayPosts.length }, (_, i) => (
-                        <div
-                          key={i}
-                          data-dot
-                          className="h-1.5 rounded-full bg-gray-400 transition-all duration-200 cursor-pointer"
-                          style={{ width: i === 0 ? "16px" : "6px", opacity: i === 0 ? 1 : 0.3 }}
-                          onClick={(e) => {
-                            const rel = (e.currentTarget as HTMLElement).closest('.relative');
-                            const el = rel?.querySelector('[data-scroll]') as HTMLElement | null;
-                            if (el) el.scrollTo({ left: i * (el.clientWidth + 12), behavior: "smooth" });
-                          }}
-                        />
-                      ))}
+                <div className="p-4">
+                  {dayPosts.length === 0 ? (
+                    <p className="text-sm text-gray-500">아직 사진 기록이 없습니다.</p>
+                  ) : (
+                    <div className="relative">
+                      <div
+                        ref={(el) => { scrollRefs.current[day.id] = el; }}
+                        className="flex gap-3 overflow-x-auto snap-x snap-mandatory select-none"
+                        style={{ scrollbarWidth: "none", cursor: "grab" }}
+                        onScroll={(e) => {
+                          const el = e.currentTarget;
+                          const step = el.clientWidth + 12;
+                          if (step <= 0) return;
+                          const idx = Math.round(el.scrollLeft / step);
+                          setActiveDots(prev => ({ ...prev, [day.id]: idx }));
+                        }}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          const el = e.currentTarget;
+                          el.style.scrollSnapType = "none";
+                          const startX = e.clientX;
+                          const startScrollLeft = el.scrollLeft;
+                          el.style.cursor = "grabbing";
+                          let hasDragged = false;
+                          const onMove = (ev: MouseEvent) => {
+                            if (Math.abs(ev.clientX - startX) > 5) hasDragged = true;
+                            el.scrollLeft = startScrollLeft - (ev.clientX - startX);
+                          };
+                          const onUp = (ev: MouseEvent) => {
+                            el.style.cursor = "grab";
+                            window.removeEventListener("mousemove", onMove);
+                            window.removeEventListener("mouseup", onUp);
+                            const step = el.clientWidth + 12;
+                            const dx = ev.clientX - startX;
+                            const baseIdx = Math.round(startScrollLeft / step);
+                            let targetIdx = baseIdx;
+                            if (dx < -step * 0.15) targetIdx = baseIdx + 1;
+                            else if (dx > step * 0.15) targetIdx = baseIdx - 1;
+                            const maxIdx = el.children.length - 1;
+                            targetIdx = Math.max(0, Math.min(targetIdx, maxIdx));
+                            el.scrollTo({ left: targetIdx * step, behavior: "smooth" });
+                            setActiveDots(prev => ({ ...prev, [day.id]: targetIdx }));
+                            setTimeout(() => { el.style.scrollSnapType = ""; }, 400);
+                            if (hasDragged) {
+                              const blockClick = (ec: MouseEvent) => { ec.stopPropagation(); window.removeEventListener("click", blockClick, true); };
+                              window.addEventListener("click", blockClick, true);
+                            }
+                          };
+                          window.addEventListener("mousemove", onMove);
+                          window.addEventListener("mouseup", onUp);
+                        }}
+                      >
+                        {toSegments(dayPosts).flatMap(seg => {
+                          const fp = seg.posts[0];
+                          const timeRange = fp?.startTime ? `${fp.startTime.slice(11, 16)} ~ ${fp.endTime!.slice(11, 16)}` : "";
+                          const label = timeRange
+                            ? `${timeRange} · ${fp?.placeName ?? "자유 시간"}`
+                            : (fp?.placeName ?? "자유 시간");
+                          const labelColor = seg.type === "timeline" ? "text-blue-400" : "text-gray-400";
+                          const borderColor = seg.type === "timeline" ? "border-blue-100 bg-blue-50" : "border-gray-200 bg-gray-50";
+
+                          return seg.posts.map(post => {
+                            const src = resolveUrl(post.contentUrl);
+                            return (
+                              <div key={post.postId} className={`rounded-2xl border p-3 flex flex-col gap-2 snap-start basis-full shrink-0 ${borderColor}`}>
+                                <p className={`text-xs font-semibold ${labelColor}`}>{label}</p>
+                                <div className="flex items-center justify-center rounded-xl overflow-hidden" style={{ height: "360px" }}>
+                                  <img src={src} alt="" draggable={false} className="max-w-full max-h-full object-contain cursor-pointer" onClick={() => setLightbox(src)} />
+                                </div>
+                              </div>
+                            );
+                          });
+                        })}
+                      </div>
+
+                      <DynamicDots
+                        total={dayPosts.length}
+                        active={activeIdx}
+                        onDotClick={handleDotClick}
+                      />
                     </div>
                   )}
-                  </div>
-                )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
-    </div>
     </>
   );
 }
