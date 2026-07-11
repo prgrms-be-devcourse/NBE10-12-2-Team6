@@ -71,59 +71,6 @@ function toSegments(posts: Post[]): Segment[] {
   );
 }
 
-// ── Dynamic Dots ──────────────────────────────────────────────────────────────
-
-const DOT_MAX = 5;
-
-function DynamicDots({ total, active, onDotClick }: {
-  total: number;
-  active: number;
-  onDotClick: (i: number) => void;
-}) {
-  if (total <= 1) return null;
-
-  if (total <= DOT_MAX) {
-    return (
-      <div className="flex justify-center items-center gap-1.5 mt-4">
-        {Array.from({ length: total }, (_, i) => (
-          <div
-            key={i}
-            onClick={() => onDotClick(i)}
-            className="h-1.5 rounded-full bg-gray-400 transition-all duration-200 cursor-pointer"
-            style={{ width: i === active ? "16px" : "6px", opacity: i === active ? 1 : 0.3 }}
-          />
-        ))}
-      </div>
-    );
-  }
-
-  // 5개 고정 윈도우, active를 중앙에 유지
-  let start = Math.max(0, active - Math.floor(DOT_MAX / 2));
-  const end = Math.min(total, start + DOT_MAX);
-  if (end - start < DOT_MAX) start = Math.max(0, end - DOT_MAX);
-
-  return (
-    <div className="flex justify-center items-center gap-1.5 mt-4">
-      {Array.from({ length: DOT_MAX }, (_, i) => {
-        const idx = start + i;
-        const isActive = idx === active;
-        const isEdge = (i === 0 && start > 0) || (i === DOT_MAX - 1 && end < total);
-        return (
-          <div
-            key={idx}
-            onClick={() => onDotClick(idx)}
-            className="h-1.5 rounded-full bg-gray-400 transition-all duration-200 cursor-pointer"
-            style={{
-              width: isActive ? "16px" : isEdge ? "4px" : "6px",
-              opacity: isActive ? 1 : isEdge ? 0.15 : 0.3,
-            }}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function TimelinePage() {
@@ -141,6 +88,7 @@ export default function TimelinePage() {
     else router.back();
   };
   const trip = trips.find(t => t.id === id);
+
 
   useEffect(() => {
     if (trip || !id) return;
@@ -166,8 +114,10 @@ export default function TimelinePage() {
   useEffect(() => {
     if (!id) return;
     apiFetch(`${API_BASE}/api/v1/trips/${id}/posts`)
-      .then(r => r.json())
-      .then(body => {
+      .then(r => r.text())
+      .then(text => {
+        if (!text) return;
+        const body = JSON.parse(text);
         const raw = Array.isArray(body) ? body : (body.data ?? []);
         setGroups(raw);
       })
@@ -212,18 +162,16 @@ export default function TimelinePage() {
             const dayPosts = group?.posts ?? [];
             const activeIdx = activeDots[day.id] ?? 0;
 
-            const handleDotClick = (i: number) => {
-              const el = scrollRefs.current[day.id];
-              if (!el) return;
-              el.scrollTo({ left: i * (el.clientWidth + 12), behavior: "smooth" });
-              setActiveDots(prev => ({ ...prev, [day.id]: i }));
-            };
-
             return (
               <div key={day.id} className="shrink-0 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-100">
-                  <p className="font-semibold">{day.dayNumber}일차</p>
-                  <p className="text-xs text-gray-400">{formatDate(day.date)}</p>
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold">{day.dayNumber}일차</p>
+                    <p className="text-xs text-gray-400">{formatDate(day.date)}</p>
+                  </div>
+                  {dayPosts.length > 1 && (
+                    <span className="text-xs text-gray-400">{activeIdx + 1}/{dayPosts.length}</span>
+                  )}
                 </div>
 
                 <div className="p-4">
@@ -239,33 +187,36 @@ export default function TimelinePage() {
                           const el = e.currentTarget;
                           const step = el.clientWidth + 12;
                           if (step <= 0) return;
-                          const idx = Math.round(el.scrollLeft / step);
-                          setActiveDots(prev => ({ ...prev, [day.id]: idx }));
+                          const idx = Math.max(0, Math.min(Math.round(el.scrollLeft / step), el.children.length - 1));
+                          setActiveDots(prev => (prev[day.id] === idx ? prev : { ...prev, [day.id]: idx }));
                         }}
-                        onMouseDown={(e) => {
+                        onPointerDown={(e) => {
+                          if (e.pointerType === "touch") return;
                           e.preventDefault();
                           const el = e.currentTarget;
+                          el.setPointerCapture(e.pointerId);
                           el.style.scrollSnapType = "none";
+                          el.style.cursor = "grabbing";
                           const startX = e.clientX;
                           const startScrollLeft = el.scrollLeft;
-                          el.style.cursor = "grabbing";
                           let hasDragged = false;
-                          const onMove = (ev: MouseEvent) => {
+                          const onMove = (ev: PointerEvent) => {
                             if (Math.abs(ev.clientX - startX) > 5) hasDragged = true;
                             el.scrollLeft = startScrollLeft - (ev.clientX - startX);
                           };
-                          const onUp = (ev: MouseEvent) => {
+                          const onUp = (ev: PointerEvent) => {
+                            el.releasePointerCapture(e.pointerId);
+                            el.removeEventListener("pointermove", onMove);
+                            el.removeEventListener("pointerup", onUp);
+                            el.removeEventListener("pointercancel", onUp);
                             el.style.cursor = "grab";
-                            window.removeEventListener("mousemove", onMove);
-                            window.removeEventListener("mouseup", onUp);
                             const step = el.clientWidth + 12;
                             const dx = ev.clientX - startX;
                             const baseIdx = Math.round(startScrollLeft / step);
                             let targetIdx = baseIdx;
                             if (dx < -step * 0.15) targetIdx = baseIdx + 1;
                             else if (dx > step * 0.15) targetIdx = baseIdx - 1;
-                            const maxIdx = el.children.length - 1;
-                            targetIdx = Math.max(0, Math.min(targetIdx, maxIdx));
+                            targetIdx = Math.max(0, Math.min(targetIdx, el.children.length - 1));
                             el.scrollTo({ left: targetIdx * step, behavior: "smooth" });
                             setActiveDots(prev => ({ ...prev, [day.id]: targetIdx }));
                             setTimeout(() => { el.style.scrollSnapType = ""; }, 400);
@@ -274,8 +225,9 @@ export default function TimelinePage() {
                               window.addEventListener("click", blockClick, true);
                             }
                           };
-                          window.addEventListener("mousemove", onMove);
-                          window.addEventListener("mouseup", onUp);
+                          el.addEventListener("pointermove", onMove);
+                          el.addEventListener("pointerup", onUp);
+                          el.addEventListener("pointercancel", onUp);
                         }}
                       >
                         {toSegments(dayPosts).flatMap(seg => {
@@ -301,11 +253,6 @@ export default function TimelinePage() {
                         })}
                       </div>
 
-                      <DynamicDots
-                        total={dayPosts.length}
-                        active={activeIdx}
-                        onDotClick={handleDotClick}
-                      />
                     </div>
                   )}
                 </div>
