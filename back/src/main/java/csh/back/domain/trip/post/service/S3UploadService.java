@@ -29,8 +29,13 @@ public class S3UploadService {
             throw new IllegalArgumentException("업로드된 이미지가 없습니다.");
         }
 
-        // 파일 이름 중복 방지를 위한 UUID 생성
-        String fileName = UUID.randomUUID() + "-" + file.getOriginalFilename();
+        String originalFilename = file.getOriginalFilename();
+        String extension = "";
+        if (originalFilename != null && originalFilename.contains(".")) {
+            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        }
+
+        String fileName = UUID.randomUUID() + extension;
 
         // 메타데이터 설정
         ObjectMetadata metadata = new ObjectMetadata();
