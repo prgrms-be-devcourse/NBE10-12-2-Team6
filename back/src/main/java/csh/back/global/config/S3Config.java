@@ -30,6 +30,7 @@ public class S3Config {
         return AmazonS3ClientBuilder.standard()
                 .withCredentials(new AWSStaticCredentialsProvider(credentials))
                 .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endpoint, region))
+                .withPathStyleAccessEnabled(true) // <-- (필수) 오라클 등 타사 스토리지 사용 시 SSL 에러 방지
                 .build();
     }
 }
