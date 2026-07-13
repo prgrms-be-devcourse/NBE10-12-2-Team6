@@ -53,6 +53,9 @@ dependencies {
     // 측정된 데이터를 프로메테우스가 읽을 수 있는 형태로 변환해 주는 도구
     implementation("io.micrometer:micrometer-registry-prometheus")
 
+    // AWS S3 연동을 위한 의존성
+    implementation("org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE")
+
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
     testImplementation("org.springframework.boot:spring-boot-starter-security-test")
     testImplementation("org.springframework.boot:spring-boot-starter-validation-test")
