@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -35,7 +36,8 @@ public class PostService {
     private final PostRepository postRepository;
     private final TripMemberRepository tripMemberRepository;
     private final TimeLineRepository timeLineRepository;
-    private final PostImageService postImageService;
+//    private final PostImageService postImageService;
+    private final S3UploadService s3UploadService;
     private final TripMemberValidator tripMemberValidator;
     private final TripGroupService tripGroupService;
 
@@ -129,14 +131,15 @@ public class PostService {
         TimeLine timeLine = null;
         if(timeLineId != null) timeLine = timeLineRepository.findById(timeLineId).orElse(null);
 
-
-
-
         // 이미지 저장
         String imageUrl = null;
 
         if (image != null && !image.isEmpty()) {
-            imageUrl = postImageService.saveImage(image);
+            try {
+                imageUrl = s3UploadService.uploadImage(image);
+            } catch (IOException ie) {
+                ie.getMessage();
+            }
         }
 
         // 게시글 생성
@@ -151,34 +154,8 @@ public class PostService {
 
         return PostResponse.from(savedPost);
     }
-    private Long getCurrentMemberId() {
 
-        Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
 
-        return (Long) authentication.getDetails();
-    }
-    private void validateAuthor(Post post) {
-
-        Long memberId = getCurrentMemberId();
-
-        if (!post.getAuthor().getMember().getId().equals(memberId)) {
-            throw new IllegalArgumentException("작성자만 수정 및 삭제할 수 있습니다.");
-        }
-    }
-    private Post findAuthorizedPost(Long tripId, Long postId) {
-
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("게시글이 존재하지 않습니다."));
-
-        if (!post.getTimeLine().getTripGroup().getId().equals(tripId)) {
-            throw new IllegalArgumentException("해당 여행의 게시글이 아닙니다.");
-        }
-
-        validateAuthor(post);
-
-        return post;
-    }
 
     /**
      * 현재 시각이 속한 슬롯 하나의 상태를 반환.
@@ -331,6 +308,37 @@ public class PostService {
                 .orElse(end);
 
         return end.isBefore(nextScheduleStart) ? end : nextScheduleStart;
+    }
+
+    private Long getCurrentMemberId() {
+
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        return (Long) authentication.getDetails();
+    }
+
+    private void validateAuthor(Post post) {
+
+        Long memberId = getCurrentMemberId();
+
+        if (!post.getAuthor().getMember().getId().equals(memberId)) {
+            throw new IllegalArgumentException("작성자만 수정 및 삭제할 수 있습니다.");
+        }
+    }
+
+    private Post findAuthorizedPost(Long tripId, Long postId) {
+
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글이 존재하지 않습니다."));
+
+        if (!post.getTimeLine().getTripGroup().getId().equals(tripId)) {
+            throw new IllegalArgumentException("해당 여행의 게시글이 아닙니다.");
+        }
+
+        validateAuthor(post);
+
+        return post;
     }
 
 

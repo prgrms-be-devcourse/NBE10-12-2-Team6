@@ -23,3 +23,21 @@ management:
   metrics:
     tags:
       application: triplog # 그라파나에서 여러 프로젝트를 구분하기 위한 이름표
+cloud:
+  aws:
+    credentials:
+      access-key: ${S3_ACCESS_KEY}
+      secret-key: ${S3_SECRET_KEY}
+    region:
+      static: "ap-chuncheon-1" # 서울 리전인 경우
+    s3:
+      # AWS URL이 아닌 오라클 호환 엔드포인트를 적어줍니다.
+      # 형식: https://{네임스페이스}.compat.objectstorage.{리전}.oraclecloud.com
+      endpoint: "https://${S3_NAMESPACE}.compat.objectstorage.ap-chuncheon-1.oraclecloud.com"
+    stack:
+      auto: false
+
+# 버킷 이름 변수화 (서비스에서 사용)
+app:
+  s3:
+    bucket: "triplog-bucket"

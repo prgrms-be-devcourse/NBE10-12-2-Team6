@@ -21,11 +21,11 @@ public class WebConfig implements WebMvcConfigurer {
         configurer.addPathPrefix("/api/v1", HandlerTypePredicate.forAnnotation(ApiV1.class));
     }
 
-    @Override
-    public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        String absolutePath = Paths.get(uploadDir).toAbsolutePath().toUri().toString();
-
-        registry.addResourceHandler("/uploadedimages/**")
-                .addResourceLocations(absolutePath);
-    }
+//    @Override
+//    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+//        String absolutePath = Paths.get(uploadDir).toAbsolutePath().toUri().toString();
+//
+//        registry.addResourceHandler("/uploadedimages/**")
+//                .addResourceLocations(absolutePath);
+//    }
 }

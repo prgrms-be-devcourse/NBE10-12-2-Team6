@@ -25,17 +25,8 @@ type Segment =
   | { type: "free"; slotKey: string; posts: Post[] };
 
 function resolveUrl(contentUrl: string): string {
-  if (!contentUrl.startsWith("http")) return `${API_BASE}${contentUrl}`;
-  try {
-    const src = new URL(contentUrl);
-    const base = new URL(API_BASE);
-    src.hostname = base.hostname;
-    src.port = base.port;
-    src.protocol = base.protocol;
-    return src.toString();
-  } catch {
-    return contentUrl;
-  }
+  if (contentUrl.startsWith("http")) return contentUrl;
+  return `${API_BASE}${contentUrl}`;
 }
 
 function toSegments(posts: Post[]): Segment[] {
