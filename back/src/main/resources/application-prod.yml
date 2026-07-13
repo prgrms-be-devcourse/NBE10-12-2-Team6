@@ -15,3 +15,11 @@ spring:
 logging:
   level:
     com.back: INFO
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus # 프로메테우스 수집 경로 활성화
+  metrics:
+    tags:
+      application: triplog # 그라파나에서 여러 프로젝트를 구분하기 위한 이름표
