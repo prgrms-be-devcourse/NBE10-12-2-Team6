@@ -2,7 +2,7 @@ name: Deploy Spring Boot to Oracle Cloud
 
 # ────────────────────────────────────────────────────────────
 # 트리거 조건
-#   - main 브랜치에 deploy-version-back.yml 파일이 변경되어 push될 때 자동 실행
+#   - dev 브랜치에 deploy-version-back.yml 파일이 변경되어 push될 때 자동 실행
 #   - 또는 GitHub Actions UI에서 수동으로 실행 가능 (workflow_dispatch)
 # ────────────────────────────────────────────────────────────
 on:
@@ -22,7 +22,6 @@ permissions:
   packages: write   # ghcr.io에 이미지 push 권한
 
 env:
-  REGISTRY: ghcr.io
   IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/triplog-backend
   CONTAINER_NAME: spring-backend
   TARGET_DIR: /home/ubuntu/triplog/back
@@ -50,7 +49,6 @@ jobs:
           echo "SPRING_PROFILES_ACTIVE=prod" > .env
           echo "FILE_UPLOAD_BASE_URL=${{ secrets.FILE_UPLOAD_BASE_URL }}" >> .env
           echo "MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}" >> .env
-          echo "CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}" >> .env
           echo "CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}" >> .env
           echo "S3_ACCESS_KEY=${{ secrets.S3_ACCESS_KEY }}" >> .env
           echo "S3_SECRET_KEY=${{ secrets.S3_SECRET_KEY }}" >> .env
@@ -83,6 +81,8 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+          cache-from: type=gha           # 빌드 캐쉬
+          cache-to: type=gha,mode=max    # 빌드 캐쉬
 
       # [8] .env 파일을 서버로 전송
       - name: 🍏 Copy .env to Oracle Cloud
@@ -119,6 +119,8 @@ jobs:
               -p $HOST_PORT:$CONTAINER_PORT \
               $IMAGE_NAME:$VERSION
             docker image prune -f
+            sleep 10
+            docker ps | grep $CONTAINER_NAME || (docker logs $CONTAINER_NAME --tail 50 && exit 1)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
