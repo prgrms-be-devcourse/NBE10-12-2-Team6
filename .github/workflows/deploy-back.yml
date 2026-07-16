@@ -65,10 +65,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # [5] arm64 크로스 플랫폼 빌드를 위한 QEMU 에뮬레이터 설치
-#      - name: 🍏 Set up QEMU
-#        uses: docker/setup-qemu-action@v3
-#        with:
-#          platforms: linux/arm64
+      #      - name: 🍏 Set up QEMU
+      #        uses: docker/setup-qemu-action@v3
+      #        with:
+      #          platforms: linux/arm64
 
       # [6] 멀티 플랫폼 Docker 이미지 빌드를 위한 Buildx 설정
       - name: 🍏 Set up Docker Buildx
