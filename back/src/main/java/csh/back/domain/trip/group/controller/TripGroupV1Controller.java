@@ -30,7 +30,7 @@ public class TripGroupV1Controller {
 
 	private final TripGroupService tripGroupService;
 
-	//FIXME 정렬 및 여러 검색어로 조회가 가능하게 동시적
+	//FIXME 정렬 및 여러 검색어로 조회가 가능하게 동시적!!
 
 	//Swagger 문서 표시
 	@Operation(summary = "모임방 목록 조회(로그인한 사용자 기준)")
