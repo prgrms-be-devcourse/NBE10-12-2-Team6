@@ -100,10 +100,7 @@ public class PostService {
 
         Post post = findAuthorizedPost(tripId, postId);
 
-        post.update(
-                request.content(),
-                request.location()
-        );
+        post.update(request.content());
     }
     // 게시글 삭제
     @Transactional

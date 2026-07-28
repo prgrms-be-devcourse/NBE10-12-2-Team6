@@ -15,10 +15,7 @@ public record PostResponse(
         @Schema(description = "게시글 내용", example = "부산 여행 시작!")
         String content,
 
-        @Schema(description = "게시글 위치", example = "부산 광안리")
-        String location,
-
-        @Schema(description = "이미지 여부", example = "true")
+@Schema(description = "이미지 여부", example = "true")
         Boolean isImg,
 
         @Schema(
@@ -36,7 +33,6 @@ public record PostResponse(
                 post.getId(),
                 timeLineId,
                 post.getContent(),
-                post.getLocation(),
                 post.getIsImg(),
                 post.getContentUrl()
         );
